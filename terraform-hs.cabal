@@ -1,0 +1,31 @@
+name:                terraform-hs
+version:             0.1.0.0
+synopsis:            Initial project template from stack
+description:         Please see README.md
+homepage:            https://github.com/timbod7/terraform-hs#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Tim Docker
+maintainer:          tim@dockerz.net
+copyright:           2017 Tim Docker
+category:            Web
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Language.Terraform.Core
+                     , Language.Terraform.Aws
+                     , Language.Terraform.Util.Text
+  build-depends:       base >= 4.7 && < 5
+                     , containers > 0.5 && < 0.6
+                     , data-default >= 0.5 && < 0.8
+                     , filepath >= 1.4 && < 1.5
+                     , text >= 1.2 && < 1.3
+                     , transformers >= 0.4.2.0 && < 0.6
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/timbod7/terraform-hs
