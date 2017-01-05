@@ -209,8 +209,8 @@ instance IsResource AwsInternetGateway where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'sn_')
 
-awsSubnet :: NameElement -> CidrBlock -> TFRef (AwsId AwsVpc) -> AwsSubnetOptions -> TF AwsSubnet
-awsSubnet name0 cidrBlock vpcId opts = awsSubnet' name0 (AwsSubnetParams cidrBlock vpcId opts)
+awsSubnet :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock -> AwsSubnetOptions -> TF AwsSubnet
+awsSubnet name0 vpcId cidrBlock opts = awsSubnet' name0 (AwsSubnetParams vpcId cidrBlock opts)
 
 awsSubnet' :: NameElement -> AwsSubnetParams -> TF AwsSubnet
 awsSubnet' name0 params = do
@@ -221,26 +221,26 @@ awsSubnet' name0 params = do
     }
 
 data AwsSubnetParams = AwsSubnetParams
-  { sn_cidr_block :: CidrBlock
-  , sn_vpc_id :: TFRef (AwsId AwsVpc)
+  { sn_vpc_id :: TFRef (AwsId AwsVpc)
+  , sn_cidr_block :: CidrBlock
   , sn_options :: AwsSubnetOptions
   }
 
 data AwsSubnetOptions = AwsSubnetOptions
-  { sn_availability_zone :: AvailabilityZone
-  , sn_map_public_ip_on_launch :: Bool
+  { sn_map_public_ip_on_launch :: Bool
+  , sn_availability_zone :: AvailabilityZone
   , sn_tags :: M.Map T.Text T.Text
   }
 
 instance Default AwsSubnetOptions where
-  def = AwsSubnetOptions "" False M.empty
+  def = AwsSubnetOptions False "" M.empty
 
 instance ToResourceFieldMap AwsSubnetParams where
   toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = sn_availability_zone (sn_options params) in if v == "" then Nothing else (Just ("availability_zone", toResourceField v))
+    [ Just ("vpc_id", toResourceField (sn_vpc_id params))
     , Just ("cidr_block", toResourceField (sn_cidr_block params))
     , let v = sn_map_public_ip_on_launch (sn_options params) in if v == False then Nothing else (Just ("map_public_ip_on_launch", toResourceField v))
-    , Just ("vpc_id", toResourceField (sn_vpc_id params))
+    , let v = sn_availability_zone (sn_options params) in if v == "" then Nothing else (Just ("availability_zone", toResourceField v))
     , let v = sn_tags (sn_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
     ]
 
@@ -960,7 +960,7 @@ instance IsResource AwsS3Bucket where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 's3o_')
 
-awsS3BucketObject :: NameElement -> TFRef (AwsId AwsS3Bucket) -> S3Key -> AwsS3BucketObjectOptions -> TF AwsS3BucketObject
+awsS3BucketObject :: NameElement -> TFRef S3BucketName -> S3Key -> AwsS3BucketObjectOptions -> TF AwsS3BucketObject
 awsS3BucketObject name0 bucket key opts = awsS3BucketObject' name0 (AwsS3BucketObjectParams bucket key opts)
 
 awsS3BucketObject' :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
@@ -974,7 +974,7 @@ awsS3BucketObject' name0 params = do
     }
 
 data AwsS3BucketObjectParams = AwsS3BucketObjectParams
-  { s3o_bucket :: TFRef (AwsId AwsS3Bucket)
+  { s3o_bucket :: TFRef S3BucketName
   , s3o_key :: S3Key
   , s3o_options :: AwsS3BucketObjectOptions
   }

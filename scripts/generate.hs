@@ -83,10 +83,10 @@ awsResources =
 
   , resourceCode "aws_subnet" "sn"
     "https://www.terraform.io/docs/providers/aws/d/subnet.html"
-    [ ("availability_zone", NamedType "AvailabilityZone", OptionalWithDefault "\"\"")
+    [ ("vpc_id", AwsIdRef "aws_vpc", Required)
     , ("cidr_block", NamedType "CidrBlock", Required)
     , ("map_public_ip_on_launch", NamedType "Bool", OptionalWithDefault "False")
-    , ("vpc_id", AwsIdRef "aws_vpc", Required)
+    , ("availability_zone", NamedType "AvailabilityZone", OptionalWithDefault "\"\"")
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
     [ ("id", AwsIdRef "aws_subnet")
@@ -247,7 +247,7 @@ awsResources =
 
   , resourceCode "aws_s3_bucket_object" "s3o"
     "https://www.terraform.io/docs/providers/aws/d/s3_bucket_object.html"
-    [ ("bucket", AwsIdRef "aws_s3_bucket", Required)
+    [ ("bucket", TFRef "S3BucketName", Required)
     , ("key", NamedType "S3Key", Required)
     , ("source", NamedType" FilePath", Optional)
     , ("content", NamedType" T.Text", Optional)
