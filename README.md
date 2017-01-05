@@ -6,7 +6,7 @@ The terraform system has some nice properties (an excellent workflow, support fo
 but as a programming language it has very limited data structures and abstraction cababilities. With this library
 one can leverage haskell abstractions to specifying infrastructure, whilst relying on terraforms excellent features.
 
-The terraform "API" is very broad, supporting hundreds of resource types accross multiple cloud providers. By it's nature
+The terraform "API" is very broad, supporting hundreds of resource types accross multiple cloud providers. By its nature
 a haskell wrapping of this is involves significant boilerplate. This [boilerplate][] is [generated][] from an API specification.
 
 Currently only a small subset of the AWS API is implemented, though
