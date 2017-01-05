@@ -352,7 +352,7 @@ fieldsCode htypename fieldprefix deriveInstances args
     
 resourceCode :: T.Text -> T.Text -> T.Text -> [(T.Text, FieldType, FieldMode)] -> [(T.Text, FieldType)] -> Code
 resourceCode tftypename fieldprefix docurl args attrs
-  =  mconcat (intersperse cblank [function,argsTypes,value,isResourceInstance])
+  =  mconcat (intersperse cblank [function,function',argsTypes,value,isResourceInstance])
   where
     function
       =  ctemplate "-- | Add a resource of type $1 to the resource graph." [htypename tftypename]
@@ -361,8 +361,22 @@ resourceCode tftypename fieldprefix docurl args attrs
       <> cline     "-- in the terraform documentation for descriptions of the arguments and attributes."
       <> ctemplate "-- (Note that attribute and argument names all have the prefix '$1_')" [fieldprefix]
       <> cline     ""
-      <> ctemplate "$1 :: NameElement -> $2Params -> TF $2" [hfnname tftypename, htypename tftypename]
-      <> ctemplate "$1 name0 params = do" [hfnname tftypename]
+      <> ctemplate
+           "$1 :: NameElement -> $2 $3Options -> TF $3"
+           [ hfnname tftypename
+           , T.intercalate " " [hftype ftype <> " ->" | (_,ftype,Required) <- args]
+           , htypename tftypename
+           ]
+      <> ctemplate
+           "$1 name0 $2 opts = $1' name0 ($3Params $2 opts)"
+           [ hfnname tftypename
+           , T.intercalate " " [hfnname fname | (fname,_,Required) <- args]
+           , htypename tftypename
+           ]
+
+    function'
+      =  ctemplate "$1' :: NameElement -> $2Params -> TF $2" [hfnname tftypename, htypename tftypename]
+      <> ctemplate "$1' name0 params = do" [hfnname tftypename]
       <> CIndent
         (  ctemplate "rid <- mkResource \"$1\" name0 (toResourceFieldMap params)" [tftypename]
         <> ctemplate "return $1" [htypename tftypename]

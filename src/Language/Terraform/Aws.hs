@@ -57,8 +57,11 @@ instance Default AwsOptions where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'vpc_')
 
-awsVpc :: NameElement -> AwsVpcParams -> TF AwsVpc
-awsVpc name0 params = do
+awsVpc :: NameElement -> CidrBlock -> AwsVpcOptions -> TF AwsVpc
+awsVpc name0 cidrBlock opts = awsVpc' name0 (AwsVpcParams cidrBlock opts)
+
+awsVpc' :: NameElement -> AwsVpcParams -> TF AwsVpc
+awsVpc' name0 params = do
   rid <- mkResource "aws_vpc" name0 (toResourceFieldMap params)
   return AwsVpc
     { vpc_id = resourceAttr rid "id"
@@ -110,8 +113,11 @@ instance IsResource AwsVpc where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'ng_')
 
-awsNatGateway :: NameElement -> AwsNatGatewayParams -> TF AwsNatGateway
-awsNatGateway name0 params = do
+awsNatGateway :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) -> AwsNatGatewayOptions -> TF AwsNatGateway
+awsNatGateway name0 allocationId subnetId opts = awsNatGateway' name0 (AwsNatGatewayParams allocationId subnetId opts)
+
+awsNatGateway' :: NameElement -> AwsNatGatewayParams -> TF AwsNatGateway
+awsNatGateway' name0 params = do
   rid <- mkResource "aws_nat_gateway" name0 (toResourceFieldMap params)
   return AwsNatGateway
     { ng_id = resourceAttr rid "id"
@@ -155,8 +161,11 @@ instance IsResource AwsNatGateway where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'ig_')
 
-awsInternetGateway :: NameElement -> AwsInternetGatewayParams -> TF AwsInternetGateway
-awsInternetGateway name0 params = do
+awsInternetGateway :: NameElement -> TFRef (AwsId AwsVpc) -> AwsInternetGatewayOptions -> TF AwsInternetGateway
+awsInternetGateway name0 vpcId opts = awsInternetGateway' name0 (AwsInternetGatewayParams vpcId opts)
+
+awsInternetGateway' :: NameElement -> AwsInternetGatewayParams -> TF AwsInternetGateway
+awsInternetGateway' name0 params = do
   rid <- mkResource "aws_internet_gateway" name0 (toResourceFieldMap params)
   return AwsInternetGateway
     { ig_id = resourceAttr rid "id"
@@ -200,8 +209,11 @@ instance IsResource AwsInternetGateway where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'sn_')
 
-awsSubnet :: NameElement -> AwsSubnetParams -> TF AwsSubnet
-awsSubnet name0 params = do
+awsSubnet :: NameElement -> CidrBlock -> TFRef (AwsId AwsVpc) -> AwsSubnetOptions -> TF AwsSubnet
+awsSubnet name0 cidrBlock vpcId opts = awsSubnet' name0 (AwsSubnetParams cidrBlock vpcId opts)
+
+awsSubnet' :: NameElement -> AwsSubnetParams -> TF AwsSubnet
+awsSubnet' name0 params = do
   rid <- mkResource "aws_subnet" name0 (toResourceFieldMap params)
   return AwsSubnet
     { sn_id = resourceAttr rid "id"
@@ -251,8 +263,11 @@ instance IsResource AwsSubnet where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'rt_')
 
-awsRouteTable :: NameElement -> AwsRouteTableParams -> TF AwsRouteTable
-awsRouteTable name0 params = do
+awsRouteTable :: NameElement -> TFRef (AwsId AwsVpc) -> AwsRouteTableOptions -> TF AwsRouteTable
+awsRouteTable name0 vpcId opts = awsRouteTable' name0 (AwsRouteTableParams vpcId opts)
+
+awsRouteTable' :: NameElement -> AwsRouteTableParams -> TF AwsRouteTable
+awsRouteTable' name0 params = do
   rid <- mkResource "aws_route_table" name0 (toResourceFieldMap params)
   return AwsRouteTable
     { rt_id = resourceAttr rid "id"
@@ -296,8 +311,11 @@ instance IsResource AwsRouteTable where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'r_')
 
-awsRoute :: NameElement -> AwsRouteParams -> TF AwsRoute
-awsRoute name0 params = do
+awsRoute :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock -> AwsRouteOptions -> TF AwsRoute
+awsRoute name0 routeTableId destinationCidrBlock opts = awsRoute' name0 (AwsRouteParams routeTableId destinationCidrBlock opts)
+
+awsRoute' :: NameElement -> AwsRouteParams -> TF AwsRoute
+awsRoute' name0 params = do
   rid <- mkResource "aws_route" name0 (toResourceFieldMap params)
   return AwsRoute
     { r_resource = rid
@@ -343,8 +361,11 @@ instance IsResource AwsRoute where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'rta_')
 
-awsRouteTableAssociation :: NameElement -> AwsRouteTableAssociationParams -> TF AwsRouteTableAssociation
-awsRouteTableAssociation name0 params = do
+awsRouteTableAssociation :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) -> AwsRouteTableAssociationOptions -> TF AwsRouteTableAssociation
+awsRouteTableAssociation name0 subnetId routeTableId opts = awsRouteTableAssociation' name0 (AwsRouteTableAssociationParams subnetId routeTableId opts)
+
+awsRouteTableAssociation' :: NameElement -> AwsRouteTableAssociationParams -> TF AwsRouteTableAssociation
+awsRouteTableAssociation' name0 params = do
   rid <- mkResource "aws_route_table_association" name0 (toResourceFieldMap params)
   return AwsRouteTableAssociation
     { rta_id = resourceAttr rid "id"
@@ -446,8 +467,11 @@ instance ToResourceField EgressRuleParams where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'sg_')
 
-awsSecurityGroup :: NameElement -> AwsSecurityGroupParams -> TF AwsSecurityGroup
-awsSecurityGroup name0 params = do
+awsSecurityGroup :: NameElement ->  AwsSecurityGroupOptions -> TF AwsSecurityGroup
+awsSecurityGroup name0  opts = awsSecurityGroup' name0 (AwsSecurityGroupParams  opts)
+
+awsSecurityGroup' :: NameElement -> AwsSecurityGroupParams -> TF AwsSecurityGroup
+awsSecurityGroup' name0 params = do
   rid <- mkResource "aws_security_group" name0 (toResourceFieldMap params)
   return AwsSecurityGroup
     { sg_id = resourceAttr rid "id"
@@ -530,8 +554,11 @@ instance ToResourceField RootBlockDeviceParams where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'i_')
 
-awsInstance :: NameElement -> AwsInstanceParams -> TF AwsInstance
-awsInstance name0 params = do
+awsInstance :: NameElement -> Ami -> InstanceType -> AwsInstanceOptions -> TF AwsInstance
+awsInstance name0 ami instanceType opts = awsInstance' name0 (AwsInstanceParams ami instanceType opts)
+
+awsInstance' :: NameElement -> AwsInstanceParams -> TF AwsInstance
+awsInstance' name0 params = do
   rid <- mkResource "aws_instance" name0 (toResourceFieldMap params)
   return AwsInstance
     { i_id = resourceAttr rid "id"
@@ -593,8 +620,11 @@ instance IsResource AwsInstance where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'eip_')
 
-awsEip :: NameElement -> AwsEipParams -> TF AwsEip
-awsEip name0 params = do
+awsEip :: NameElement ->  AwsEipOptions -> TF AwsEip
+awsEip name0  opts = awsEip' name0 (AwsEipParams  opts)
+
+awsEip' :: NameElement -> AwsEipParams -> TF AwsEip
+awsEip' name0 params = do
   rid <- mkResource "aws_eip" name0 (toResourceFieldMap params)
   return AwsEip
     { eip_id = resourceAttr rid "id"
@@ -733,8 +763,11 @@ instance ToResourceField HealthCheckParams where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 'elb_')
 
-awsElb :: NameElement -> AwsElbParams -> TF AwsElb
-awsElb name0 params = do
+awsElb :: NameElement -> [ListenerParams] -> AwsElbOptions -> TF AwsElb
+awsElb name0 listener opts = awsElb' name0 (AwsElbParams listener opts)
+
+awsElb' :: NameElement -> AwsElbParams -> TF AwsElb
+awsElb' name0 params = do
   rid <- mkResource "aws_elb" name0 (toResourceFieldMap params)
   return AwsElb
     { elb_id = resourceAttr rid "id"
@@ -873,8 +906,11 @@ instance ToResourceField LifecycleRuleParams where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 's3_')
 
-awsS3Bucket :: NameElement -> AwsS3BucketParams -> TF AwsS3Bucket
-awsS3Bucket name0 params = do
+awsS3Bucket :: NameElement -> T.Text -> AwsS3BucketOptions -> TF AwsS3Bucket
+awsS3Bucket name0 bucket opts = awsS3Bucket' name0 (AwsS3BucketParams bucket opts)
+
+awsS3Bucket' :: NameElement -> AwsS3BucketParams -> TF AwsS3Bucket
+awsS3Bucket' name0 params = do
   rid <- mkResource "aws_s3_bucket" name0 (toResourceFieldMap params)
   return AwsS3Bucket
     { s3_id = resourceAttr rid "id"
@@ -924,8 +960,11 @@ instance IsResource AwsS3Bucket where
 -- in the terraform documentation for descriptions of the arguments and attributes.
 -- (Note that attribute and argument names all have the prefix 's3o_')
 
-awsS3BucketObject :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
-awsS3BucketObject name0 params = do
+awsS3BucketObject :: NameElement -> TFRef (AwsId AwsS3Bucket) -> S3Key -> AwsS3BucketObjectOptions -> TF AwsS3BucketObject
+awsS3BucketObject name0 bucket key opts = awsS3BucketObject' name0 (AwsS3BucketObjectParams bucket key opts)
+
+awsS3BucketObject' :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
+awsS3BucketObject' name0 params = do
   rid <- mkResource "aws_s3_bucket_object" name0 (toResourceFieldMap params)
   return AwsS3BucketObject
     { s3o_id = resourceAttr rid "id"
