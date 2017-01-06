@@ -1,5 +1,52 @@
 {-# LANGUAGE OverloadedStrings,FlexibleInstances #-}
-module Language.Terraform.Core where
+-- | An EDSL for generating terraform code.
+--
+-- The basic idea is that you compose an monadic `TF` action to specify
+-- the terraform resources and their dependencies, and then call `generateFiles`
+-- to actually generate the terraform files. An example:
+--
+-- @
+-- {-# LANGUAGE OverloadedStrings #-}
+-- import Language.Terraform.Core
+-- import Language.Terraform.Aws
+-- import Data.Default
+-- 
+-- main = generateFiles "/tmp" $ do
+--    -- Construct an AWS virtual private cloud
+--    vpc <- awsVpc "vpc" "10.30.0.0/16" def
+--    -- Construct a route table
+--    awsRouteTable "rt" (vpc_id vpc) def
+--    return ()
+-- @
+--
+-- In terraform, each resource requires a unique name. The name is
+-- provided as the first parameter to the function creating that
+-- resource. The `withNameScope` function helps composability by creating
+-- independent scopes for names.
+--
+-- For more details on terraform, see
+-- https://www.terraform.io/intro/index.html
+
+module Language.Terraform.Core(
+  ToResourceField(..),
+  ToResourceFieldMap(..),
+  IsResource(..),
+  
+  ResourceField(..),
+  TF,
+  TFRef(..),
+  NameElement,
+  Name,
+  ResourceId,
+
+  mkProvider,
+  mkResource,
+  output,
+  resourceAttr,
+  dependsOn,
+  withNameScope,
+  generateFiles,
+  ) where
 
 import Data.Monoid
 import Control.Monad(void)
@@ -15,6 +62,10 @@ import qualified Data.Text.IO as T
 import qualified Language.Terraform.Util.Text as T
 
 type NameElement = T.Text
+
+-- | Every terraform resource has a unique name that is
+-- generated from it's name scope and the name provided
+-- to the resource constructor function.
 type Name = [NameElement]
 
 type TFType = T.Text
@@ -36,29 +87,41 @@ data Output  = Output {
   o_value :: T.Text
 }
 
+-- | A map to be embedded in the terraform output.
 type ResourceFieldMap = M.Map T.Text ResourceField
 
+-- | A value to be embedded in the terraform output.
 data ResourceField = RF_Text T.Text
                    | RF_List [ResourceField]
                    | RF_Map ResourceFieldMap
 
+-- | Typeclass for overloading the conversion of values to
+-- a `ResourceField` value.
 class ToResourceField a where
   toResourceField :: a -> ResourceField
   toResourceFieldList ::  [a] -> ResourceField
   toResourceFieldList as = RF_List (map toResourceField as)
 
+-- | Typeclass for overloading the conversion of values to
+-- a `ResourceFieldMap` value.
 class ToResourceFieldMap a where
   toResourceFieldMap :: a -> ResourceFieldMap
 
 instance IsString ResourceField where
   fromString = RF_Text . T.pack
 
+-- | A unique identifier for a source.
 data ResourceId = ResourceId TFType Name
  deriving (Eq,Ord)
 
+-- | All terraform resources implement this class to support
+-- overloaded access to common features.
 class IsResource a where
   resourceId :: a -> ResourceId
 
+-- | `TFRef t` is a reference to a terraform derived value of type t.
+-- Such values typically depend on actually deploying the infrastructure
+-- before they become known.
 newtype TFRef t = TFRef {
   tfRefText :: T.Text
 } deriving (Eq)
@@ -93,6 +156,8 @@ data TFState = TFState {
   tf_dependencies :: S.Set (ResourceId,ResourceId)
   }
 
+-- | A state monad over IO that accumulates the
+-- terraform resource graph.
 type TF a = StateT TFState IO a
 
 nameText :: Name -> T.Text
@@ -103,7 +168,8 @@ getNameText name0 = do
   context <- tf_context <$> get
   return (nameText (name0:context))
 
--- | Generate the given terraform with a more specific naming context
+-- | Provide a more specific naming scope for the specified terraform
+-- action.  
 withNameScope:: NameElement -> TF a -> TF a
 withNameScope name tfa = do
   s0 <- get
@@ -113,12 +179,14 @@ withNameScope name tfa = do
   put s1{tf_context=tf_context s0}
   return a
 
+-- | Internal function for constructing terraform providers
 mkProvider :: TFType -> [(T.Text,ResourceField)] -> TF ()
 mkProvider tftype fields  = do
   name <- fmap tf_context get
   let provider = Provider tftype name (M.fromList fields)
   modify' (\s -> s{tf_providers=provider:tf_providers s})
 
+-- | Internal function for constructing terraform resources
 mkResource :: TFType -> NameElement -> ResourceFieldMap -> TF ResourceId 
 mkResource tftype name0 fieldmap  = do
   s <- get
@@ -127,9 +195,12 @@ mkResource tftype name0 fieldmap  = do
   modify' (\s -> s{tf_resources=resource:tf_resources s})
   return (ResourceId tftype name)
 
+-- | Internal function for constructing resource attributes
 resourceAttr :: ResourceId -> T.Text -> TFRef a
 resourceAttr (ResourceId tftype name) attr = TFRef (T.template "${$1.$2.$3}" [tftype, nameText name, attr])
 
+-- | Add an output to the generated terraform.
+-- (See https://www.terraform.io/intro/getting-started/outputs.html)
 output :: NameElement -> T.Text -> TF ()
 output name0 value = do
   s <- get
@@ -137,9 +208,13 @@ output name0 value = do
   let output = Output name value
   modify' (\s -> s{tf_outputs=output:tf_outputs s})
 
+-- | Specifiy an explicit depedency betweeen resources.
+-- (See https://www.terraform.io/intro/getting-started/dependencies.html)
 dependsOn :: (IsResource r1,IsResource r2) => r1 -> r2 -> TF ()
 dependsOn r1 r2 = modify' (\s->s{tf_dependencies=S.insert (resourceId r1, resourceId r2) (tf_dependencies s)})
 
+-- | Execute the TF monadic action to generating the graph of terraform
+-- resources, writing them to the specified directory.
 generateFiles :: FilePath -> TF a -> IO a
 generateFiles outDir tfa = do
   (a,state) <- runStateT tfa state0
