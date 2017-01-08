@@ -579,12 +579,13 @@ data AwsInstanceOptions = AwsInstanceOptions
   , i_subnet_id :: Maybe (TFRef (AwsId AwsSubnet))
   , i_root_block_device :: Maybe (RootBlockDeviceParams)
   , i_user_data :: T.Text
+  , i_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
   , i_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
   , i_tags :: M.Map T.Text T.Text
   }
 
 instance Default AwsInstanceOptions where
-  def = AwsInstanceOptions "" Nothing Nothing Nothing "" [] M.empty
+  def = AwsInstanceOptions "" Nothing Nothing Nothing "" Nothing [] M.empty
 
 instance ToResourceFieldMap AwsInstanceParams where
   toResourceFieldMap params = M.fromList $ catMaybes
@@ -595,6 +596,7 @@ instance ToResourceFieldMap AwsInstanceParams where
     , fmap (\v-> ("subnet_id", toResourceField v)) (i_subnet_id (i_options params))
     , fmap (\v-> ("root_block_device", toResourceField v)) (i_root_block_device (i_options params))
     , let v = i_user_data (i_options params) in if v == "" then Nothing else (Just ("user_data", toResourceField v))
+    , fmap (\v-> ("iam_instance_profile", toResourceField v)) (i_iam_instance_profile (i_options params))
     , let v = i_vpc_security_group_ids (i_options params) in if v == [] then Nothing else (Just ("vpc_security_group_ids", toResourceField v))
     , let v = i_tags (i_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
     ]
@@ -1007,3 +1009,171 @@ data AwsS3BucketObject = AwsS3BucketObject
 
 instance IsResource AwsS3BucketObject where
   resourceId = s3o_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsIamRole to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/iam_role.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'iamr_')
+
+awsIamRole :: NameElement -> T.Text -> AwsIamRoleOptions -> TF AwsIamRole
+awsIamRole name0 assumeRolePolicy opts = awsIamRole' name0 (AwsIamRoleParams assumeRolePolicy opts)
+
+awsIamRole' :: NameElement -> AwsIamRoleParams -> TF AwsIamRole
+awsIamRole' name0 params = do
+  rid <- mkResource "aws_iam_role" name0 (toResourceFieldMap params)
+  return AwsIamRole
+    { iamr_id = resourceAttr rid "id"
+    , iamr_arn = resourceAttr rid "arn"
+    , iamr_name = resourceAttr rid "name"
+    , iamr_create_date = resourceAttr rid "create_date"
+    , iamr_unique_id = resourceAttr rid "unique_id"
+    , iamr_resource = rid
+    }
+
+data AwsIamRoleParams = AwsIamRoleParams
+  { iamr_assume_role_policy :: T.Text
+  , iamr_options :: AwsIamRoleOptions
+  }
+
+data AwsIamRoleOptions = AwsIamRoleOptions
+  { iamr_name' :: T.Text
+  , iamr_name_prefix :: T.Text
+  , iamr_path :: T.Text
+  }
+
+instance Default AwsIamRoleOptions where
+  def = AwsIamRoleOptions "" "" ""
+
+instance ToResourceFieldMap AwsIamRoleParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ let v = iamr_name' (iamr_options params) in if v == "" then Nothing else (Just ("name'", toResourceField v))
+    , let v = iamr_name_prefix (iamr_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
+    , Just ("assume_role_policy", toResourceField (iamr_assume_role_policy params))
+    , let v = iamr_path (iamr_options params) in if v == "" then Nothing else (Just ("path", toResourceField v))
+    ]
+
+instance ToResourceField AwsIamRoleParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamRole = AwsIamRole
+  { iamr_id :: TFRef (AwsId AwsIamRole)
+  , iamr_arn :: TFRef T.Text
+  , iamr_name :: TFRef T.Text
+  , iamr_create_date :: TFRef T.Text
+  , iamr_unique_id :: TFRef T.Text
+  , iamr_resource :: ResourceId
+  }
+
+instance IsResource AwsIamRole where
+  resourceId = iamr_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsIamInstanceProfile to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/iam_instance_profile.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'iamip_')
+
+awsIamInstanceProfile :: NameElement ->  AwsIamInstanceProfileOptions -> TF AwsIamInstanceProfile
+awsIamInstanceProfile name0  opts = awsIamInstanceProfile' name0 (AwsIamInstanceProfileParams  opts)
+
+awsIamInstanceProfile' :: NameElement -> AwsIamInstanceProfileParams -> TF AwsIamInstanceProfile
+awsIamInstanceProfile' name0 params = do
+  rid <- mkResource "aws_iam_instance_profile" name0 (toResourceFieldMap params)
+  return AwsIamInstanceProfile
+    { iamip_id = resourceAttr rid "id"
+    , iamip_arn = resourceAttr rid "arn"
+    , iamip_create_date = resourceAttr rid "create_date"
+    , iamip_unique_id = resourceAttr rid "unique_id"
+    , iamip_resource = rid
+    }
+
+data AwsIamInstanceProfileParams = AwsIamInstanceProfileParams
+  { iamip_options :: AwsIamInstanceProfileOptions
+  }
+
+data AwsIamInstanceProfileOptions = AwsIamInstanceProfileOptions
+  { iamip_name :: T.Text
+  , iamip_name_prefix :: T.Text
+  , iamip_path :: T.Text
+  , iamip_roles :: [TFRef T.Text]
+  }
+
+instance Default AwsIamInstanceProfileOptions where
+  def = AwsIamInstanceProfileOptions "" "" "/" []
+
+instance ToResourceFieldMap AwsIamInstanceProfileParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ let v = iamip_name (iamip_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
+    , let v = iamip_name_prefix (iamip_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
+    , let v = iamip_path (iamip_options params) in if v == "/" then Nothing else (Just ("path", toResourceField v))
+    , let v = iamip_roles (iamip_options params) in if v == [] then Nothing else (Just ("roles", toResourceField v))
+    ]
+
+instance ToResourceField AwsIamInstanceProfileParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamInstanceProfile = AwsIamInstanceProfile
+  { iamip_id :: TFRef (AwsId AwsIamInstanceProfile)
+  , iamip_arn :: TFRef T.Text
+  , iamip_create_date :: TFRef T.Text
+  , iamip_unique_id :: TFRef T.Text
+  , iamip_resource :: ResourceId
+  }
+
+instance IsResource AwsIamInstanceProfile where
+  resourceId = iamip_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsIamRolePolicy to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/iam_role_policy.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'iamrp_')
+
+awsIamRolePolicy :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) -> AwsIamRolePolicyOptions -> TF AwsIamRolePolicy
+awsIamRolePolicy name0 name policy role opts = awsIamRolePolicy' name0 (AwsIamRolePolicyParams name policy role opts)
+
+awsIamRolePolicy' :: NameElement -> AwsIamRolePolicyParams -> TF AwsIamRolePolicy
+awsIamRolePolicy' name0 params = do
+  rid <- mkResource "aws_iam_role_policy" name0 (toResourceFieldMap params)
+  return AwsIamRolePolicy
+    { iamrp_id = resourceAttr rid "id"
+    , iamrp_resource = rid
+    }
+
+data AwsIamRolePolicyParams = AwsIamRolePolicyParams
+  { iamrp_name :: T.Text
+  , iamrp_policy :: T.Text
+  , iamrp_role :: TFRef (AwsId AwsIamRole)
+  , iamrp_options :: AwsIamRolePolicyOptions
+  }
+
+data AwsIamRolePolicyOptions = AwsIamRolePolicyOptions
+  { }
+
+instance Default AwsIamRolePolicyOptions where
+  def = AwsIamRolePolicyOptions 
+
+instance ToResourceFieldMap AwsIamRolePolicyParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("name", toResourceField (iamrp_name params))
+    , Just ("policy", toResourceField (iamrp_policy params))
+    , Just ("role", toResourceField (iamrp_role params))
+    ]
+
+instance ToResourceField AwsIamRolePolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamRolePolicy = AwsIamRolePolicy
+  { iamrp_id :: TFRef (AwsId AwsIamInstanceProfile)
+  , iamrp_resource :: ResourceId
+  }
+
+instance IsResource AwsIamRolePolicy where
+  resourceId = iamrp_resource

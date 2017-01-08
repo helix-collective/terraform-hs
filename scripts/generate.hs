@@ -160,6 +160,7 @@ awsResources =
     , ("subnet_id", AwsIdRef "aws_subnet", Optional)
     , ("root_block_device", NamedType "RootBlockDeviceParams", Optional)
     , ("user_data", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("iam_instance_profile", AwsIdRef "aws_iam_instance_profile", Optional)
     , ("vpc_security_group_ids", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
@@ -256,6 +257,42 @@ awsResources =
     , ("etag", TFRef "T.Text")
     , ("version_id", TFRef "T.Text")
     ]
+
+  , resourceCode "aws_iam_role" "iamr"
+    "https://www.terraform.io/docs/providers/aws/r/iam_role.html"
+    [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("assume_role_policy", NamedType "T.Text", Required)
+    , ("path", NamedType "T.Text", OptionalWithDefault "\"\"")
+    ]
+    [ ("id", AwsIdRef "aws_iam_role")
+    , ("arn", TFRef "T.Text")
+    , ("name", TFRef "T.Text")
+    , ("create_date", TFRef "T.Text")
+    , ("unique_id", TFRef "T.Text")
+    ]
+    
+  , resourceCode "aws_iam_instance_profile" "iamip"
+    "https://www.terraform.io/docs/providers/aws/r/iam_instance_profile.html"
+    [ ("name", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("path", NamedType "T.Text", OptionalWithDefault "\"/\"")
+    , ("roles", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
+    ]
+    [ ("id", AwsIdRef "aws_iam_instance_profile")
+    , ("arn", TFRef "T.Text")
+    , ("create_date", TFRef "T.Text")
+    , ("unique_id", TFRef "T.Text")
+    ]
+
+  , resourceCode "aws_iam_role_policy" "iamrp"
+    "https://www.terraform.io/docs/providers/aws/r/iam_role_policy.html"
+    [ ("name", NamedType "T.Text", Required)
+    , ("policy", NamedType "T.Text", Required)
+    , ("role", AwsIdRef "aws_iam_role", Required)
+    ]
+    [ ("id", AwsIdRef "aws_iam_instance_profile")
+    ] 
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap

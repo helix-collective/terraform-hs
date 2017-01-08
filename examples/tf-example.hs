@@ -74,7 +74,7 @@ networking = do
   return (NetworkDetails vpc azs)
 
 ----------------------------------------------------------------------
--- An s3 bucket with some derived content
+-- An s3 bucket with some content derived from the infrastructure
   
 s3 :: TF AwsS3Bucket
 s3 = do
@@ -106,7 +106,8 @@ shared = do
     }
 
 ----------------------------------------------------------------------
--- An application server deployed into the shared infrastructure
+-- An application server deployed into the shared infrastructure,
+-- with both uat and prod instances  
   
 demoappTags = M.fromList
   [ ("tf-stack","demoapp")
@@ -133,12 +134,13 @@ egressAll = EgressRuleParams
     }
   }
   
-mkAppServer :: NetworkDetails -> AwsSecurityGroup -> InstanceType  -> TF ()
-mkAppServer nd securityGroup instanceType = do
+mkAppServer :: NetworkDetails -> AwsSecurityGroup -> AwsIamInstanceProfile -> InstanceType  -> TF ()
+mkAppServer nd securityGroup iamInstanceProfile instanceType = do
   ec2 <- awsInstance "appserver" "ami-623c0d01" instanceType def
         { i_tags = demoappTags
         , i_subnet_id = Just (sn_id (az_external_subnet (head (nd_azs nd))))
         , i_vpc_security_group_ids = [sg_id securityGroup]
+        , i_iam_instance_profile = Just (iamip_id iamInstanceProfile)
         , i_root_block_device = Just $ RootBlockDeviceParams
           { rbd_options = def
             { rbd_volume_size = Just 20
@@ -151,11 +153,63 @@ mkAppServer nd securityGroup instanceType = do
         }
   output "appserverip" (tfRefText (eip_public_ip eip))
 
-demoapp :: NetworkDetails -> TF ()
-demoapp networkDetails = do
+iamPolicy = T.intercalate "\n"
+  [ "{"
+  , "\"Version\": \"2012-10-17\","
+  , "\"Statement\": ["
+  , "   {"
+  , "     \"Action\": \"sts:AssumeRole\","
+  , "     \"Principal\": { \"Service\": \"ec2.amazonaws.com\" },"
+  , "     \"Effect\": \"Allow\","
+  , "     \"Sid\": \"\""
+  , "   }"
+  , " ]"
+  , "}"
+  ]
+
+publishMetricsPolicy = T.intercalate "\n"  
+  [ "{"
+  , "  \"Statement\": ["
+  , "    {"
+  , "      \"Action\": ["
+  , "        \"cloudwatch:GetMetricStatistics\","
+  , "        \"cloudwatch:ListMetrics\","
+  , "        \"cloudwatch:PutMetricData\","
+  , "        \"ec2:DescribeTags\""
+  , "      ],"
+  , "      \"Effect\": \"Allow\","
+  , "      \"Resource\": \"*\""
+  , "    }"
+  , "  ]"
+  , "}"
+  ]
+
+s3ReadonlyPolicy :: AwsS3Bucket -> T.Text
+s3ReadonlyPolicy bucket = T.intercalate "\n"
+  [ "{"
+  , "  \"Version\": \"2012-10-17\","
+  , "  \"Statement\": ["
+  , "        {"
+  , "            \"Action\": ["
+  , "                \"s3:GetObject\""
+  , "            ],"
+  , "            \"Effect\": \"Allow\","
+  , "            \"Resource\": ["
+  , T.template
+    "                \"arn:aws:s3:::$1/*\""
+    [tfRefText (s3_id bucket)]
+  , "            ]"
+  , "        }"
+  , "    ]"
+  , "}"
+  ]
+
+demoapp :: SharedInfrastructure -> TF ()
+demoapp sharedInfrastructure = do
+  let networkDetails = si_networkDetails sharedInfrastructure
   sg <- awsSecurityGroup "sgappserver" def
         { sg_tags = demoappTags
-        , sg_vpc_id = Just (vpc_id (nd_vpc networkDetails))
+        , sg_vpc_id = Just  (vpc_id (nd_vpc networkDetails))
         , sg_ingress =
           [ ingressOnPort 22
           , ingressOnPort 80
@@ -165,11 +219,25 @@ demoapp networkDetails = do
           [ egressAll
           ]
         }
+
+  iamr <- awsIamRole "appserver" iamPolicy def
+  iamip <- awsIamInstanceProfile "appserver" def
+    { iamip_roles=[iamr_name iamr]
+    }
+
+  let namedPolicy name0 policy = do
+        name <- scopedName name0
+        awsIamRolePolicy name0 name policy (iamr_id iamr) def
+
+  void $ namedPolicy "publishmetrics"
+    publishMetricsPolicy
+  void $ namedPolicy "deployaccess"
+    (s3ReadonlyPolicy (si_deployBucket sharedInfrastructure))
   
   withNameScope "prod" $ do
-    mkAppServer networkDetails sg "t2.medium"
+    mkAppServer networkDetails sg iamip "t2.medium"
   withNameScope "uat" $ do
-    mkAppServer networkDetails sg "t2.micro"
+    mkAppServer networkDetails sg iamip "t2.micro"
 
 ----------------------------------------------------------------------
 -- Combine everything and generate the terraform file    
@@ -183,4 +251,4 @@ main = generateFiles "/tmp" $ do
     shared
 
   withNameScope "demoapp" $ do
-    demoapp (si_networkDetails sharedInfrastructure)
+    demoapp sharedInfrastructure

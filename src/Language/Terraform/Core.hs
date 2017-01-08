@@ -45,6 +45,7 @@ module Language.Terraform.Core(
   resourceAttr,
   dependsOn,
   withNameScope,
+  scopedName,
   generateFiles,
   ) where
 
@@ -163,8 +164,9 @@ type TF a = StateT TFState IO a
 nameText :: Name -> T.Text
 nameText nameElements = T.intercalate "_" (reverse nameElements)
 
-getNameText :: NameElement -> TF T.Text
-getNameText name0 = do
+-- | Generate a global name based upon the the current scope.
+scopedName :: NameElement -> TF T.Text
+scopedName name0 = do
   context <- tf_context <$> get
   return (nameText (name0:context))
 
