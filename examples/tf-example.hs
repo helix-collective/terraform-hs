@@ -93,16 +93,28 @@ s3 = do
 
 data SharedInfrastructure = SharedInfrastructure {
   si_networkDetails :: NetworkDetails,
-  si_deployBucket :: AwsS3Bucket
+  si_deployBucket :: AwsS3Bucket,
+  si_alertTopic :: AwsSnsTopic,
+  si_alarmTopic :: AwsSnsTopic
 }
+
+namedSnsTopic :: T.Text -> TF AwsSnsTopic
+namedSnsTopic n = do
+  sn <- scopedName n
+  awsSnsTopic n sn def
 
 shared :: TF SharedInfrastructure
 shared = do
   nd <- networking
   db <- s3
+  alarms <- namedSnsTopic "alarms"
+  alerts <- namedSnsTopic "alerts"
+    
   return SharedInfrastructure
     { si_networkDetails = nd
     , si_deployBucket = db
+    , si_alarmTopic = alarms
+    , si_alertTopic = alerts
     }
 
 ----------------------------------------------------------------------
@@ -134,7 +146,7 @@ egressAll = EgressRuleParams
     }
   }
   
-mkAppServer :: NetworkDetails -> AwsSecurityGroup -> AwsIamInstanceProfile -> InstanceType  -> TF ()
+mkAppServer :: NetworkDetails -> AwsSecurityGroup -> AwsIamInstanceProfile -> InstanceType  -> TF AwsInstance
 mkAppServer nd securityGroup iamInstanceProfile instanceType = do
   ec2 <- awsInstance "appserver" "ami-623c0d01" instanceType def
         { i_tags = demoappTags
@@ -152,6 +164,7 @@ mkAppServer nd securityGroup iamInstanceProfile instanceType = do
         , eip_vpc = True
         }
   output "appserverip" (tfRefText (eip_public_ip eip))
+  return ec2
 
 iamPolicy = T.intercalate "\n"
   [ "{"
@@ -204,6 +217,50 @@ s3ReadonlyPolicy bucket = T.intercalate "\n"
   , "}"
   ]
 
+highDiskAlert :: AwsSnsTopic -> AwsInstance -> TF AwsCloudwatchMetricAlarm
+highDiskAlert topic ec2Instance = do
+  sn <- scopedName "highdisk"
+  awsCloudwatchMetricAlarm' "highdisk" AwsCloudwatchMetricAlarmParams
+    { cma_alarm_name = sn
+    , cma_comparison_operator = "GreaterThanThreshold"
+    , cma_evaluation_periods = 1
+    , cma_metric_name = "DiskSpaceUtilization"
+    , cma_namespace = "System/Linux"
+    , cma_period = 300
+    , cma_statistic = "Average"
+    , cma_threshold = 90
+    , cma_options = def
+      { cma_dimensions = M.fromList
+        [ ("InstanceId", tfRefText (i_id ec2Instance) )
+        , ("Filesystem", "/dev/xvda1")
+        , ("MountPath", "/")
+        ]
+      , cma_alarm_description = "Sustained high disk usage for application server"
+      , cma_alarm_actions = [sns_arn topic]
+      }
+    }
+
+highCpuAlert :: AwsSnsTopic -> AwsInstance -> TF AwsCloudwatchMetricAlarm
+highCpuAlert topic ec2Instance = do
+  sn <- scopedName "highcpu"
+  awsCloudwatchMetricAlarm' "highcpu" AwsCloudwatchMetricAlarmParams
+    { cma_alarm_name = sn
+    , cma_comparison_operator = "GreaterThanThreshold"
+    , cma_evaluation_periods = 4
+    , cma_metric_name = "DiskSpaceUtilization"
+    , cma_namespace = "AWS/EC2"
+    , cma_period = 300
+    , cma_statistic = "Average"
+    , cma_threshold = 90
+    , cma_options = def
+      { cma_dimensions = M.fromList
+        [ ("InstanceId", tfRefText (i_id ec2Instance) )
+        ]
+      , cma_alarm_description = "Sustained high cpu usage for application server"
+      , cma_alarm_actions = [sns_arn topic]
+      }
+    }
+
 demoapp :: SharedInfrastructure -> TF ()
 demoapp sharedInfrastructure = do
   let networkDetails = si_networkDetails sharedInfrastructure
@@ -235,9 +292,14 @@ demoapp sharedInfrastructure = do
     (s3ReadonlyPolicy (si_deployBucket sharedInfrastructure))
   
   withNameScope "prod" $ do
-    mkAppServer networkDetails sg iamip "t2.medium"
+    ec2 <- mkAppServer networkDetails sg iamip "t2.medium"
+    highDiskAlert (si_alertTopic sharedInfrastructure) ec2
+    highCpuAlert (si_alertTopic sharedInfrastructure) ec2
+    
   withNameScope "uat" $ do
     mkAppServer networkDetails sg iamip "t2.micro"
+
+  return ()
 
 ----------------------------------------------------------------------
 -- Combine everything and generate the terraform file    

@@ -23,6 +23,11 @@ awsHeader = clines
     , "newtype IpAddress = IpAddress T.Text"
     , "type VolumeType = T.Text"
     , "type CannedAcl = T.Text"
+    , "type MetricComparisonOperator = T.Text"
+    , "type MetricNamespace = T.Text"
+    , "type MetricName = T.Text"
+    , "type MetricStatistic = T.Text"
+    , "type MetricUnit = T.Text"
     , ""
     , "-- | Add an aws provider to the resource graph."
     , "--"
@@ -266,7 +271,7 @@ awsResources =
     , ("path", NamedType "T.Text", OptionalWithDefault "\"\"")
     ]
     [ ("id", AwsIdRef "aws_iam_role")
-    , ("arn", TFRef "T.Text")
+    , ("arn", TFRef "Arn")
     , ("name", TFRef "T.Text")
     , ("create_date", TFRef "T.Text")
     , ("unique_id", TFRef "T.Text")
@@ -280,7 +285,7 @@ awsResources =
     , ("roles", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
     ]
     [ ("id", AwsIdRef "aws_iam_instance_profile")
-    , ("arn", TFRef "T.Text")
+    , ("arn", TFRef "Arn")
     , ("create_date", TFRef "T.Text")
     , ("unique_id", TFRef "T.Text")
     ]
@@ -292,7 +297,37 @@ awsResources =
     , ("role", AwsIdRef "aws_iam_role", Required)
     ]
     [ ("id", AwsIdRef "aws_iam_instance_profile")
-    ] 
+    ]
+
+  , resourceCode "aws_sns_topic" "sns"
+    "https://www.terraform.io/docs/providers/aws/r/sns_topic.html"
+    [ ("name", NamedType "T.Text", Required)
+    , ("display_name", NamedType "T.Text", OptionalWithDefault "\"\"")
+    ]
+    [ ("id", AwsIdRef "aws_sns_topic")
+    , ("arn", TFRef "Arn")
+    ]
+
+  , resourceCode "aws_cloudwatch_metric_alarm" "cma"
+    "https://www.terraform.io/docs/providers/aws/r/cloudwatch_metric_alarm.html"
+    [ ("alarm_name", NamedType "T.Text", Required)
+    , ("comparison_operator", NamedType "MetricComparisonOperator", Required)
+    , ("evaluation_periods", NamedType "Int", Required)
+    , ("metric_name", NamedType "MetricName", Required)
+    , ("namespace", NamedType "MetricNamespace", Required)
+    , ("period", NamedType "Int", Required)
+    , ("statistic", NamedType "MetricStatistic", Required)
+    , ("threshold", NamedType "Int", Required)
+    , ("actions_enabled", NamedType "Bool", OptionalWithDefault "True")
+    , ("alarm_actions", FTList (TFRef "Arn"), OptionalWithDefault "[]")
+    , ("alarm_description", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("dimensions", TagsMap, OptionalWithDefault "M.empty")
+    , ("insufficient_data_actions", FTList (TFRef "Arn"), OptionalWithDefault "[]")
+    , ("ok_actions", FTList (TFRef "Arn"), OptionalWithDefault "[]")
+    , ("unit", NamedType "MetricUnit", OptionalWithDefault "\"\"")
+    ]
+    [ ("id", AwsIdRef "aws_cloudwatch_metric_alarm")
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap

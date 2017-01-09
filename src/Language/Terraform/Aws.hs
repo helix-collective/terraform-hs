@@ -22,6 +22,11 @@ type Arn = T.Text
 newtype IpAddress = IpAddress T.Text
 type VolumeType = T.Text
 type CannedAcl = T.Text
+type MetricComparisonOperator = T.Text
+type MetricNamespace = T.Text
+type MetricName = T.Text
+type MetricStatistic = T.Text
+type MetricUnit = T.Text
 
 -- | Add an aws provider to the resource graph.
 --
@@ -1060,7 +1065,7 @@ instance ToResourceField AwsIamRoleParams where
 
 data AwsIamRole = AwsIamRole
   { iamr_id :: TFRef (AwsId AwsIamRole)
-  , iamr_arn :: TFRef T.Text
+  , iamr_arn :: TFRef Arn
   , iamr_name :: TFRef T.Text
   , iamr_create_date :: TFRef T.Text
   , iamr_unique_id :: TFRef T.Text
@@ -1119,7 +1124,7 @@ instance ToResourceField AwsIamInstanceProfileParams where
 
 data AwsIamInstanceProfile = AwsIamInstanceProfile
   { iamip_id :: TFRef (AwsId AwsIamInstanceProfile)
-  , iamip_arn :: TFRef T.Text
+  , iamip_arn :: TFRef Arn
   , iamip_create_date :: TFRef T.Text
   , iamip_unique_id :: TFRef T.Text
   , iamip_resource :: ResourceId
@@ -1177,3 +1182,127 @@ data AwsIamRolePolicy = AwsIamRolePolicy
 
 instance IsResource AwsIamRolePolicy where
   resourceId = iamrp_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsSnsTopic to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/sns_topic.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'sns_')
+
+awsSnsTopic :: NameElement -> T.Text -> AwsSnsTopicOptions -> TF AwsSnsTopic
+awsSnsTopic name0 name opts = awsSnsTopic' name0 (AwsSnsTopicParams name opts)
+
+awsSnsTopic' :: NameElement -> AwsSnsTopicParams -> TF AwsSnsTopic
+awsSnsTopic' name0 params = do
+  rid <- mkResource "aws_sns_topic" name0 (toResourceFieldMap params)
+  return AwsSnsTopic
+    { sns_id = resourceAttr rid "id"
+    , sns_arn = resourceAttr rid "arn"
+    , sns_resource = rid
+    }
+
+data AwsSnsTopicParams = AwsSnsTopicParams
+  { sns_name :: T.Text
+  , sns_options :: AwsSnsTopicOptions
+  }
+
+data AwsSnsTopicOptions = AwsSnsTopicOptions
+  { sns_display_name :: T.Text
+  }
+
+instance Default AwsSnsTopicOptions where
+  def = AwsSnsTopicOptions ""
+
+instance ToResourceFieldMap AwsSnsTopicParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("name", toResourceField (sns_name params))
+    , let v = sns_display_name (sns_options params) in if v == "" then Nothing else (Just ("display_name", toResourceField v))
+    ]
+
+instance ToResourceField AwsSnsTopicParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsSnsTopic = AwsSnsTopic
+  { sns_id :: TFRef (AwsId AwsSnsTopic)
+  , sns_arn :: TFRef Arn
+  , sns_resource :: ResourceId
+  }
+
+instance IsResource AwsSnsTopic where
+  resourceId = sns_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsCloudwatchMetricAlarm to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/cloudwatch_metric_alarm.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'cma_')
+
+awsCloudwatchMetricAlarm :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int -> AwsCloudwatchMetricAlarmOptions -> TF AwsCloudwatchMetricAlarm
+awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts = awsCloudwatchMetricAlarm' name0 (AwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts)
+
+awsCloudwatchMetricAlarm' :: NameElement -> AwsCloudwatchMetricAlarmParams -> TF AwsCloudwatchMetricAlarm
+awsCloudwatchMetricAlarm' name0 params = do
+  rid <- mkResource "aws_cloudwatch_metric_alarm" name0 (toResourceFieldMap params)
+  return AwsCloudwatchMetricAlarm
+    { cma_id = resourceAttr rid "id"
+    , cma_resource = rid
+    }
+
+data AwsCloudwatchMetricAlarmParams = AwsCloudwatchMetricAlarmParams
+  { cma_alarm_name :: T.Text
+  , cma_comparison_operator :: MetricComparisonOperator
+  , cma_evaluation_periods :: Int
+  , cma_metric_name :: MetricName
+  , cma_namespace :: MetricNamespace
+  , cma_period :: Int
+  , cma_statistic :: MetricStatistic
+  , cma_threshold :: Int
+  , cma_options :: AwsCloudwatchMetricAlarmOptions
+  }
+
+data AwsCloudwatchMetricAlarmOptions = AwsCloudwatchMetricAlarmOptions
+  { cma_actions_enabled :: Bool
+  , cma_alarm_actions :: [TFRef Arn]
+  , cma_alarm_description :: T.Text
+  , cma_dimensions :: M.Map T.Text T.Text
+  , cma_insufficient_data_actions :: [TFRef Arn]
+  , cma_ok_actions :: [TFRef Arn]
+  , cma_unit :: MetricUnit
+  }
+
+instance Default AwsCloudwatchMetricAlarmOptions where
+  def = AwsCloudwatchMetricAlarmOptions True [] "" M.empty [] [] ""
+
+instance ToResourceFieldMap AwsCloudwatchMetricAlarmParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("alarm_name", toResourceField (cma_alarm_name params))
+    , Just ("comparison_operator", toResourceField (cma_comparison_operator params))
+    , Just ("evaluation_periods", toResourceField (cma_evaluation_periods params))
+    , Just ("metric_name", toResourceField (cma_metric_name params))
+    , Just ("namespace", toResourceField (cma_namespace params))
+    , Just ("period", toResourceField (cma_period params))
+    , Just ("statistic", toResourceField (cma_statistic params))
+    , Just ("threshold", toResourceField (cma_threshold params))
+    , let v = cma_actions_enabled (cma_options params) in if v == True then Nothing else (Just ("actions_enabled", toResourceField v))
+    , let v = cma_alarm_actions (cma_options params) in if v == [] then Nothing else (Just ("alarm_actions", toResourceField v))
+    , let v = cma_alarm_description (cma_options params) in if v == "" then Nothing else (Just ("alarm_description", toResourceField v))
+    , let v = cma_dimensions (cma_options params) in if v == M.empty then Nothing else (Just ("dimensions", toResourceField v))
+    , let v = cma_insufficient_data_actions (cma_options params) in if v == [] then Nothing else (Just ("insufficient_data_actions", toResourceField v))
+    , let v = cma_ok_actions (cma_options params) in if v == [] then Nothing else (Just ("ok_actions", toResourceField v))
+    , let v = cma_unit (cma_options params) in if v == "" then Nothing else (Just ("unit", toResourceField v))
+    ]
+
+instance ToResourceField AwsCloudwatchMetricAlarmParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsCloudwatchMetricAlarm = AwsCloudwatchMetricAlarm
+  { cma_id :: TFRef (AwsId AwsCloudwatchMetricAlarm)
+  , cma_resource :: ResourceId
+  }
+
+instance IsResource AwsCloudwatchMetricAlarm where
+  resourceId = cma_resource
