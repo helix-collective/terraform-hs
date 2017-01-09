@@ -28,6 +28,8 @@ awsHeader = clines
     , "type MetricName = T.Text"
     , "type MetricStatistic = T.Text"
     , "type MetricUnit = T.Text"
+    , "type DBEngine = T.Text"
+    , "type DBInstanceClass = T.Text"
     , ""
     , "-- | Add an aws provider to the resource graph."
     , "--"
@@ -327,6 +329,38 @@ awsResources =
     , ("unit", NamedType "MetricUnit", OptionalWithDefault "\"\"")
     ]
     [ ("id", AwsIdRef "aws_cloudwatch_metric_alarm")
+    ]
+
+  , resourceCode "aws_db_instance" "db"
+    "https://www.terraform.io/docs/providers/aws/r/db_instance.html"
+    [ ("allocated_storage", NamedType "Int", Required)
+    , ("engine", NamedType "DBEngine", Required)
+    , ("engine_version", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("identifier", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("instance_class", NamedType "DBInstanceClass", Required)
+    , ("username", NamedType "T.Text", Required)
+    , ("password", NamedType "T.Text", Required)
+    , ("publicly_accessible", NamedType "Bool", OptionalWithDefault "False")
+    , ("backup_retention_period", NamedType "Int", OptionalWithDefault "0")
+    , ("vpc_security_group_ids", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
+    , ("db_subnet_group_name", TFRef "T.Text", Optional)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_db_instance")
+    , ("arn", TFRef "Arn")
+    , ("address", TFRef "T.Text")
+    ]
+    
+  , resourceCode "aws_db_subnet_group" "dsg"
+    "https://www.terraform.io/docs/providers/aws/r/db_subnet_group.html"
+    [ ("name'", NamedType "T.Text", Required)
+    , ("description", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("subnet_ids", FTList (AwsIdRef "aws_subnet"), Required)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_db_instance")
+    , ("name", TFRef "T.Text")
+    , ("arn", TFRef "Arn")
     ]
   ]
 

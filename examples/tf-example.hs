@@ -21,6 +21,8 @@ cidrBlock :: CidrBlock
 cidrBlock = "10.30.0.0/16"
 
 azparams :: [(NameElement, [Char], CidrBlock, CidrBlock)]
+
+
 azparams =
      [ ("apse2a", "ap-southeast-2a", "10.30.0.0/19", "10.30.32.0/20")
      , ("apse2b", "ap-southeast-2b", "10.30.64.0/19", "10.30.96.0/20")
@@ -145,6 +147,24 @@ egressAll = EgressRuleParams
     { er_cidr_blocks = ["0.0.0.0/0"]
     }
   }
+
+mkPostgres :: NetworkDetails -> AwsDbSubnetGroup -> DBInstanceClass -> TF AwsDbInstance
+mkPostgres nd subnetGroup instanceClass = do
+  db <- awsDbInstance' "db" AwsDbInstanceParams
+    { db_allocated_storage = 5
+    , db_engine = "postgres"
+    , db_instance_class = instanceClass
+    , db_username = "postgres"
+    , db_password = "password"
+    , db_options = def
+        { db_engine_version = "9.4.7"
+        , db_publicly_accessible = True
+        , db_backup_retention_period = 3
+        , db_db_subnet_group_name = Just (dsg_name subnetGroup)
+        }
+    }
+  output "dbaddress" (tfRefText (db_address db))
+  return db
   
 mkAppServer :: NetworkDetails -> AwsSecurityGroup -> AwsIamInstanceProfile -> InstanceType  -> TF AwsInstance
 mkAppServer nd securityGroup iamInstanceProfile instanceType = do
@@ -291,13 +311,21 @@ demoapp sharedInfrastructure = do
   void $ namedPolicy "deployaccess"
     (s3ReadonlyPolicy (si_deployBucket sharedInfrastructure))
   
+  dbsg <- do
+    sname <- scopedName "dsg"
+    awsDbSubnetGroup "dsg" sname
+      [sn_id (az_external_subnet az) | az <- nd_azs networkDetails] def
+
   withNameScope "prod" $ do
     ec2 <- mkAppServer networkDetails sg iamip "t2.medium"
+    mkPostgres networkDetails dbsg "db.t2.medium"
+    
     highDiskAlert (si_alertTopic sharedInfrastructure) ec2
     highCpuAlert (si_alertTopic sharedInfrastructure) ec2
     
   withNameScope "uat" $ do
-    mkAppServer networkDetails sg iamip "t2.micro"
+    ec2 <- mkAppServer networkDetails sg iamip "t2.micro"
+    mkPostgres networkDetails dbsg "db.t2.micro"
 
   return ()
 

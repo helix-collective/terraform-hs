@@ -27,6 +27,8 @@ type MetricNamespace = T.Text
 type MetricName = T.Text
 type MetricStatistic = T.Text
 type MetricUnit = T.Text
+type DBEngine = T.Text
+type DBInstanceClass = T.Text
 
 -- | Add an aws provider to the resource graph.
 --
@@ -1306,3 +1308,131 @@ data AwsCloudwatchMetricAlarm = AwsCloudwatchMetricAlarm
 
 instance IsResource AwsCloudwatchMetricAlarm where
   resourceId = cma_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsDbInstance to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/db_instance.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'db_')
+
+awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceOptions -> TF AwsDbInstance
+awsDbInstance name0 allocatedStorage engine instanceClass username password opts = awsDbInstance' name0 (AwsDbInstanceParams allocatedStorage engine instanceClass username password opts)
+
+awsDbInstance' :: NameElement -> AwsDbInstanceParams -> TF AwsDbInstance
+awsDbInstance' name0 params = do
+  rid <- mkResource "aws_db_instance" name0 (toResourceFieldMap params)
+  return AwsDbInstance
+    { db_id = resourceAttr rid "id"
+    , db_arn = resourceAttr rid "arn"
+    , db_address = resourceAttr rid "address"
+    , db_resource = rid
+    }
+
+data AwsDbInstanceParams = AwsDbInstanceParams
+  { db_allocated_storage :: Int
+  , db_engine :: DBEngine
+  , db_instance_class :: DBInstanceClass
+  , db_username :: T.Text
+  , db_password :: T.Text
+  , db_options :: AwsDbInstanceOptions
+  }
+
+data AwsDbInstanceOptions = AwsDbInstanceOptions
+  { db_engine_version :: T.Text
+  , db_identifier :: T.Text
+  , db_publicly_accessible :: Bool
+  , db_backup_retention_period :: Int
+  , db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
+  , db_db_subnet_group_name :: Maybe (TFRef T.Text)
+  , db_tags :: M.Map T.Text T.Text
+  }
+
+instance Default AwsDbInstanceOptions where
+  def = AwsDbInstanceOptions "" "" False 0 [] Nothing M.empty
+
+instance ToResourceFieldMap AwsDbInstanceParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("allocated_storage", toResourceField (db_allocated_storage params))
+    , Just ("engine", toResourceField (db_engine params))
+    , let v = db_engine_version (db_options params) in if v == "" then Nothing else (Just ("engine_version", toResourceField v))
+    , let v = db_identifier (db_options params) in if v == "" then Nothing else (Just ("identifier", toResourceField v))
+    , Just ("instance_class", toResourceField (db_instance_class params))
+    , Just ("username", toResourceField (db_username params))
+    , Just ("password", toResourceField (db_password params))
+    , let v = db_publicly_accessible (db_options params) in if v == False then Nothing else (Just ("publicly_accessible", toResourceField v))
+    , let v = db_backup_retention_period (db_options params) in if v == 0 then Nothing else (Just ("backup_retention_period", toResourceField v))
+    , let v = db_vpc_security_group_ids (db_options params) in if v == [] then Nothing else (Just ("vpc_security_group_ids", toResourceField v))
+    , fmap (\v-> ("db_subnet_group_name", toResourceField v)) (db_db_subnet_group_name (db_options params))
+    , let v = db_tags (db_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
+    ]
+
+instance ToResourceField AwsDbInstanceParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsDbInstance = AwsDbInstance
+  { db_id :: TFRef (AwsId AwsDbInstance)
+  , db_arn :: TFRef Arn
+  , db_address :: TFRef T.Text
+  , db_resource :: ResourceId
+  }
+
+instance IsResource AwsDbInstance where
+  resourceId = db_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsDbSubnetGroup to the resource graph.
+--
+-- See https://www.terraform.io/docs/providers/aws/r/db_subnet_group.html
+-- in the terraform documentation for descriptions of the arguments and attributes.
+-- (Note that attribute and argument names all have the prefix 'dsg_')
+
+awsDbSubnetGroup :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] -> AwsDbSubnetGroupOptions -> TF AwsDbSubnetGroup
+awsDbSubnetGroup name0 name' subnetIds opts = awsDbSubnetGroup' name0 (AwsDbSubnetGroupParams name' subnetIds opts)
+
+awsDbSubnetGroup' :: NameElement -> AwsDbSubnetGroupParams -> TF AwsDbSubnetGroup
+awsDbSubnetGroup' name0 params = do
+  rid <- mkResource "aws_db_subnet_group" name0 (toResourceFieldMap params)
+  return AwsDbSubnetGroup
+    { dsg_id = resourceAttr rid "id"
+    , dsg_name = resourceAttr rid "name"
+    , dsg_arn = resourceAttr rid "arn"
+    , dsg_resource = rid
+    }
+
+data AwsDbSubnetGroupParams = AwsDbSubnetGroupParams
+  { dsg_name' :: T.Text
+  , dsg_subnet_ids :: [TFRef (AwsId AwsSubnet)]
+  , dsg_options :: AwsDbSubnetGroupOptions
+  }
+
+data AwsDbSubnetGroupOptions = AwsDbSubnetGroupOptions
+  { dsg_description :: T.Text
+  , dsg_tags :: M.Map T.Text T.Text
+  }
+
+instance Default AwsDbSubnetGroupOptions where
+  def = AwsDbSubnetGroupOptions "" M.empty
+
+instance ToResourceFieldMap AwsDbSubnetGroupParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("name'", toResourceField (dsg_name' params))
+    , let v = dsg_description (dsg_options params) in if v == "" then Nothing else (Just ("description", toResourceField v))
+    , Just ("subnet_ids", toResourceField (dsg_subnet_ids params))
+    , let v = dsg_tags (dsg_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
+    ]
+
+instance ToResourceField AwsDbSubnetGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsDbSubnetGroup = AwsDbSubnetGroup
+  { dsg_id :: TFRef (AwsId AwsDbInstance)
+  , dsg_name :: TFRef T.Text
+  , dsg_arn :: TFRef Arn
+  , dsg_resource :: ResourceId
+  }
+
+instance IsResource AwsDbSubnetGroup where
+  resourceId = dsg_resource
