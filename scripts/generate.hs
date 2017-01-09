@@ -33,8 +33,8 @@ awsHeader = clines
     , ""
     , "-- | Add an aws provider to the resource graph."
     , "--"
-    , "-- See https://www.terraform.io/docs/providers/aws/index.html"
-    , "-- in the terraform documentation for descriptions of the arguments."
+    , "-- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>"
+    , "-- for details."
     , ""
     , "aws :: AwsParams -> TF ()"
     , "aws params ="
@@ -463,9 +463,9 @@ resourceCode tftypename fieldprefix docurl args attrs
     function
       =  ctemplate "-- | Add a resource of type $1 to the resource graph." [htypename tftypename]
       <> cline     "--"
-      <> ctemplate "-- See $1" [docurl]
-      <> cline     "-- in the terraform documentation for descriptions of the arguments and attributes."
-      <> ctemplate "-- (Note that attribute and argument names all have the prefix '$1_')" [fieldprefix]
+      <> ctemplate "-- See the terraform <$1 $2> documentation" [docurl, tftypename]
+      <> cline     "-- for details."
+      <> ctemplate "-- (In this binding attribute and argument names all have the prefix '$1_')" [fieldprefix]
       <> cline     ""
       <> ctemplate
            "$1 :: NameElement -> $2 $3Options -> TF $3"
@@ -542,6 +542,17 @@ generateModule outdir moduleName header resources = T.writeFile filepath (T.inte
     csection = cblank <> cline (T.replicate 70 "-")  <> cblank
     header0 = clines
       [ "{-# LANGUAGE OverloadedStrings #-}"
+      , "-- | Terraform resource definitions"
+      , "--"
+      , "-- This file is auto-generated. Change it by changing the script"
+      , "-- that generates it."
+      , "--"
+      , "-- There are two variants of each function to construct a resource"
+      , "-- (eg 'awsVpc' and 'awsVpc'') . The former takes the required attributes"
+      , "-- as positional paramemeters. The latter (with the quote suffixed name)"
+      , "-- takes a record containing all attributes. This can be more convenient"
+      , "-- when there are many required arguments."
+      , "--"
       , T.template "module Language.Terraform.$1 where" [moduleName]
       , ""
       , "import qualified Data.Map as M"

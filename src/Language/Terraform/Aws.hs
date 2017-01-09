@@ -1,4 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- | Terraform resource definitions
+--
+-- This file is auto-generated. Change it by changing the script
+-- that generates it.
+--
+-- There are two variants of each function to construct a resource
+-- (eg 'awsVpc' and 'awsVpc'') . The former takes the required attributes
+-- as positional paramemeters. The latter (with the quote suffixed name)
+-- takes a record containing all attributes. This can be more convenient
+-- when there are many required arguments.
+--
 module Language.Terraform.Aws where
 
 import qualified Data.Map as M
@@ -32,8 +43,8 @@ type DBInstanceClass = T.Text
 
 -- | Add an aws provider to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/index.html
--- in the terraform documentation for descriptions of the arguments.
+-- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>
+-- for details.
 
 aws :: AwsParams -> TF ()
 aws params =
@@ -60,9 +71,9 @@ instance Default AwsOptions where
 
 -- | Add a resource of type AwsVpc to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/d/vpc.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'vpc_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/d/vpc.html aws_vpc> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'vpc_')
 
 awsVpc :: NameElement -> CidrBlock -> AwsVpcOptions -> TF AwsVpc
 awsVpc name0 cidrBlock opts = awsVpc' name0 (AwsVpcParams cidrBlock opts)
@@ -116,9 +127,9 @@ instance IsResource AwsVpc where
 
 -- | Add a resource of type AwsNatGateway to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/nat_gateway.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'ng_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/nat_gateway.html aws_nat_gateway> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ng_')
 
 awsNatGateway :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) -> AwsNatGatewayOptions -> TF AwsNatGateway
 awsNatGateway name0 allocationId subnetId opts = awsNatGateway' name0 (AwsNatGatewayParams allocationId subnetId opts)
@@ -164,9 +175,9 @@ instance IsResource AwsNatGateway where
 
 -- | Add a resource of type AwsInternetGateway to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/internet_gateway.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'ig_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/internet_gateway.html aws_internet_gateway> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ig_')
 
 awsInternetGateway :: NameElement -> TFRef (AwsId AwsVpc) -> AwsInternetGatewayOptions -> TF AwsInternetGateway
 awsInternetGateway name0 vpcId opts = awsInternetGateway' name0 (AwsInternetGatewayParams vpcId opts)
@@ -212,9 +223,9 @@ instance IsResource AwsInternetGateway where
 
 -- | Add a resource of type AwsSubnet to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/d/subnet.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'sn_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/d/subnet.html aws_subnet> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'sn_')
 
 awsSubnet :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock -> AwsSubnetOptions -> TF AwsSubnet
 awsSubnet name0 vpcId cidrBlock opts = awsSubnet' name0 (AwsSubnetParams vpcId cidrBlock opts)
@@ -266,9 +277,9 @@ instance IsResource AwsSubnet where
 
 -- | Add a resource of type AwsRouteTable to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/route_table.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'rt_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/route_table.html aws_route_table> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'rt_')
 
 awsRouteTable :: NameElement -> TFRef (AwsId AwsVpc) -> AwsRouteTableOptions -> TF AwsRouteTable
 awsRouteTable name0 vpcId opts = awsRouteTable' name0 (AwsRouteTableParams vpcId opts)
@@ -314,9 +325,9 @@ instance IsResource AwsRouteTable where
 
 -- | Add a resource of type AwsRoute to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/route.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'r_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/route.html aws_route> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'r_')
 
 awsRoute :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock -> AwsRouteOptions -> TF AwsRoute
 awsRoute name0 routeTableId destinationCidrBlock opts = awsRoute' name0 (AwsRouteParams routeTableId destinationCidrBlock opts)
@@ -364,9 +375,9 @@ instance IsResource AwsRoute where
 
 -- | Add a resource of type AwsRouteTableAssociation to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/route_table_association.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'rta_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/route_table_association.html aws_route_table_association> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'rta_')
 
 awsRouteTableAssociation :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) -> AwsRouteTableAssociationOptions -> TF AwsRouteTableAssociation
 awsRouteTableAssociation name0 subnetId routeTableId opts = awsRouteTableAssociation' name0 (AwsRouteTableAssociationParams subnetId routeTableId opts)
@@ -470,9 +481,9 @@ instance ToResourceField EgressRuleParams where
 
 -- | Add a resource of type AwsSecurityGroup to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/security_group.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'sg_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/security_group.html aws_security_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'sg_')
 
 awsSecurityGroup :: NameElement ->  AwsSecurityGroupOptions -> TF AwsSecurityGroup
 awsSecurityGroup name0  opts = awsSecurityGroup' name0 (AwsSecurityGroupParams  opts)
@@ -557,9 +568,9 @@ instance ToResourceField RootBlockDeviceParams where
 
 -- | Add a resource of type AwsInstance to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/instance.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'i_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/instance.html aws_instance> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'i_')
 
 awsInstance :: NameElement -> Ami -> InstanceType -> AwsInstanceOptions -> TF AwsInstance
 awsInstance name0 ami instanceType opts = awsInstance' name0 (AwsInstanceParams ami instanceType opts)
@@ -625,9 +636,9 @@ instance IsResource AwsInstance where
 
 -- | Add a resource of type AwsEip to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/eip.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'eip_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/eip.html aws_eip> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'eip_')
 
 awsEip :: NameElement ->  AwsEipOptions -> TF AwsEip
 awsEip name0  opts = awsEip' name0 (AwsEipParams  opts)
@@ -768,9 +779,9 @@ instance ToResourceField HealthCheckParams where
 
 -- | Add a resource of type AwsElb to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/elb.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'elb_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/elb.html aws_elb> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'elb_')
 
 awsElb :: NameElement -> [ListenerParams] -> AwsElbOptions -> TF AwsElb
 awsElb name0 listener opts = awsElb' name0 (AwsElbParams listener opts)
@@ -911,9 +922,9 @@ instance ToResourceField LifecycleRuleParams where
 
 -- | Add a resource of type AwsS3Bucket to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/s3_bucket.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 's3_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/s3_bucket.html aws_s3_bucket> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 's3_')
 
 awsS3Bucket :: NameElement -> T.Text -> AwsS3BucketOptions -> TF AwsS3Bucket
 awsS3Bucket name0 bucket opts = awsS3Bucket' name0 (AwsS3BucketParams bucket opts)
@@ -965,9 +976,9 @@ instance IsResource AwsS3Bucket where
 
 -- | Add a resource of type AwsS3BucketObject to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/d/s3_bucket_object.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 's3o_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/d/s3_bucket_object.html aws_s3_bucket_object> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 's3o_')
 
 awsS3BucketObject :: NameElement -> TFRef S3BucketName -> S3Key -> AwsS3BucketObjectOptions -> TF AwsS3BucketObject
 awsS3BucketObject name0 bucket key opts = awsS3BucketObject' name0 (AwsS3BucketObjectParams bucket key opts)
@@ -1021,9 +1032,9 @@ instance IsResource AwsS3BucketObject where
 
 -- | Add a resource of type AwsIamRole to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/iam_role.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'iamr_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_role.html aws_iam_role> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamr_')
 
 awsIamRole :: NameElement -> T.Text -> AwsIamRoleOptions -> TF AwsIamRole
 awsIamRole name0 assumeRolePolicy opts = awsIamRole' name0 (AwsIamRoleParams assumeRolePolicy opts)
@@ -1081,9 +1092,9 @@ instance IsResource AwsIamRole where
 
 -- | Add a resource of type AwsIamInstanceProfile to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/iam_instance_profile.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'iamip_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_instance_profile.html aws_iam_instance_profile> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamip_')
 
 awsIamInstanceProfile :: NameElement ->  AwsIamInstanceProfileOptions -> TF AwsIamInstanceProfile
 awsIamInstanceProfile name0  opts = awsIamInstanceProfile' name0 (AwsIamInstanceProfileParams  opts)
@@ -1139,9 +1150,9 @@ instance IsResource AwsIamInstanceProfile where
 
 -- | Add a resource of type AwsIamRolePolicy to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/iam_role_policy.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'iamrp_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_role_policy.html aws_iam_role_policy> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamrp_')
 
 awsIamRolePolicy :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) -> AwsIamRolePolicyOptions -> TF AwsIamRolePolicy
 awsIamRolePolicy name0 name policy role opts = awsIamRolePolicy' name0 (AwsIamRolePolicyParams name policy role opts)
@@ -1189,9 +1200,9 @@ instance IsResource AwsIamRolePolicy where
 
 -- | Add a resource of type AwsSnsTopic to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/sns_topic.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'sns_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/sns_topic.html aws_sns_topic> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'sns_')
 
 awsSnsTopic :: NameElement -> T.Text -> AwsSnsTopicOptions -> TF AwsSnsTopic
 awsSnsTopic name0 name opts = awsSnsTopic' name0 (AwsSnsTopicParams name opts)
@@ -1239,9 +1250,9 @@ instance IsResource AwsSnsTopic where
 
 -- | Add a resource of type AwsCloudwatchMetricAlarm to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/cloudwatch_metric_alarm.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'cma_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/cloudwatch_metric_alarm.html aws_cloudwatch_metric_alarm> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'cma_')
 
 awsCloudwatchMetricAlarm :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int -> AwsCloudwatchMetricAlarmOptions -> TF AwsCloudwatchMetricAlarm
 awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts = awsCloudwatchMetricAlarm' name0 (AwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts)
@@ -1313,9 +1324,9 @@ instance IsResource AwsCloudwatchMetricAlarm where
 
 -- | Add a resource of type AwsDbInstance to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/db_instance.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'db_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/db_instance.html aws_db_instance> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'db_')
 
 awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceOptions -> TF AwsDbInstance
 awsDbInstance name0 allocatedStorage engine instanceClass username password opts = awsDbInstance' name0 (AwsDbInstanceParams allocatedStorage engine instanceClass username password opts)
@@ -1385,9 +1396,9 @@ instance IsResource AwsDbInstance where
 
 -- | Add a resource of type AwsDbSubnetGroup to the resource graph.
 --
--- See https://www.terraform.io/docs/providers/aws/r/db_subnet_group.html
--- in the terraform documentation for descriptions of the arguments and attributes.
--- (Note that attribute and argument names all have the prefix 'dsg_')
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/db_subnet_group.html aws_db_subnet_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'dsg_')
 
 awsDbSubnetGroup :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] -> AwsDbSubnetGroupOptions -> TF AwsDbSubnetGroup
 awsDbSubnetGroup name0 name' subnetIds opts = awsDbSubnetGroup' name0 (AwsDbSubnetGroupParams name' subnetIds opts)
