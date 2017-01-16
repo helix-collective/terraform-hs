@@ -44,11 +44,13 @@ module Language.Terraform.Core(
   output,
   resourceAttr,
   dependsOn,
+  localExecProvisioner,
   withNameScope,
   scopedName,
   generateFiles,
   ) where
 
+import Data.Maybe(fromMaybe)
 import Data.Monoid
 import Control.Monad(void)
 import Control.Monad.Trans.State.Lazy(StateT,get,put,modify',runStateT)
@@ -86,6 +88,11 @@ data Resource = Resource {
 data Output  = Output {
   o_name :: [NameElement],
   o_value :: T.Text
+}
+
+data Provisioner = Provisioner {
+  pv_type :: T.Text,
+  pv_fields :: ResourceFieldMap
 }
 
 -- | A map to be embedded in the terraform output.
@@ -154,7 +161,8 @@ data TFState = TFState {
   tf_providers :: [Provider],
   tf_resources :: [Resource],
   tf_outputs :: [Output],
-  tf_dependencies :: S.Set (ResourceId,ResourceId)
+  tf_dependencies :: S.Set (ResourceId,ResourceId),
+  tf_provisioners :: M.Map ResourceId [Provisioner]
   }
 
 -- | A state monad over IO that accumulates the
@@ -215,6 +223,12 @@ output name0 value = do
 dependsOn :: (IsResource r1,IsResource r2) => r1 -> r2 -> TF ()
 dependsOn r1 r2 = modify' (\s->s{tf_dependencies=S.insert (resourceId r1, resourceId r2) (tf_dependencies s)})
 
+-- | Add a local command to run after a resource is provisioned
+localExecProvisioner :: IsResource r => r -> T.Text -> TF ()
+localExecProvisioner r command = modify' (\s->s{tf_provisioners=M.insertWith (<>) (resourceId r) [provisioner] (tf_provisioners s)})
+  where
+    provisioner = Provisioner "local-exec" (M.singleton "command" (RF_Text command))
+
 -- | Execute the TF monadic action to generating the graph of terraform
 -- resources, writing them to the specified directory.
 generateFiles :: FilePath -> TF a -> IO a
@@ -231,7 +245,7 @@ generateFiles outDir tfa = do
     T.writeFile (outDir </> T.unpack file <> ".tf") (T.intercalate "\n\n" content)
   return a
   where
-    state0 = TFState [] [] [] [] S.empty
+    state0 = TFState [] [] [] [] S.empty M.empty
     matchName0 n ns = case reverse ns of
       (n0:_) -> n == n0
       _ -> False
@@ -248,6 +262,14 @@ generateFiles outDir tfa = do
       [ T.template  "resource \"$1\" \"$2\" {" [r_type r, nameText (r_name r)] ]
       <>
       generateFieldMap "  " fieldMap
+      <> 
+      mconcat [ [T.template "  provisioner \"$1\" {" [pv_type pv]]
+                <>
+                generateFieldMap "    " (pv_fields pv)
+                <>
+                ["  }"]
+                | pv <- provisioners ]
+                
       <>
       ["}"]
       )
@@ -255,9 +277,9 @@ generateFiles outDir tfa = do
         fieldMap = M.union (r_fields r) dependsMap
         dependsMap | null depends = M.empty
                    | otherwise = M.singleton "depends_on" (toResourceField [rtype <> "." <> nameText rname | (ResourceId rtype rname) <- depends])
+        provisioners = fromMaybe [] (M.lookup rid (tf_provisioners state))
         rid = ResourceId (r_type r) (r_name r)
         depends = [r2 | (r1,r2) <- S.toList (tf_dependencies state), r1 == rid]
-
 
     generateFieldMap indent fieldMap = concatMap generateField (M.toList fieldMap)
       where
