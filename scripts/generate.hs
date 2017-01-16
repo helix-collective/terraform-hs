@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Language.Terraform.Util.Text as T
@@ -30,6 +31,8 @@ awsHeader = clines
     , "type MetricUnit = T.Text"
     , "type DBEngine = T.Text"
     , "type DBInstanceClass = T.Text"
+    , "type HostedZoneId = T.Text"
+    , "type Route53RecordType = T.Text"
     , ""
     , "-- | Add an aws provider to the resource graph."
     , "--"
@@ -362,6 +365,36 @@ awsResources =
     , ("name", TFRef "T.Text")
     , ("arn", TFRef "Arn")
     ]
+
+  , resourceCode "aws_route53_zone" "r53z"
+    "https://www.terraform.io/docs/providers/aws/r/route53_zone.html"
+    [ ("name", NamedType "T.Text", Required)
+    , ("comment", NamedType "T.Text", OptionalWithDefault "\"Managed by Terraform\"")
+    , ("vpc_id", AwsIdRef "aws_vpc", Optional)
+    , ("vpc_region", NamedType "AwsRegion", Optional)
+    , ("force_destroy", NamedType "Bool", OptionalWithDefault "False")
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("zone_id", TFRef "HostedZoneId")
+    ]
+
+  , fieldsCode "Route53Alias" "r53a" True
+    [ ("zone_id", TFRef "HostedZoneId", Required)
+    , ("name", TFRef "T.Text", Required)
+    , ("evaluate_target_health", NamedType "Bool", Required)
+    ]
+
+  , resourceCode "aws_route53_record" "r53r"
+    "https://www.terraform.io/docs/providers/aws/r/route53_record.html"
+    [ ("zone_id", TFRef "HostedZoneId", Required)
+    , ("name", NamedType "T.Text", Required)
+    , ("type", NamedType "Route53RecordType", Required)
+    , ("ttl", NamedType "Int", Optional)
+    , ("records", FTList (TFRef "IpAddress"), OptionalWithDefault "[]")
+    , ("alias", NamedType "Route53AliasParams", Optional)
+    ]
+    [
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
@@ -510,7 +543,12 @@ resourceCode tftypename fieldprefix docurl args attrs
       ctemplate "instance IsResource $1 where" [htypename tftypename]
       <> CIndent (ctemplate "resourceId = $1_resource" [fieldprefix])
 
-    hfnname tftype = let (c1,cs) = T.splitAt 1 (htypename tftype) in T.toLower c1 <> cs
+    hfnname tftype = unreserve (T.toLower c1 <> cs)
+      where
+        (c1,cs) = T.splitAt 1 (htypename tftype)
+        unreserve n = if S.member n reserved then n <> "_" else n
+        reserved = S.fromList ["type","data","instance"]
+        
 
     hname n = fieldprefix <> "_" <> n
 

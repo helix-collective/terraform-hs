@@ -40,6 +40,8 @@ type MetricStatistic = T.Text
 type MetricUnit = T.Text
 type DBEngine = T.Text
 type DBInstanceClass = T.Text
+type HostedZoneId = T.Text
+type Route53RecordType = T.Text
 
 -- | Add an aws provider to the resource graph.
 --
@@ -1447,3 +1449,140 @@ data AwsDbSubnetGroup = AwsDbSubnetGroup
 
 instance IsResource AwsDbSubnetGroup where
   resourceId = dsg_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsRoute53Zone to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/route53_zone.html aws_route53_zone> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'r53z_')
+
+awsRoute53Zone :: NameElement -> T.Text -> AwsRoute53ZoneOptions -> TF AwsRoute53Zone
+awsRoute53Zone name0 name opts = awsRoute53Zone' name0 (AwsRoute53ZoneParams name opts)
+
+awsRoute53Zone' :: NameElement -> AwsRoute53ZoneParams -> TF AwsRoute53Zone
+awsRoute53Zone' name0 params = do
+  rid <- mkResource "aws_route53_zone" name0 (toResourceFieldMap params)
+  return AwsRoute53Zone
+    { r53z_zone_id = resourceAttr rid "zone_id"
+    , r53z_resource = rid
+    }
+
+data AwsRoute53ZoneParams = AwsRoute53ZoneParams
+  { r53z_name :: T.Text
+  , r53z_options :: AwsRoute53ZoneOptions
+  }
+
+data AwsRoute53ZoneOptions = AwsRoute53ZoneOptions
+  { r53z_comment :: T.Text
+  , r53z_vpc_id :: Maybe (TFRef (AwsId AwsVpc))
+  , r53z_vpc_region :: Maybe (AwsRegion)
+  , r53z_force_destroy :: Bool
+  , r53z_tags :: M.Map T.Text T.Text
+  }
+
+instance Default AwsRoute53ZoneOptions where
+  def = AwsRoute53ZoneOptions "Managed by Terraform" Nothing Nothing False M.empty
+
+instance ToResourceFieldMap AwsRoute53ZoneParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("name", toResourceField (r53z_name params))
+    , let v = r53z_comment (r53z_options params) in if v == "Managed by Terraform" then Nothing else (Just ("comment", toResourceField v))
+    , fmap (\v-> ("vpc_id", toResourceField v)) (r53z_vpc_id (r53z_options params))
+    , fmap (\v-> ("vpc_region", toResourceField v)) (r53z_vpc_region (r53z_options params))
+    , let v = r53z_force_destroy (r53z_options params) in if v == False then Nothing else (Just ("force_destroy", toResourceField v))
+    , let v = r53z_tags (r53z_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
+    ]
+
+instance ToResourceField AwsRoute53ZoneParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsRoute53Zone = AwsRoute53Zone
+  { r53z_zone_id :: TFRef HostedZoneId
+  , r53z_resource :: ResourceId
+  }
+
+instance IsResource AwsRoute53Zone where
+  resourceId = r53z_resource
+
+----------------------------------------------------------------------
+
+data Route53AliasParams = Route53AliasParams
+  { r53a_zone_id :: TFRef HostedZoneId
+  , r53a_name :: TFRef T.Text
+  , r53a_evaluate_target_health :: Bool
+  , r53a_options :: Route53AliasOptions
+  }
+  deriving (Eq)
+
+data Route53AliasOptions = Route53AliasOptions
+  { }
+  deriving (Eq)
+
+instance Default Route53AliasOptions where
+  def = Route53AliasOptions 
+
+instance ToResourceFieldMap Route53AliasParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("zone_id", toResourceField (r53a_zone_id params))
+    , Just ("name", toResourceField (r53a_name params))
+    , Just ("evaluate_target_health", toResourceField (r53a_evaluate_target_health params))
+    ]
+
+instance ToResourceField Route53AliasParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsRoute53Record to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/route53_record.html aws_route53_record> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'r53r_')
+
+awsRoute53Record :: NameElement -> TFRef HostedZoneId -> T.Text -> Route53RecordType -> AwsRoute53RecordOptions -> TF AwsRoute53Record
+awsRoute53Record name0 zoneId name type_ opts = awsRoute53Record' name0 (AwsRoute53RecordParams zoneId name type_ opts)
+
+awsRoute53Record' :: NameElement -> AwsRoute53RecordParams -> TF AwsRoute53Record
+awsRoute53Record' name0 params = do
+  rid <- mkResource "aws_route53_record" name0 (toResourceFieldMap params)
+  return AwsRoute53Record
+    { r53r_resource = rid
+    }
+
+data AwsRoute53RecordParams = AwsRoute53RecordParams
+  { r53r_zone_id :: TFRef HostedZoneId
+  , r53r_name :: T.Text
+  , r53r_type :: Route53RecordType
+  , r53r_options :: AwsRoute53RecordOptions
+  }
+
+data AwsRoute53RecordOptions = AwsRoute53RecordOptions
+  { r53r_ttl :: Maybe (Int)
+  , r53r_records :: [TFRef IpAddress]
+  , r53r_alias :: Maybe (Route53AliasParams)
+  }
+
+instance Default AwsRoute53RecordOptions where
+  def = AwsRoute53RecordOptions Nothing [] Nothing
+
+instance ToResourceFieldMap AwsRoute53RecordParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("zone_id", toResourceField (r53r_zone_id params))
+    , Just ("name", toResourceField (r53r_name params))
+    , Just ("type", toResourceField (r53r_type params))
+    , fmap (\v-> ("ttl", toResourceField v)) (r53r_ttl (r53r_options params))
+    , let v = r53r_records (r53r_options params) in if v == [] then Nothing else (Just ("records", toResourceField v))
+    , fmap (\v-> ("alias", toResourceField v)) (r53r_alias (r53r_options params))
+    ]
+
+instance ToResourceField AwsRoute53RecordParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsRoute53Record = AwsRoute53Record
+  { r53r_resource :: ResourceId
+  }
+
+instance IsResource AwsRoute53Record where
+  resourceId = r53r_resource
