@@ -1067,7 +1067,7 @@ instance Default AwsIamRoleOptions where
 
 instance ToResourceFieldMap AwsIamRoleParams where
   toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = iamr_name' (iamr_options params) in if v == "" then Nothing else (Just ("name'", toResourceField v))
+    [ let v = iamr_name' (iamr_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
     , let v = iamr_name_prefix (iamr_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
     , Just ("assume_role_policy", toResourceField (iamr_assume_role_policy params))
     , let v = iamr_path (iamr_options params) in if v == "" then Nothing else (Just ("path", toResourceField v))
@@ -1429,7 +1429,7 @@ instance Default AwsDbSubnetGroupOptions where
 
 instance ToResourceFieldMap AwsDbSubnetGroupParams where
   toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name'", toResourceField (dsg_name' params))
+    [ Just ("name", toResourceField (dsg_name' params))
     , let v = dsg_description (dsg_options params) in if v == "" then Nothing else (Just ("description", toResourceField v))
     , Just ("subnet_ids", toResourceField (dsg_subnet_ids params))
     , let v = dsg_tags (dsg_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))

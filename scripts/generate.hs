@@ -448,7 +448,9 @@ fieldsCode htypename fieldprefix deriveInstances args
     createValue (fname,ftype,OptionalWithDefault defv) =
       T.template "let v = $1 ($2_options params) in if v == $3 then Nothing else (Just $4)"[hname fname,fieldprefix,defv,fieldValue fname "v"]
 
-    fieldValue fname v = T.template "(\"$1\", toResourceField $2)" [fname,v]
+    fieldValue fname v = T.template "(\"$1\", toResourceField $2)" [dequote fname,v]
+
+    dequote = T.takeWhile (/= '\'')
 
     defaultInstance =
       ctemplate "instance Default $1Options where" [htypename]
