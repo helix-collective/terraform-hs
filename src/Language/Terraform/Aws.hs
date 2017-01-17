@@ -1331,7 +1331,7 @@ instance IsResource AwsCloudwatchMetricAlarm where
 -- (In this binding attribute and argument names all have the prefix 'db_')
 
 awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceOptions -> TF AwsDbInstance
-awsDbInstance name0 allocatedStorage engine instanceClass username password opts = awsDbInstance' name0 (AwsDbInstanceParams allocatedStorage engine instanceClass username password opts)
+awsDbInstance name0 allocatedStorage engine instanceClass username' password opts = awsDbInstance' name0 (AwsDbInstanceParams allocatedStorage engine instanceClass username' password opts)
 
 awsDbInstance' :: NameElement -> AwsDbInstanceParams -> TF AwsDbInstance
 awsDbInstance' name0 params = do
@@ -1339,7 +1339,9 @@ awsDbInstance' name0 params = do
   return AwsDbInstance
     { db_id = resourceAttr rid "id"
     , db_arn = resourceAttr rid "arn"
+    , db_name = resourceAttr rid "name"
     , db_address = resourceAttr rid "address"
+    , db_username = resourceAttr rid "username"
     , db_resource = rid
     }
 
@@ -1347,7 +1349,7 @@ data AwsDbInstanceParams = AwsDbInstanceParams
   { db_allocated_storage :: Int
   , db_engine :: DBEngine
   , db_instance_class :: DBInstanceClass
-  , db_username :: T.Text
+  , db_username' :: T.Text
   , db_password :: T.Text
   , db_options :: AwsDbInstanceOptions
   }
@@ -1355,6 +1357,7 @@ data AwsDbInstanceParams = AwsDbInstanceParams
 data AwsDbInstanceOptions = AwsDbInstanceOptions
   { db_engine_version :: T.Text
   , db_identifier :: T.Text
+  , db_name' :: T.Text
   , db_publicly_accessible :: Bool
   , db_backup_retention_period :: Int
   , db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
@@ -1363,7 +1366,7 @@ data AwsDbInstanceOptions = AwsDbInstanceOptions
   }
 
 instance Default AwsDbInstanceOptions where
-  def = AwsDbInstanceOptions "" "" False 0 [] Nothing M.empty
+  def = AwsDbInstanceOptions "" "" "" False 0 [] Nothing M.empty
 
 instance ToResourceFieldMap AwsDbInstanceParams where
   toResourceFieldMap params = M.fromList $ catMaybes
@@ -1372,7 +1375,8 @@ instance ToResourceFieldMap AwsDbInstanceParams where
     , let v = db_engine_version (db_options params) in if v == "" then Nothing else (Just ("engine_version", toResourceField v))
     , let v = db_identifier (db_options params) in if v == "" then Nothing else (Just ("identifier", toResourceField v))
     , Just ("instance_class", toResourceField (db_instance_class params))
-    , Just ("username", toResourceField (db_username params))
+    , let v = db_name' (db_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
+    , Just ("username", toResourceField (db_username' params))
     , Just ("password", toResourceField (db_password params))
     , let v = db_publicly_accessible (db_options params) in if v == False then Nothing else (Just ("publicly_accessible", toResourceField v))
     , let v = db_backup_retention_period (db_options params) in if v == 0 then Nothing else (Just ("backup_retention_period", toResourceField v))
@@ -1387,7 +1391,9 @@ instance ToResourceField AwsDbInstanceParams where
 data AwsDbInstance = AwsDbInstance
   { db_id :: TFRef (AwsId AwsDbInstance)
   , db_arn :: TFRef Arn
+  , db_name :: TFRef T.Text
   , db_address :: TFRef T.Text
+  , db_username :: TFRef T.Text
   , db_resource :: ResourceId
   }
 

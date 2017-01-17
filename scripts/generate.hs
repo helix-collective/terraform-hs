@@ -341,7 +341,8 @@ awsResources =
     , ("engine_version", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("identifier", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("instance_class", NamedType "DBInstanceClass", Required)
-    , ("username", NamedType "T.Text", Required)
+    , ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("username'", NamedType "T.Text", Required)
     , ("password", NamedType "T.Text", Required)
     , ("publicly_accessible", NamedType "Bool", OptionalWithDefault "False")
     , ("backup_retention_period", NamedType "Int", OptionalWithDefault "0")
@@ -351,7 +352,9 @@ awsResources =
     ]
     [ ("id", AwsIdRef "aws_db_instance")
     , ("arn", TFRef "Arn")
+    , ("name", TFRef "T.Text")
     , ("address", TFRef "T.Text")
+    , ("username", TFRef "T.Text")
     ]
     
   , resourceCode "aws_db_subnet_group" "dsg"
