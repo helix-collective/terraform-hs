@@ -47,6 +47,7 @@ module Language.Terraform.Core(
   localExecProvisioner,
   withNameScope,
   scopedName,
+  scopedName',
   generateFiles,
   ) where
 
@@ -177,6 +178,13 @@ scopedName :: NameElement -> TF T.Text
 scopedName name0 = do
   context <- tf_context <$> get
   return (nameText (name0:context))
+
+-- | Generate a global name based upon the the current scope, returning
+-- the name components.  
+scopedName' :: NameElement -> TF Name
+scopedName' name0 = do
+  context <- tf_context <$> get
+  return (reverse (name0:context))
 
 -- | Provide a more specific naming scope for the specified terraform
 -- action.  
