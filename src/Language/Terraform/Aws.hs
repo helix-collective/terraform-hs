@@ -1341,6 +1341,7 @@ awsDbInstance' name0 params = do
     , db_arn = resourceAttr rid "arn"
     , db_name = resourceAttr rid "name"
     , db_address = resourceAttr rid "address"
+    , db_port = resourceAttr rid "port"
     , db_username = resourceAttr rid "username"
     , db_resource = rid
     }
@@ -1393,6 +1394,7 @@ data AwsDbInstance = AwsDbInstance
   , db_arn :: TFRef Arn
   , db_name :: TFRef T.Text
   , db_address :: TFRef T.Text
+  , db_port :: TFRef T.Text
   , db_username :: TFRef T.Text
   , db_resource :: ResourceId
   }

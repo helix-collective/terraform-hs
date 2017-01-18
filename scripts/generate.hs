@@ -354,6 +354,7 @@ awsResources =
     , ("arn", TFRef "Arn")
     , ("name", TFRef "T.Text")
     , ("address", TFRef "T.Text")
+    , ("port", TFRef "T.Text")
     , ("username", TFRef "T.Text")
     ]
     
