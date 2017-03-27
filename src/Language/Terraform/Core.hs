@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings,FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings,FlexibleInstances, ScopedTypeVariables #-}
 -- | An EDSL for generating terraform code.
 --
 -- The basic idea is that you compose an monadic `TF` action to specify
@@ -48,11 +48,15 @@ module Language.Terraform.Core(
   withNameScope,
   scopedName,
   scopedName',
+  withContext,
+  getContext,
   generateFiles,
   ) where
 
 import Data.Maybe(fromMaybe)
 import Data.Monoid
+import Data.Typeable
+import Data.Dynamic
 import Control.Monad(void)
 import Control.Monad.Trans.State.Lazy(StateT,get,put,modify',runStateT)
 import System.FilePath((</>))
@@ -158,7 +162,8 @@ instance ToResourceField a => ToResourceField (M.Map T.Text a) where
   toResourceField = RF_Map . M.map toResourceField
 
 data TFState = TFState {
-  tf_context :: [NameElement],
+  tf_nameContext :: [NameElement],
+  tf_context :: M.Map TypeRep Dynamic,
   tf_providers :: [Provider],
   tf_resources :: [Resource],
   tf_outputs :: [Output],
@@ -176,14 +181,14 @@ nameText nameElements = T.intercalate "_" (reverse nameElements)
 -- | Generate a global name based upon the the current scope.
 scopedName :: NameElement -> TF T.Text
 scopedName name0 = do
-  context <- tf_context <$> get
+  context <- tf_nameContext <$> get
   return (nameText (name0:context))
 
 -- | Generate a global name based upon the the current scope, returning
 -- the name components.  
 scopedName' :: NameElement -> TF Name
 scopedName' name0 = do
-  context <- tf_context <$> get
+  context <- tf_nameContext <$> get
   return (reverse (name0:context))
 
 -- | Provide a more specific naming scope for the specified terraform
@@ -191,16 +196,33 @@ scopedName' name0 = do
 withNameScope:: NameElement -> TF a -> TF a
 withNameScope name tfa = do
   s0 <- get
-  put s0{tf_context=name:tf_context s0}
+  put s0{tf_nameContext=name:tf_nameContext s0}
+  a <- tfa
+  s1 <- get
+  put s1{tf_nameContext=tf_nameContext s0}
+  return a
+
+withContext :: Typeable c => c ->  TF a -> TF a
+withContext c tfa = do
+  s0 <- get
+  let dyn = toDyn c
+  put s0{tf_context=M.insert (dynTypeRep dyn) dyn (tf_context s0)}
   a <- tfa
   s1 <- get
   put s1{tf_context=tf_context s0}
   return a
 
+getContext :: forall c . Typeable c => TF (Maybe c)
+getContext = do
+  s0 <- get
+  case M.lookup (typeRep (Proxy :: Proxy c)) (tf_context s0) of
+     Nothing -> return Nothing
+     (Just dyn) -> return (fromDynamic dyn)
+
 -- | Internal function for constructing terraform providers
 mkProvider :: TFType -> [(T.Text,ResourceField)] -> TF ()
 mkProvider tftype fields  = do
-  name <- fmap tf_context get
+  name <- fmap tf_nameContext get
   let provider = Provider tftype name (M.fromList fields)
   modify' (\s -> s{tf_providers=provider:tf_providers s})
 
@@ -208,7 +230,7 @@ mkProvider tftype fields  = do
 mkResource :: TFType -> NameElement -> ResourceFieldMap -> TF ResourceId 
 mkResource tftype name0 fieldmap  = do
   s <- get
-  let name = name0:tf_context s
+  let name = name0:tf_nameContext s
   let resource = Resource tftype name fieldmap
   modify' (\s -> s{tf_resources=resource:tf_resources s})
   return (ResourceId tftype name)
@@ -222,7 +244,7 @@ resourceAttr (ResourceId tftype name) attr = TFRef (T.template "${$1.$2.$3}" [tf
 output :: NameElement -> T.Text -> TF ()
 output name0 value = do
   s <- get
-  let name = name0:tf_context s
+  let name = name0:tf_nameContext s
   let output = Output name value
   modify' (\s -> s{tf_outputs=output:tf_outputs s})
 
@@ -253,7 +275,7 @@ generateFiles outDir tfa = do
     T.writeFile (outDir </> T.unpack file <> ".tf") (T.intercalate "\n\n" content)
   return a
   where
-    state0 = TFState [] [] [] [] S.empty M.empty
+    state0 = TFState [] M.empty [] [] [] S.empty M.empty
     matchName0 n ns = case reverse ns of
       (n0:_) -> n == n0
       _ -> False
