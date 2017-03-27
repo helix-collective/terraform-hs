@@ -1359,6 +1359,7 @@ data AwsDbInstanceOptions = AwsDbInstanceOptions
   { db_engine_version :: T.Text
   , db_identifier :: T.Text
   , db_name' :: T.Text
+  , db_port' :: Maybe (Int)
   , db_publicly_accessible :: Bool
   , db_backup_retention_period :: Int
   , db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
@@ -1367,7 +1368,7 @@ data AwsDbInstanceOptions = AwsDbInstanceOptions
   }
 
 instance Default AwsDbInstanceOptions where
-  def = AwsDbInstanceOptions "" "" "" False 0 [] Nothing M.empty
+  def = AwsDbInstanceOptions "" "" "" Nothing False 0 [] Nothing M.empty
 
 instance ToResourceFieldMap AwsDbInstanceParams where
   toResourceFieldMap params = M.fromList $ catMaybes
@@ -1377,6 +1378,7 @@ instance ToResourceFieldMap AwsDbInstanceParams where
     , let v = db_identifier (db_options params) in if v == "" then Nothing else (Just ("identifier", toResourceField v))
     , Just ("instance_class", toResourceField (db_instance_class params))
     , let v = db_name' (db_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
+    , fmap (\v-> ("port", toResourceField v)) (db_port' (db_options params))
     , Just ("username", toResourceField (db_username' params))
     , Just ("password", toResourceField (db_password params))
     , let v = db_publicly_accessible (db_options params) in if v == False then Nothing else (Just ("publicly_accessible", toResourceField v))

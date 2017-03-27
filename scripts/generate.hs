@@ -342,6 +342,7 @@ awsResources =
     , ("identifier", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("instance_class", NamedType "DBInstanceClass", Required)
     , ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("port'", NamedType "Int", Optional)
     , ("username'", NamedType "T.Text", Required)
     , ("password", NamedType "T.Text", Required)
     , ("publicly_accessible", NamedType "Bool", OptionalWithDefault "False")
