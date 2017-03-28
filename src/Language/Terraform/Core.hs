@@ -44,6 +44,7 @@ module Language.Terraform.Core(
   output,
   resourceAttr,
   dependsOn,
+  ignoreChanges,
   localExecProvisioner,
   withNameScope,
   scopedName,
@@ -168,6 +169,7 @@ data TFState = TFState {
   tf_resources :: [Resource],
   tf_outputs :: [Output],
   tf_dependencies :: S.Set (ResourceId,ResourceId),
+  tf_ignoreChanges :: M.Map ResourceId (S.Set T.Text),
   tf_provisioners :: M.Map ResourceId [Provisioner]
   }
 
@@ -253,6 +255,11 @@ output name0 value = do
 dependsOn :: (IsResource r1,IsResource r2) => r1 -> r2 -> TF ()
 dependsOn r1 r2 = modify' (\s->s{tf_dependencies=S.insert (resourceId r1, resourceId r2) (tf_dependencies s)})
 
+-- | Specify that a resource will ignore changes to the specified attribute
+-- (See https://www.terraform.io/docs/configuration/resources.html#ignore_changes)
+ignoreChanges :: (IsResource r) => r -> T.Text -> TF ()
+ignoreChanges r attr = modify' (\s->s{tf_ignoreChanges=M.insertWith (<>)(resourceId r) (S.singleton attr) (tf_ignoreChanges s)})
+
 -- | Add a local command to run after a resource is provisioned
 localExecProvisioner :: IsResource r => r -> T.Text -> TF ()
 localExecProvisioner r command = modify' (\s->s{tf_provisioners=M.insertWith (<>) (resourceId r) [provisioner] (tf_provisioners s)})
@@ -275,7 +282,7 @@ generateFiles outDir tfa = do
     T.writeFile (outDir </> T.unpack file <> ".tf") (T.intercalate "\n\n" content)
   return a
   where
-    state0 = TFState [] M.empty [] [] [] S.empty M.empty
+    state0 = TFState [] M.empty [] [] [] S.empty M.empty M.empty
     matchName0 n ns = case reverse ns of
       (n0:_) -> n == n0
       _ -> False
@@ -301,6 +308,8 @@ generateFiles outDir tfa = do
                 | pv <- provisioners ]
                 
       <>
+      lifecycle
+      <>
       ["}"]
       )
       where
@@ -310,6 +319,13 @@ generateFiles outDir tfa = do
         provisioners = fromMaybe [] (M.lookup rid (tf_provisioners state))
         rid = ResourceId (r_type r) (r_name r)
         depends = [r2 | (r1,r2) <- S.toList (tf_dependencies state), r1 == rid]
+        lifecycle = case M.lookup rid (tf_ignoreChanges state) of
+          Nothing -> mempty
+          (Just attrs) ->
+            [ "  lifecycle {"
+            , T.template "    ignore_changes = [$1]" [T.intercalate ", " [ "\"" <> attr <> "\"" | attr <- S.toList attrs]]
+            , "  }"
+            ]
 
     generateFieldMap indent fieldMap = concatMap generateField (M.toList fieldMap)
       where
