@@ -1,3 +1,5 @@
+#!/usr/bin/env stack
+{- stack --stack-yaml ./stack.yaml runghc --package terraform-hs -}
 {-# LANGUAGE OverloadedStrings #-}
 
 import qualified Data.Set as S
@@ -165,9 +167,11 @@ awsResources =
     "https://www.terraform.io/docs/providers/aws/r/instance.html"
     [ ("ami", NamedType "Ami", Required)
     , ("availability_zone", NamedType "AvailabilityZone", OptionalWithDefault "\"\"")
+    , ("ebs_optimized", NamedType "Bool", Optional)
     , ("instance_type", NamedType "InstanceType", Required)
     , ("key_name", NamedType "KeyName", Optional)
     , ("subnet_id", AwsIdRef "aws_subnet", Optional)
+    , ("associate_public_ip_address", NamedType "Bool", Optional)
     , ("root_block_device", NamedType "RootBlockDeviceParams", Optional)
     , ("user_data", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("iam_instance_profile", AwsIdRef "aws_iam_instance_profile", Optional)
@@ -177,6 +181,46 @@ awsResources =
     [ ("id", AwsIdRef "aws_instance")
     , ("public_ip", TFRef "IpAddress")
     , ("private_ip", TFRef "IpAddress")
+    ]
+
+  , resourceCode "aws_launch_configuration" "lc"
+    "https://www.terraform.io/docs/providers/aws/r/launch_configuration.html"
+    [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("image_id", NamedType "Ami", Required)
+    , ("instance_type",  NamedType "InstanceType", Required)
+    , ("iam_instance_profile", AwsIdRef "aws_iam_instance_profile", Optional)
+    , ("key_name", NamedType "KeyName", Optional)
+    , ("security_groups", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
+    , ("associate_public_ip_address", NamedType "Bool", Optional)
+    , ("user_data", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("ebs_optimized", NamedType "Bool", Optional)
+    ]
+    [ ("id", AwsIdRef "aws_launch_configuration")
+    , ("name", TFRef "T.Text")
+    ]
+
+  , resourceCode "aws_autoscaling_group" "ag"
+    "https://www.terraform.io/docs/providers/aws/r/autoscaling_group.html"
+    [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("max_size", NamedType "Int", Required)
+    , ("min_size", NamedType "Int", Required)
+    , ("vpc_zone_identifier", FTList (AwsIdRef "aws_subnet"), OptionalWithDefault "[]")
+    , ("launch_configuration", TFRef "T.Text", Required)
+    , ("load_balancers", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
+-- Needs to expand the list into to "map" tags
+--  , ("tag", FTList (NamedType "AsgTagParams"), OptionalWithDefault "[]")
+    ]
+    [ ("id", AwsIdRef "aws_autoscaling_group")
+    , ("arn", TFRef "Arn")
+    , ("name", TFRef "T.Text")
+    ]
+    
+  , fieldsCode "AsgTag" "asg" True
+    [ ("key", NamedType "T.Text", Required)
+    , ("value", NamedType "T.Text", Required)
+    , ("propagate_at_launch", NamedType "Bool", Required)
     ]
     
   , resourceCode  "aws_eip" "eip"
@@ -366,7 +410,7 @@ awsResources =
     , ("subnet_ids", FTList (AwsIdRef "aws_subnet"), Required)
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
-    [ ("id", AwsIdRef "aws_db_instance")
+    [ ("id", AwsIdRef "aws_db_subnet_group")
     , ("name", TFRef "T.Text")
     , ("arn", TFRef "Arn")
     ]
@@ -400,6 +444,32 @@ awsResources =
     ]
     [
     ]
+
+  , resourceCode "aws_sqs_queue" "sqs"
+    "https://www.terraform.io/docs/providers/aws/r/sqs_queue.html"
+    [ ("name", NamedType "T.Text", Required)
+    , ("visibility_timeout_seconds", NamedType "Int", OptionalWithDefault "30")
+    , ("message_retention_seconds", NamedType "Int", OptionalWithDefault "345600")
+    , ("max_message_size", NamedType "Int", OptionalWithDefault "262144")
+    , ("delay_seconds", NamedType "Int", OptionalWithDefault "0")
+    , ("receive_wait_time_seconds", NamedType "Int", OptionalWithDefault "0")
+    , ("policy", NamedType "T.Text", Optional)
+    , ("redrive_policy", NamedType "T.Text", Optional)
+    , ("fifo_queue", NamedType "Bool", OptionalWithDefault "False")
+    , ("content_based_deduplication", NamedType "Bool", OptionalWithDefault "False")
+    ]
+    [ ("id", AwsIdRef "aws_sqs_queue")
+    , ("arn", TFRef "Arn")
+    ]
+    
+  , resourceCode "aws_sqs_queue_policy" "sqsp"
+    "https://www.terraform.io/docs/providers/aws/r/sqs_queue_policy.html"
+    [ ("queue_url", NamedType "T.Text", Required)
+    , ("policy", NamedType "T.Text", Required)
+    ]
+    [
+    ]
+
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
@@ -478,7 +548,7 @@ fieldsCode htypename fieldprefix deriveInstances args
       <> CIndent
          (cline "toResourceField = RF_Map . toResourceFieldMap "
          )
-        
+
     createValue (fname,ftype,Required) =
       T.template "Just $1" [fieldValue fname (T.template "($1 params)" [hname fname])]
     createValue (fname,ftype,Optional) =

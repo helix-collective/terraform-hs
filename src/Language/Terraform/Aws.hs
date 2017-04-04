@@ -595,8 +595,10 @@ data AwsInstanceParams = AwsInstanceParams
 
 data AwsInstanceOptions = AwsInstanceOptions
   { i_availability_zone :: AvailabilityZone
+  , i_ebs_optimized :: Maybe (Bool)
   , i_key_name :: Maybe (KeyName)
   , i_subnet_id :: Maybe (TFRef (AwsId AwsSubnet))
+  , i_associate_public_ip_address :: Maybe (Bool)
   , i_root_block_device :: Maybe (RootBlockDeviceParams)
   , i_user_data :: T.Text
   , i_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
@@ -605,15 +607,17 @@ data AwsInstanceOptions = AwsInstanceOptions
   }
 
 instance Default AwsInstanceOptions where
-  def = AwsInstanceOptions "" Nothing Nothing Nothing "" Nothing [] M.empty
+  def = AwsInstanceOptions "" Nothing Nothing Nothing Nothing Nothing "" Nothing [] M.empty
 
 instance ToResourceFieldMap AwsInstanceParams where
   toResourceFieldMap params = M.fromList $ catMaybes
     [ Just ("ami", toResourceField (i_ami params))
     , let v = i_availability_zone (i_options params) in if v == "" then Nothing else (Just ("availability_zone", toResourceField v))
+    , fmap (\v-> ("ebs_optimized", toResourceField v)) (i_ebs_optimized (i_options params))
     , Just ("instance_type", toResourceField (i_instance_type params))
     , fmap (\v-> ("key_name", toResourceField v)) (i_key_name (i_options params))
     , fmap (\v-> ("subnet_id", toResourceField v)) (i_subnet_id (i_options params))
+    , fmap (\v-> ("associate_public_ip_address", toResourceField v)) (i_associate_public_ip_address (i_options params))
     , fmap (\v-> ("root_block_device", toResourceField v)) (i_root_block_device (i_options params))
     , let v = i_user_data (i_options params) in if v == "" then Nothing else (Just ("user_data", toResourceField v))
     , fmap (\v-> ("iam_instance_profile", toResourceField v)) (i_iam_instance_profile (i_options params))
@@ -633,6 +637,161 @@ data AwsInstance = AwsInstance
 
 instance IsResource AwsInstance where
   resourceId = i_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLaunchConfiguration to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/launch_configuration.html aws_launch_configuration> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lc_')
+
+awsLaunchConfiguration :: NameElement -> Ami -> InstanceType -> AwsLaunchConfigurationOptions -> TF AwsLaunchConfiguration
+awsLaunchConfiguration name0 imageId instanceType opts = awsLaunchConfiguration' name0 (AwsLaunchConfigurationParams imageId instanceType opts)
+
+awsLaunchConfiguration' :: NameElement -> AwsLaunchConfigurationParams -> TF AwsLaunchConfiguration
+awsLaunchConfiguration' name0 params = do
+  rid <- mkResource "aws_launch_configuration" name0 (toResourceFieldMap params)
+  return AwsLaunchConfiguration
+    { lc_id = resourceAttr rid "id"
+    , lc_name = resourceAttr rid "name"
+    , lc_resource = rid
+    }
+
+data AwsLaunchConfigurationParams = AwsLaunchConfigurationParams
+  { lc_image_id :: Ami
+  , lc_instance_type :: InstanceType
+  , lc_options :: AwsLaunchConfigurationOptions
+  }
+
+data AwsLaunchConfigurationOptions = AwsLaunchConfigurationOptions
+  { lc_name' :: T.Text
+  , lc_name_prefix :: T.Text
+  , lc_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
+  , lc_key_name :: Maybe (KeyName)
+  , lc_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
+  , lc_associate_public_ip_address :: Maybe (Bool)
+  , lc_user_data :: T.Text
+  , lc_ebs_optimized :: Maybe (Bool)
+  }
+
+instance Default AwsLaunchConfigurationOptions where
+  def = AwsLaunchConfigurationOptions "" "" Nothing Nothing [] Nothing "" Nothing
+
+instance ToResourceFieldMap AwsLaunchConfigurationParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ let v = lc_name' (lc_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
+    , let v = lc_name_prefix (lc_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
+    , Just ("image_id", toResourceField (lc_image_id params))
+    , Just ("instance_type", toResourceField (lc_instance_type params))
+    , fmap (\v-> ("iam_instance_profile", toResourceField v)) (lc_iam_instance_profile (lc_options params))
+    , fmap (\v-> ("key_name", toResourceField v)) (lc_key_name (lc_options params))
+    , let v = lc_security_groups (lc_options params) in if v == [] then Nothing else (Just ("security_groups", toResourceField v))
+    , fmap (\v-> ("associate_public_ip_address", toResourceField v)) (lc_associate_public_ip_address (lc_options params))
+    , let v = lc_user_data (lc_options params) in if v == "" then Nothing else (Just ("user_data", toResourceField v))
+    , fmap (\v-> ("ebs_optimized", toResourceField v)) (lc_ebs_optimized (lc_options params))
+    ]
+
+instance ToResourceField AwsLaunchConfigurationParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsLaunchConfiguration = AwsLaunchConfiguration
+  { lc_id :: TFRef (AwsId AwsLaunchConfiguration)
+  , lc_name :: TFRef T.Text
+  , lc_resource :: ResourceId
+  }
+
+instance IsResource AwsLaunchConfiguration where
+  resourceId = lc_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsAutoscalingGroup to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/autoscaling_group.html aws_autoscaling_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ag_')
+
+awsAutoscalingGroup :: NameElement -> Int -> Int -> TFRef T.Text -> AwsAutoscalingGroupOptions -> TF AwsAutoscalingGroup
+awsAutoscalingGroup name0 maxSize minSize launchConfiguration opts = awsAutoscalingGroup' name0 (AwsAutoscalingGroupParams maxSize minSize launchConfiguration opts)
+
+awsAutoscalingGroup' :: NameElement -> AwsAutoscalingGroupParams -> TF AwsAutoscalingGroup
+awsAutoscalingGroup' name0 params = do
+  rid <- mkResource "aws_autoscaling_group" name0 (toResourceFieldMap params)
+  return AwsAutoscalingGroup
+    { ag_id = resourceAttr rid "id"
+    , ag_arn = resourceAttr rid "arn"
+    , ag_name = resourceAttr rid "name"
+    , ag_resource = rid
+    }
+
+data AwsAutoscalingGroupParams = AwsAutoscalingGroupParams
+  { ag_max_size :: Int
+  , ag_min_size :: Int
+  , ag_launch_configuration :: TFRef T.Text
+  , ag_options :: AwsAutoscalingGroupOptions
+  }
+
+data AwsAutoscalingGroupOptions = AwsAutoscalingGroupOptions
+  { ag_name' :: T.Text
+  , ag_name_prefix :: T.Text
+  , ag_vpc_zone_identifier :: [TFRef (AwsId AwsSubnet)]
+  , ag_load_balancers :: [TFRef T.Text]
+  }
+
+instance Default AwsAutoscalingGroupOptions where
+  def = AwsAutoscalingGroupOptions "" "" [] []
+
+instance ToResourceFieldMap AwsAutoscalingGroupParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ let v = ag_name' (ag_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
+    , let v = ag_name_prefix (ag_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
+    , Just ("max_size", toResourceField (ag_max_size params))
+    , Just ("min_size", toResourceField (ag_min_size params))
+    , let v = ag_vpc_zone_identifier (ag_options params) in if v == [] then Nothing else (Just ("vpc_zone_identifier", toResourceField v))
+    , Just ("launch_configuration", toResourceField (ag_launch_configuration params))
+    , let v = ag_load_balancers (ag_options params) in if v == [] then Nothing else (Just ("load_balancers", toResourceField v))
+    ]
+
+instance ToResourceField AwsAutoscalingGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsAutoscalingGroup = AwsAutoscalingGroup
+  { ag_id :: TFRef (AwsId AwsAutoscalingGroup)
+  , ag_arn :: TFRef Arn
+  , ag_name :: TFRef T.Text
+  , ag_resource :: ResourceId
+  }
+
+instance IsResource AwsAutoscalingGroup where
+  resourceId = ag_resource
+
+----------------------------------------------------------------------
+
+data AsgTagParams = AsgTagParams
+  { asg_key :: T.Text
+  , asg_value :: T.Text
+  , asg_propagate_at_launch :: Bool
+  , asg_options :: AsgTagOptions
+  }
+  deriving (Eq)
+
+data AsgTagOptions = AsgTagOptions
+  { }
+  deriving (Eq)
+
+instance Default AsgTagOptions where
+  def = AsgTagOptions 
+
+instance ToResourceFieldMap AsgTagParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("key", toResourceField (asg_key params))
+    , Just ("value", toResourceField (asg_value params))
+    , Just ("propagate_at_launch", toResourceField (asg_propagate_at_launch params))
+    ]
+
+instance ToResourceField AsgTagParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1451,7 +1610,7 @@ instance ToResourceField AwsDbSubnetGroupParams where
   toResourceField = RF_Map . toResourceFieldMap 
 
 data AwsDbSubnetGroup = AwsDbSubnetGroup
-  { dsg_id :: TFRef (AwsId AwsDbInstance)
+  { dsg_id :: TFRef (AwsId AwsDbSubnetGroup)
   , dsg_name :: TFRef T.Text
   , dsg_arn :: TFRef Arn
   , dsg_resource :: ResourceId
@@ -1596,3 +1755,115 @@ data AwsRoute53Record = AwsRoute53Record
 
 instance IsResource AwsRoute53Record where
   resourceId = r53r_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsSqsQueue to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/sqs_queue.html aws_sqs_queue> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'sqs_')
+
+awsSqsQueue :: NameElement -> T.Text -> AwsSqsQueueOptions -> TF AwsSqsQueue
+awsSqsQueue name0 name opts = awsSqsQueue' name0 (AwsSqsQueueParams name opts)
+
+awsSqsQueue' :: NameElement -> AwsSqsQueueParams -> TF AwsSqsQueue
+awsSqsQueue' name0 params = do
+  rid <- mkResource "aws_sqs_queue" name0 (toResourceFieldMap params)
+  return AwsSqsQueue
+    { sqs_id = resourceAttr rid "id"
+    , sqs_arn = resourceAttr rid "arn"
+    , sqs_resource = rid
+    }
+
+data AwsSqsQueueParams = AwsSqsQueueParams
+  { sqs_name :: T.Text
+  , sqs_options :: AwsSqsQueueOptions
+  }
+
+data AwsSqsQueueOptions = AwsSqsQueueOptions
+  { sqs_visibility_timeout_seconds :: Int
+  , sqs_message_retention_seconds :: Int
+  , sqs_max_message_size :: Int
+  , sqs_delay_seconds :: Int
+  , sqs_receive_wait_time_seconds :: Int
+  , sqs_policy :: Maybe (T.Text)
+  , sqs_redrive_policy :: Maybe (T.Text)
+  , sqs_fifo_queue :: Bool
+  , sqs_content_based_deduplication :: Bool
+  }
+
+instance Default AwsSqsQueueOptions where
+  def = AwsSqsQueueOptions 30 345600 262144 0 0 Nothing Nothing False False
+
+instance ToResourceFieldMap AwsSqsQueueParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("name", toResourceField (sqs_name params))
+    , let v = sqs_visibility_timeout_seconds (sqs_options params) in if v == 30 then Nothing else (Just ("visibility_timeout_seconds", toResourceField v))
+    , let v = sqs_message_retention_seconds (sqs_options params) in if v == 345600 then Nothing else (Just ("message_retention_seconds", toResourceField v))
+    , let v = sqs_max_message_size (sqs_options params) in if v == 262144 then Nothing else (Just ("max_message_size", toResourceField v))
+    , let v = sqs_delay_seconds (sqs_options params) in if v == 0 then Nothing else (Just ("delay_seconds", toResourceField v))
+    , let v = sqs_receive_wait_time_seconds (sqs_options params) in if v == 0 then Nothing else (Just ("receive_wait_time_seconds", toResourceField v))
+    , fmap (\v-> ("policy", toResourceField v)) (sqs_policy (sqs_options params))
+    , fmap (\v-> ("redrive_policy", toResourceField v)) (sqs_redrive_policy (sqs_options params))
+    , let v = sqs_fifo_queue (sqs_options params) in if v == False then Nothing else (Just ("fifo_queue", toResourceField v))
+    , let v = sqs_content_based_deduplication (sqs_options params) in if v == False then Nothing else (Just ("content_based_deduplication", toResourceField v))
+    ]
+
+instance ToResourceField AwsSqsQueueParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsSqsQueue = AwsSqsQueue
+  { sqs_id :: TFRef (AwsId AwsSqsQueue)
+  , sqs_arn :: TFRef Arn
+  , sqs_resource :: ResourceId
+  }
+
+instance IsResource AwsSqsQueue where
+  resourceId = sqs_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsSqsQueuePolicy to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/sqs_queue_policy.html aws_sqs_queue_policy> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'sqsp_')
+
+awsSqsQueuePolicy :: NameElement -> T.Text -> T.Text -> AwsSqsQueuePolicyOptions -> TF AwsSqsQueuePolicy
+awsSqsQueuePolicy name0 queueUrl policy opts = awsSqsQueuePolicy' name0 (AwsSqsQueuePolicyParams queueUrl policy opts)
+
+awsSqsQueuePolicy' :: NameElement -> AwsSqsQueuePolicyParams -> TF AwsSqsQueuePolicy
+awsSqsQueuePolicy' name0 params = do
+  rid <- mkResource "aws_sqs_queue_policy" name0 (toResourceFieldMap params)
+  return AwsSqsQueuePolicy
+    { sqsp_resource = rid
+    }
+
+data AwsSqsQueuePolicyParams = AwsSqsQueuePolicyParams
+  { sqsp_queue_url :: T.Text
+  , sqsp_policy :: T.Text
+  , sqsp_options :: AwsSqsQueuePolicyOptions
+  }
+
+data AwsSqsQueuePolicyOptions = AwsSqsQueuePolicyOptions
+  { }
+
+instance Default AwsSqsQueuePolicyOptions where
+  def = AwsSqsQueuePolicyOptions 
+
+instance ToResourceFieldMap AwsSqsQueuePolicyParams where
+  toResourceFieldMap params = M.fromList $ catMaybes
+    [ Just ("queue_url", toResourceField (sqsp_queue_url params))
+    , Just ("policy", toResourceField (sqsp_policy params))
+    ]
+
+instance ToResourceField AwsSqsQueuePolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsSqsQueuePolicy = AwsSqsQueuePolicy
+  { sqsp_resource :: ResourceId
+  }
+
+instance IsResource AwsSqsQueuePolicy where
+  resourceId = sqsp_resource

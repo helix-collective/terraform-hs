@@ -49,6 +49,7 @@ module Language.Terraform.Core(
   withNameScope,
   scopedName,
   scopedName',
+  nameContext,
   withContext,
   getContext,
   generateFiles,
@@ -192,6 +193,9 @@ scopedName' :: NameElement -> TF Name
 scopedName' name0 = do
   context <- tf_nameContext <$> get
   return (reverse (name0:context))
+
+nameContext :: TF [NameElement]
+nameContext = tf_nameContext <$> get
 
 -- | Provide a more specific naming scope for the specified terraform
 -- action.  
