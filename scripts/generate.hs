@@ -209,8 +209,7 @@ awsResources =
     , ("vpc_zone_identifier", FTList (AwsIdRef "aws_subnet"), OptionalWithDefault "[]")
     , ("launch_configuration", TFRef "T.Text", Required)
     , ("load_balancers", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
--- Needs to expand the list into to "map" tags
---  , ("tag", FTList (NamedType "AsgTagParams"), OptionalWithDefault "[]")
+    , ("tag", FTList (NamedType "AsgTagParams"), ExpandedList)
     ]
     [ ("id", AwsIdRef "aws_autoscaling_group")
     , ("arn", TFRef "Arn")
@@ -473,7 +472,7 @@ awsResources =
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
-data FieldMode = Required | Optional | OptionalWithDefault T.Text
+data FieldMode = Required | Optional | OptionalWithDefault T.Text | ExpandedList
 
 data Code = CEmpty
           | CLine T.Text      
@@ -540,8 +539,8 @@ fieldsCode htypename fieldprefix deriveInstances args
     toResourceInstance
       =  (ctemplate "instance ToResourceFieldMap $1Params where" [htypename])
       <> CIndent
-         (cline "toResourceFieldMap params = M.fromList $ catMaybes"
-         <> (CIndent (cgroup "[ " ", " "]"  (map createValue args)))
+         (cline "toResourceFieldMap params"
+         <> (CIndent (cgroup "=  " "<> " ""  (map createValue args)))
          )
       <> cblank
       <> (ctemplate "instance ToResourceField $1Params where" [htypename])
@@ -550,13 +549,13 @@ fieldsCode htypename fieldprefix deriveInstances args
          )
 
     createValue (fname,ftype,Required) =
-      T.template "Just $1" [fieldValue fname (T.template "($1 params)" [hname fname])]
+      T.template "rfmField \"$1\" ($2 params)" [dequote fname, hname fname]
     createValue (fname,ftype,Optional) =
-      T.template "fmap (\\v-> $1) ($2 ($3_options params))" [fieldValue fname "v",hname fname,fieldprefix]
+      T.template "rfmOptionalField \"$1\" ($2 ($3_options params))" [dequote fname, hname fname,fieldprefix]
     createValue (fname,ftype,OptionalWithDefault defv) =
-      T.template "let v = $1 ($2_options params) in if v == $3 then Nothing else (Just $4)"[hname fname,fieldprefix,defv,fieldValue fname "v"]
-
-    fieldValue fname v = T.template "(\"$1\", toResourceField $2)" [dequote fname,v]
+      T.template "rfmOptionalDefField \"$1\" $2 ($3 ($4_options params))" [dequote fname, defv, hname fname,fieldprefix]
+    createValue (fname,ftype,ExpandedList) =
+      T.template "rfmExpandedList \"$1\" ($2 ($3_options params))" [dequote fname, hname fname,fieldprefix]
 
     dequote = T.takeWhile (/= '\'')
 
@@ -631,12 +630,14 @@ htypename tftype = T.concat (map T.toTitle (T.splitOn "_" tftype))
 
 isOptional Optional = True
 isOptional (OptionalWithDefault _)  = True
+isOptional ExpandedList  = True
 isOptional _ = False
 
 optionalType ftype Optional = T.template "Maybe ($1)" [hftype ftype]
-optionalType ftype (OptionalWithDefault _) = hftype ftype
+optionalType ftype _ = hftype ftype
 
 optionalDefault  Required = "??"
+optionalDefault  ExpandedList = "[]"
 optionalDefault  Optional = "Nothing"
 optionalDefault (OptionalWithDefault def) = def
 

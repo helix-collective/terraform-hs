@@ -105,14 +105,14 @@ instance Default AwsVpcOptions where
   def = AwsVpcOptions Nothing True False False M.empty
 
 instance ToResourceFieldMap AwsVpcParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("cidr_block", toResourceField (vpc_cidr_block params))
-    , fmap (\v-> ("instance_tenancy", toResourceField v)) (vpc_instance_tenancy (vpc_options params))
-    , let v = vpc_enable_dns_support (vpc_options params) in if v == True then Nothing else (Just ("enable_dns_support", toResourceField v))
-    , let v = vpc_enable_dns_hostnames (vpc_options params) in if v == False then Nothing else (Just ("enable_dns_hostnames", toResourceField v))
-    , let v = vpc_enable_classic_link (vpc_options params) in if v == False then Nothing else (Just ("enable_classic_link", toResourceField v))
-    , let v = vpc_tags (vpc_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "cidr_block" (vpc_cidr_block params)
+    <> rfmOptionalField "instance_tenancy" (vpc_instance_tenancy (vpc_options params))
+    <> rfmOptionalDefField "enable_dns_support" True (vpc_enable_dns_support (vpc_options params))
+    <> rfmOptionalDefField "enable_dns_hostnames" False (vpc_enable_dns_hostnames (vpc_options params))
+    <> rfmOptionalDefField "enable_classic_link" False (vpc_enable_classic_link (vpc_options params))
+    <> rfmOptionalDefField "tags" M.empty (vpc_tags (vpc_options params))
+    
 
 instance ToResourceField AwsVpcParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -157,10 +157,10 @@ instance Default AwsNatGatewayOptions where
   def = AwsNatGatewayOptions 
 
 instance ToResourceFieldMap AwsNatGatewayParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("allocation_id", toResourceField (ng_allocation_id params))
-    , Just ("subnet_id", toResourceField (ng_subnet_id params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "allocation_id" (ng_allocation_id params)
+    <> rfmField "subnet_id" (ng_subnet_id params)
+    
 
 instance ToResourceField AwsNatGatewayParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -205,10 +205,10 @@ instance Default AwsInternetGatewayOptions where
   def = AwsInternetGatewayOptions M.empty
 
 instance ToResourceFieldMap AwsInternetGatewayParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("vpc_id", toResourceField (ig_vpc_id params))
-    , let v = ig_tags (ig_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (ig_vpc_id params)
+    <> rfmOptionalDefField "tags" M.empty (ig_tags (ig_options params))
+    
 
 instance ToResourceField AwsInternetGatewayParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -256,13 +256,13 @@ instance Default AwsSubnetOptions where
   def = AwsSubnetOptions False "" M.empty
 
 instance ToResourceFieldMap AwsSubnetParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("vpc_id", toResourceField (sn_vpc_id params))
-    , Just ("cidr_block", toResourceField (sn_cidr_block params))
-    , let v = sn_map_public_ip_on_launch (sn_options params) in if v == False then Nothing else (Just ("map_public_ip_on_launch", toResourceField v))
-    , let v = sn_availability_zone (sn_options params) in if v == "" then Nothing else (Just ("availability_zone", toResourceField v))
-    , let v = sn_tags (sn_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (sn_vpc_id params)
+    <> rfmField "cidr_block" (sn_cidr_block params)
+    <> rfmOptionalDefField "map_public_ip_on_launch" False (sn_map_public_ip_on_launch (sn_options params))
+    <> rfmOptionalDefField "availability_zone" "" (sn_availability_zone (sn_options params))
+    <> rfmOptionalDefField "tags" M.empty (sn_tags (sn_options params))
+    
 
 instance ToResourceField AwsSubnetParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -307,10 +307,10 @@ instance Default AwsRouteTableOptions where
   def = AwsRouteTableOptions M.empty
 
 instance ToResourceFieldMap AwsRouteTableParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("vpc_id", toResourceField (rt_vpc_id params))
-    , let v = rt_tags (rt_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (rt_vpc_id params)
+    <> rfmOptionalDefField "tags" M.empty (rt_tags (rt_options params))
+    
 
 instance ToResourceField AwsRouteTableParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -356,12 +356,12 @@ instance Default AwsRouteOptions where
   def = AwsRouteOptions Nothing Nothing
 
 instance ToResourceFieldMap AwsRouteParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("route_table_id", toResourceField (r_route_table_id params))
-    , Just ("destination_cidr_block", toResourceField (r_destination_cidr_block params))
-    , fmap (\v-> ("nat_gateway_id", toResourceField v)) (r_nat_gateway_id (r_options params))
-    , fmap (\v-> ("gateway_id", toResourceField v)) (r_gateway_id (r_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "route_table_id" (r_route_table_id params)
+    <> rfmField "destination_cidr_block" (r_destination_cidr_block params)
+    <> rfmOptionalField "nat_gateway_id" (r_nat_gateway_id (r_options params))
+    <> rfmOptionalField "gateway_id" (r_gateway_id (r_options params))
+    
 
 instance ToResourceField AwsRouteParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -405,10 +405,10 @@ instance Default AwsRouteTableAssociationOptions where
   def = AwsRouteTableAssociationOptions 
 
 instance ToResourceFieldMap AwsRouteTableAssociationParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("subnet_id", toResourceField (rta_subnet_id params))
-    , Just ("route_table_id", toResourceField (rta_route_table_id params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "subnet_id" (rta_subnet_id params)
+    <> rfmField "route_table_id" (rta_route_table_id params)
+    
 
 instance ToResourceField AwsRouteTableAssociationParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -440,12 +440,12 @@ instance Default IngressRuleOptions where
   def = IngressRuleOptions []
 
 instance ToResourceFieldMap IngressRuleParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("from_port", toResourceField (ir_from_port params))
-    , Just ("to_port", toResourceField (ir_to_port params))
-    , Just ("protocol", toResourceField (ir_protocol params))
-    , let v = ir_cidr_blocks (ir_options params) in if v == [] then Nothing else (Just ("cidr_blocks", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "from_port" (ir_from_port params)
+    <> rfmField "to_port" (ir_to_port params)
+    <> rfmField "protocol" (ir_protocol params)
+    <> rfmOptionalDefField "cidr_blocks" [] (ir_cidr_blocks (ir_options params))
+    
 
 instance ToResourceField IngressRuleParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -469,12 +469,12 @@ instance Default EgressRuleOptions where
   def = EgressRuleOptions []
 
 instance ToResourceFieldMap EgressRuleParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("from_port", toResourceField (er_from_port params))
-    , Just ("to_port", toResourceField (er_to_port params))
-    , Just ("protocol", toResourceField (er_protocol params))
-    , let v = er_cidr_blocks (er_options params) in if v == [] then Nothing else (Just ("cidr_blocks", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "from_port" (er_from_port params)
+    <> rfmField "to_port" (er_to_port params)
+    <> rfmField "protocol" (er_protocol params)
+    <> rfmOptionalDefField "cidr_blocks" [] (er_cidr_blocks (er_options params))
+    
 
 instance ToResourceField EgressRuleParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -517,15 +517,15 @@ instance Default AwsSecurityGroupOptions where
   def = AwsSecurityGroupOptions "" "" "" [] [] Nothing M.empty
 
 instance ToResourceFieldMap AwsSecurityGroupParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = sg_name (sg_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , let v = sg_name_prefix (sg_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
-    , let v = sg_description (sg_options params) in if v == "" then Nothing else (Just ("description", toResourceField v))
-    , let v = sg_ingress (sg_options params) in if v == [] then Nothing else (Just ("ingress", toResourceField v))
-    , let v = sg_egress (sg_options params) in if v == [] then Nothing else (Just ("egress", toResourceField v))
-    , fmap (\v-> ("vpc_id", toResourceField v)) (sg_vpc_id (sg_options params))
-    , let v = sg_tags (sg_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (sg_name (sg_options params))
+    <> rfmOptionalDefField "name_prefix" "" (sg_name_prefix (sg_options params))
+    <> rfmOptionalDefField "description" "" (sg_description (sg_options params))
+    <> rfmOptionalDefField "ingress" [] (sg_ingress (sg_options params))
+    <> rfmOptionalDefField "egress" [] (sg_egress (sg_options params))
+    <> rfmOptionalField "vpc_id" (sg_vpc_id (sg_options params))
+    <> rfmOptionalDefField "tags" M.empty (sg_tags (sg_options params))
+    
 
 instance ToResourceField AwsSecurityGroupParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -557,11 +557,11 @@ instance Default RootBlockDeviceOptions where
   def = RootBlockDeviceOptions "standard" Nothing True
 
 instance ToResourceFieldMap RootBlockDeviceParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = rbd_volume_type (rbd_options params) in if v == "standard" then Nothing else (Just ("volume_type", toResourceField v))
-    , fmap (\v-> ("volume_size", toResourceField v)) (rbd_volume_size (rbd_options params))
-    , let v = rbd_delete_on_termination (rbd_options params) in if v == True then Nothing else (Just ("delete_on_termination", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "volume_type" "standard" (rbd_volume_type (rbd_options params))
+    <> rfmOptionalField "volume_size" (rbd_volume_size (rbd_options params))
+    <> rfmOptionalDefField "delete_on_termination" True (rbd_delete_on_termination (rbd_options params))
+    
 
 instance ToResourceField RootBlockDeviceParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -610,20 +610,20 @@ instance Default AwsInstanceOptions where
   def = AwsInstanceOptions "" Nothing Nothing Nothing Nothing Nothing "" Nothing [] M.empty
 
 instance ToResourceFieldMap AwsInstanceParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("ami", toResourceField (i_ami params))
-    , let v = i_availability_zone (i_options params) in if v == "" then Nothing else (Just ("availability_zone", toResourceField v))
-    , fmap (\v-> ("ebs_optimized", toResourceField v)) (i_ebs_optimized (i_options params))
-    , Just ("instance_type", toResourceField (i_instance_type params))
-    , fmap (\v-> ("key_name", toResourceField v)) (i_key_name (i_options params))
-    , fmap (\v-> ("subnet_id", toResourceField v)) (i_subnet_id (i_options params))
-    , fmap (\v-> ("associate_public_ip_address", toResourceField v)) (i_associate_public_ip_address (i_options params))
-    , fmap (\v-> ("root_block_device", toResourceField v)) (i_root_block_device (i_options params))
-    , let v = i_user_data (i_options params) in if v == "" then Nothing else (Just ("user_data", toResourceField v))
-    , fmap (\v-> ("iam_instance_profile", toResourceField v)) (i_iam_instance_profile (i_options params))
-    , let v = i_vpc_security_group_ids (i_options params) in if v == [] then Nothing else (Just ("vpc_security_group_ids", toResourceField v))
-    , let v = i_tags (i_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "ami" (i_ami params)
+    <> rfmOptionalDefField "availability_zone" "" (i_availability_zone (i_options params))
+    <> rfmOptionalField "ebs_optimized" (i_ebs_optimized (i_options params))
+    <> rfmField "instance_type" (i_instance_type params)
+    <> rfmOptionalField "key_name" (i_key_name (i_options params))
+    <> rfmOptionalField "subnet_id" (i_subnet_id (i_options params))
+    <> rfmOptionalField "associate_public_ip_address" (i_associate_public_ip_address (i_options params))
+    <> rfmOptionalField "root_block_device" (i_root_block_device (i_options params))
+    <> rfmOptionalDefField "user_data" "" (i_user_data (i_options params))
+    <> rfmOptionalField "iam_instance_profile" (i_iam_instance_profile (i_options params))
+    <> rfmOptionalDefField "vpc_security_group_ids" [] (i_vpc_security_group_ids (i_options params))
+    <> rfmOptionalDefField "tags" M.empty (i_tags (i_options params))
+    
 
 instance ToResourceField AwsInstanceParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -679,18 +679,18 @@ instance Default AwsLaunchConfigurationOptions where
   def = AwsLaunchConfigurationOptions "" "" Nothing Nothing [] Nothing "" Nothing
 
 instance ToResourceFieldMap AwsLaunchConfigurationParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = lc_name' (lc_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , let v = lc_name_prefix (lc_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
-    , Just ("image_id", toResourceField (lc_image_id params))
-    , Just ("instance_type", toResourceField (lc_instance_type params))
-    , fmap (\v-> ("iam_instance_profile", toResourceField v)) (lc_iam_instance_profile (lc_options params))
-    , fmap (\v-> ("key_name", toResourceField v)) (lc_key_name (lc_options params))
-    , let v = lc_security_groups (lc_options params) in if v == [] then Nothing else (Just ("security_groups", toResourceField v))
-    , fmap (\v-> ("associate_public_ip_address", toResourceField v)) (lc_associate_public_ip_address (lc_options params))
-    , let v = lc_user_data (lc_options params) in if v == "" then Nothing else (Just ("user_data", toResourceField v))
-    , fmap (\v-> ("ebs_optimized", toResourceField v)) (lc_ebs_optimized (lc_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (lc_name' (lc_options params))
+    <> rfmOptionalDefField "name_prefix" "" (lc_name_prefix (lc_options params))
+    <> rfmField "image_id" (lc_image_id params)
+    <> rfmField "instance_type" (lc_instance_type params)
+    <> rfmOptionalField "iam_instance_profile" (lc_iam_instance_profile (lc_options params))
+    <> rfmOptionalField "key_name" (lc_key_name (lc_options params))
+    <> rfmOptionalDefField "security_groups" [] (lc_security_groups (lc_options params))
+    <> rfmOptionalField "associate_public_ip_address" (lc_associate_public_ip_address (lc_options params))
+    <> rfmOptionalDefField "user_data" "" (lc_user_data (lc_options params))
+    <> rfmOptionalField "ebs_optimized" (lc_ebs_optimized (lc_options params))
+    
 
 instance ToResourceField AwsLaunchConfigurationParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -737,21 +737,23 @@ data AwsAutoscalingGroupOptions = AwsAutoscalingGroupOptions
   , ag_name_prefix :: T.Text
   , ag_vpc_zone_identifier :: [TFRef (AwsId AwsSubnet)]
   , ag_load_balancers :: [TFRef T.Text]
+  , ag_tag :: [AsgTagParams]
   }
 
 instance Default AwsAutoscalingGroupOptions where
-  def = AwsAutoscalingGroupOptions "" "" [] []
+  def = AwsAutoscalingGroupOptions "" "" [] [] []
 
 instance ToResourceFieldMap AwsAutoscalingGroupParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = ag_name' (ag_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , let v = ag_name_prefix (ag_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
-    , Just ("max_size", toResourceField (ag_max_size params))
-    , Just ("min_size", toResourceField (ag_min_size params))
-    , let v = ag_vpc_zone_identifier (ag_options params) in if v == [] then Nothing else (Just ("vpc_zone_identifier", toResourceField v))
-    , Just ("launch_configuration", toResourceField (ag_launch_configuration params))
-    , let v = ag_load_balancers (ag_options params) in if v == [] then Nothing else (Just ("load_balancers", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (ag_name' (ag_options params))
+    <> rfmOptionalDefField "name_prefix" "" (ag_name_prefix (ag_options params))
+    <> rfmField "max_size" (ag_max_size params)
+    <> rfmField "min_size" (ag_min_size params)
+    <> rfmOptionalDefField "vpc_zone_identifier" [] (ag_vpc_zone_identifier (ag_options params))
+    <> rfmField "launch_configuration" (ag_launch_configuration params)
+    <> rfmOptionalDefField "load_balancers" [] (ag_load_balancers (ag_options params))
+    <> rfmExpandedList "tag" (ag_tag (ag_options params))
+    
 
 instance ToResourceField AwsAutoscalingGroupParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -784,11 +786,11 @@ instance Default AsgTagOptions where
   def = AsgTagOptions 
 
 instance ToResourceFieldMap AsgTagParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("key", toResourceField (asg_key params))
-    , Just ("value", toResourceField (asg_value params))
-    , Just ("propagate_at_launch", toResourceField (asg_propagate_at_launch params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "key" (asg_key params)
+    <> rfmField "value" (asg_value params)
+    <> rfmField "propagate_at_launch" (asg_propagate_at_launch params)
+    
 
 instance ToResourceField AsgTagParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -827,10 +829,10 @@ instance Default AwsEipOptions where
   def = AwsEipOptions False Nothing
 
 instance ToResourceFieldMap AwsEipParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = eip_vpc (eip_options params) in if v == False then Nothing else (Just ("vpc", toResourceField v))
-    , fmap (\v-> ("instance", toResourceField v)) (eip_instance (eip_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "vpc" False (eip_vpc (eip_options params))
+    <> rfmOptionalField "instance" (eip_instance (eip_options params))
+    
 
 instance ToResourceField AwsEipParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -864,12 +866,12 @@ instance Default AccessLogsOptions where
   def = AccessLogsOptions "" 60 True
 
 instance ToResourceFieldMap AccessLogsParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("bucket", toResourceField (al_bucket params))
-    , let v = al_bucket_prefix (al_options params) in if v == "" then Nothing else (Just ("bucket_prefix", toResourceField v))
-    , let v = al_interval (al_options params) in if v == 60 then Nothing else (Just ("interval", toResourceField v))
-    , let v = al_enabled (al_options params) in if v == True then Nothing else (Just ("enabled", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "bucket" (al_bucket params)
+    <> rfmOptionalDefField "bucket_prefix" "" (al_bucket_prefix (al_options params))
+    <> rfmOptionalDefField "interval" 60 (al_interval (al_options params))
+    <> rfmOptionalDefField "enabled" True (al_enabled (al_options params))
+    
 
 instance ToResourceField AccessLogsParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -894,13 +896,13 @@ instance Default ListenerOptions where
   def = ListenerOptions Nothing
 
 instance ToResourceFieldMap ListenerParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("instance_port", toResourceField (l_instance_port params))
-    , Just ("instance_protocol", toResourceField (l_instance_protocol params))
-    , Just ("lb_port", toResourceField (l_lb_port params))
-    , Just ("lb_protocol", toResourceField (l_lb_protocol params))
-    , fmap (\v-> ("ssl_certificate_id", toResourceField v)) (l_ssl_certificate_id (l_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "instance_port" (l_instance_port params)
+    <> rfmField "instance_protocol" (l_instance_protocol params)
+    <> rfmField "lb_port" (l_lb_port params)
+    <> rfmField "lb_protocol" (l_lb_protocol params)
+    <> rfmOptionalField "ssl_certificate_id" (l_ssl_certificate_id (l_options params))
+    
 
 instance ToResourceField ListenerParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -925,13 +927,13 @@ instance Default HealthCheckOptions where
   def = HealthCheckOptions 
 
 instance ToResourceFieldMap HealthCheckParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("healthy_threshold", toResourceField (hc_healthy_threshold params))
-    , Just ("unhealthy_threshold", toResourceField (hc_unhealthy_threshold params))
-    , Just ("target", toResourceField (hc_target params))
-    , Just ("interval", toResourceField (hc_interval params))
-    , Just ("timeout", toResourceField (hc_timeout params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "healthy_threshold" (hc_healthy_threshold params)
+    <> rfmField "unhealthy_threshold" (hc_unhealthy_threshold params)
+    <> rfmField "target" (hc_target params)
+    <> rfmField "interval" (hc_interval params)
+    <> rfmField "timeout" (hc_timeout params)
+    
 
 instance ToResourceField HealthCheckParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -975,16 +977,16 @@ instance Default AwsElbOptions where
   def = AwsElbOptions Nothing Nothing [] [] [] Nothing M.empty
 
 instance ToResourceFieldMap AwsElbParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ fmap (\v-> ("name", toResourceField v)) (elb_name (elb_options params))
-    , fmap (\v-> ("access_logs", toResourceField v)) (elb_access_logs (elb_options params))
-    , let v = elb_security_groups (elb_options params) in if v == [] then Nothing else (Just ("security_groups", toResourceField v))
-    , let v = elb_subnets (elb_options params) in if v == [] then Nothing else (Just ("subnets", toResourceField v))
-    , let v = elb_instances (elb_options params) in if v == [] then Nothing else (Just ("instances", toResourceField v))
-    , Just ("listener", toResourceField (elb_listener params))
-    , fmap (\v-> ("health_check", toResourceField v)) (elb_health_check (elb_options params))
-    , let v = elb_tags (elb_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalField "name" (elb_name (elb_options params))
+    <> rfmOptionalField "access_logs" (elb_access_logs (elb_options params))
+    <> rfmOptionalDefField "security_groups" [] (elb_security_groups (elb_options params))
+    <> rfmOptionalDefField "subnets" [] (elb_subnets (elb_options params))
+    <> rfmOptionalDefField "instances" [] (elb_instances (elb_options params))
+    <> rfmField "listener" (elb_listener params)
+    <> rfmOptionalField "health_check" (elb_health_check (elb_options params))
+    <> rfmOptionalDefField "tags" M.empty (elb_tags (elb_options params))
+    
 
 instance ToResourceField AwsElbParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1015,10 +1017,10 @@ instance Default BucketVersioningOptions where
   def = BucketVersioningOptions False False
 
 instance ToResourceFieldMap BucketVersioningParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = bv_enabled (bv_options params) in if v == False then Nothing else (Just ("enabled", toResourceField v))
-    , let v = bv_mfa_delete (bv_options params) in if v == False then Nothing else (Just ("mfa_delete", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "enabled" False (bv_enabled (bv_options params))
+    <> rfmOptionalDefField "mfa_delete" False (bv_mfa_delete (bv_options params))
+    
 
 instance ToResourceField BucketVersioningParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1041,11 +1043,11 @@ instance Default ExpirationOptions where
   def = ExpirationOptions Nothing Nothing False
 
 instance ToResourceFieldMap ExpirationParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ fmap (\v-> ("days", toResourceField v)) (e_days (e_options params))
-    , fmap (\v-> ("date", toResourceField v)) (e_date (e_options params))
-    , let v = e_expired_object_delete_marker (e_options params) in if v == False then Nothing else (Just ("expired_object_delete_marker", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalField "days" (e_days (e_options params))
+    <> rfmOptionalField "date" (e_date (e_options params))
+    <> rfmOptionalDefField "expired_object_delete_marker" False (e_expired_object_delete_marker (e_options params))
+    
 
 instance ToResourceField ExpirationParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1069,12 +1071,12 @@ instance Default LifecycleRuleOptions where
   def = LifecycleRuleOptions Nothing Nothing
 
 instance ToResourceFieldMap LifecycleRuleParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ fmap (\v-> ("id", toResourceField v)) (lr_id (lr_options params))
-    , Just ("prefix", toResourceField (lr_prefix params))
-    , Just ("enabled", toResourceField (lr_enabled params))
-    , fmap (\v-> ("expiration", toResourceField v)) (lr_expiration (lr_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalField "id" (lr_id (lr_options params))
+    <> rfmField "prefix" (lr_prefix params)
+    <> rfmField "enabled" (lr_enabled params)
+    <> rfmOptionalField "expiration" (lr_expiration (lr_options params))
+    
 
 instance ToResourceField LifecycleRuleParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1114,13 +1116,13 @@ instance Default AwsS3BucketOptions where
   def = AwsS3BucketOptions "private" M.empty Nothing Nothing
 
 instance ToResourceFieldMap AwsS3BucketParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("bucket", toResourceField (s3_bucket params))
-    , let v = s3_acl (s3_options params) in if v == "private" then Nothing else (Just ("acl", toResourceField v))
-    , let v = s3_tags (s3_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    , fmap (\v-> ("versioning", toResourceField v)) (s3_versioning (s3_options params))
-    , fmap (\v-> ("lifecycle_rule", toResourceField v)) (s3_lifecycle_rule (s3_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "bucket" (s3_bucket params)
+    <> rfmOptionalDefField "acl" "private" (s3_acl (s3_options params))
+    <> rfmOptionalDefField "tags" M.empty (s3_tags (s3_options params))
+    <> rfmOptionalField "versioning" (s3_versioning (s3_options params))
+    <> rfmOptionalField "lifecycle_rule" (s3_lifecycle_rule (s3_options params))
+    
 
 instance ToResourceField AwsS3BucketParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1169,12 +1171,12 @@ instance Default AwsS3BucketObjectOptions where
   def = AwsS3BucketObjectOptions Nothing Nothing
 
 instance ToResourceFieldMap AwsS3BucketObjectParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("bucket", toResourceField (s3o_bucket params))
-    , Just ("key", toResourceField (s3o_key params))
-    , fmap (\v-> ("source", toResourceField v)) (s3o_source (s3o_options params))
-    , fmap (\v-> ("content", toResourceField v)) (s3o_content (s3o_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "bucket" (s3o_bucket params)
+    <> rfmField "key" (s3o_key params)
+    <> rfmOptionalField "source" (s3o_source (s3o_options params))
+    <> rfmOptionalField "content" (s3o_content (s3o_options params))
+    
 
 instance ToResourceField AwsS3BucketObjectParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1227,12 +1229,12 @@ instance Default AwsIamRoleOptions where
   def = AwsIamRoleOptions "" "" ""
 
 instance ToResourceFieldMap AwsIamRoleParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = iamr_name' (iamr_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , let v = iamr_name_prefix (iamr_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
-    , Just ("assume_role_policy", toResourceField (iamr_assume_role_policy params))
-    , let v = iamr_path (iamr_options params) in if v == "" then Nothing else (Just ("path", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (iamr_name' (iamr_options params))
+    <> rfmOptionalDefField "name_prefix" "" (iamr_name_prefix (iamr_options params))
+    <> rfmField "assume_role_policy" (iamr_assume_role_policy params)
+    <> rfmOptionalDefField "path" "" (iamr_path (iamr_options params))
+    
 
 instance ToResourceField AwsIamRoleParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1286,12 +1288,12 @@ instance Default AwsIamInstanceProfileOptions where
   def = AwsIamInstanceProfileOptions "" "" "/" []
 
 instance ToResourceFieldMap AwsIamInstanceProfileParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ let v = iamip_name (iamip_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , let v = iamip_name_prefix (iamip_options params) in if v == "" then Nothing else (Just ("name_prefix", toResourceField v))
-    , let v = iamip_path (iamip_options params) in if v == "/" then Nothing else (Just ("path", toResourceField v))
-    , let v = iamip_roles (iamip_options params) in if v == [] then Nothing else (Just ("roles", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (iamip_name (iamip_options params))
+    <> rfmOptionalDefField "name_prefix" "" (iamip_name_prefix (iamip_options params))
+    <> rfmOptionalDefField "path" "/" (iamip_path (iamip_options params))
+    <> rfmOptionalDefField "roles" [] (iamip_roles (iamip_options params))
+    
 
 instance ToResourceField AwsIamInstanceProfileParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1340,11 +1342,11 @@ instance Default AwsIamRolePolicyOptions where
   def = AwsIamRolePolicyOptions 
 
 instance ToResourceFieldMap AwsIamRolePolicyParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name", toResourceField (iamrp_name params))
-    , Just ("policy", toResourceField (iamrp_policy params))
-    , Just ("role", toResourceField (iamrp_role params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "name" (iamrp_name params)
+    <> rfmField "policy" (iamrp_policy params)
+    <> rfmField "role" (iamrp_role params)
+    
 
 instance ToResourceField AwsIamRolePolicyParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1390,10 +1392,10 @@ instance Default AwsSnsTopicOptions where
   def = AwsSnsTopicOptions ""
 
 instance ToResourceFieldMap AwsSnsTopicParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name", toResourceField (sns_name params))
-    , let v = sns_display_name (sns_options params) in if v == "" then Nothing else (Just ("display_name", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "name" (sns_name params)
+    <> rfmOptionalDefField "display_name" "" (sns_display_name (sns_options params))
+    
 
 instance ToResourceField AwsSnsTopicParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1452,23 +1454,23 @@ instance Default AwsCloudwatchMetricAlarmOptions where
   def = AwsCloudwatchMetricAlarmOptions True [] "" M.empty [] [] ""
 
 instance ToResourceFieldMap AwsCloudwatchMetricAlarmParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("alarm_name", toResourceField (cma_alarm_name params))
-    , Just ("comparison_operator", toResourceField (cma_comparison_operator params))
-    , Just ("evaluation_periods", toResourceField (cma_evaluation_periods params))
-    , Just ("metric_name", toResourceField (cma_metric_name params))
-    , Just ("namespace", toResourceField (cma_namespace params))
-    , Just ("period", toResourceField (cma_period params))
-    , Just ("statistic", toResourceField (cma_statistic params))
-    , Just ("threshold", toResourceField (cma_threshold params))
-    , let v = cma_actions_enabled (cma_options params) in if v == True then Nothing else (Just ("actions_enabled", toResourceField v))
-    , let v = cma_alarm_actions (cma_options params) in if v == [] then Nothing else (Just ("alarm_actions", toResourceField v))
-    , let v = cma_alarm_description (cma_options params) in if v == "" then Nothing else (Just ("alarm_description", toResourceField v))
-    , let v = cma_dimensions (cma_options params) in if v == M.empty then Nothing else (Just ("dimensions", toResourceField v))
-    , let v = cma_insufficient_data_actions (cma_options params) in if v == [] then Nothing else (Just ("insufficient_data_actions", toResourceField v))
-    , let v = cma_ok_actions (cma_options params) in if v == [] then Nothing else (Just ("ok_actions", toResourceField v))
-    , let v = cma_unit (cma_options params) in if v == "" then Nothing else (Just ("unit", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "alarm_name" (cma_alarm_name params)
+    <> rfmField "comparison_operator" (cma_comparison_operator params)
+    <> rfmField "evaluation_periods" (cma_evaluation_periods params)
+    <> rfmField "metric_name" (cma_metric_name params)
+    <> rfmField "namespace" (cma_namespace params)
+    <> rfmField "period" (cma_period params)
+    <> rfmField "statistic" (cma_statistic params)
+    <> rfmField "threshold" (cma_threshold params)
+    <> rfmOptionalDefField "actions_enabled" True (cma_actions_enabled (cma_options params))
+    <> rfmOptionalDefField "alarm_actions" [] (cma_alarm_actions (cma_options params))
+    <> rfmOptionalDefField "alarm_description" "" (cma_alarm_description (cma_options params))
+    <> rfmOptionalDefField "dimensions" M.empty (cma_dimensions (cma_options params))
+    <> rfmOptionalDefField "insufficient_data_actions" [] (cma_insufficient_data_actions (cma_options params))
+    <> rfmOptionalDefField "ok_actions" [] (cma_ok_actions (cma_options params))
+    <> rfmOptionalDefField "unit" "" (cma_unit (cma_options params))
+    
 
 instance ToResourceField AwsCloudwatchMetricAlarmParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1530,22 +1532,22 @@ instance Default AwsDbInstanceOptions where
   def = AwsDbInstanceOptions "" "" "" Nothing False 0 [] Nothing M.empty
 
 instance ToResourceFieldMap AwsDbInstanceParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("allocated_storage", toResourceField (db_allocated_storage params))
-    , Just ("engine", toResourceField (db_engine params))
-    , let v = db_engine_version (db_options params) in if v == "" then Nothing else (Just ("engine_version", toResourceField v))
-    , let v = db_identifier (db_options params) in if v == "" then Nothing else (Just ("identifier", toResourceField v))
-    , Just ("instance_class", toResourceField (db_instance_class params))
-    , let v = db_name' (db_options params) in if v == "" then Nothing else (Just ("name", toResourceField v))
-    , fmap (\v-> ("port", toResourceField v)) (db_port' (db_options params))
-    , Just ("username", toResourceField (db_username' params))
-    , Just ("password", toResourceField (db_password params))
-    , let v = db_publicly_accessible (db_options params) in if v == False then Nothing else (Just ("publicly_accessible", toResourceField v))
-    , let v = db_backup_retention_period (db_options params) in if v == 0 then Nothing else (Just ("backup_retention_period", toResourceField v))
-    , let v = db_vpc_security_group_ids (db_options params) in if v == [] then Nothing else (Just ("vpc_security_group_ids", toResourceField v))
-    , fmap (\v-> ("db_subnet_group_name", toResourceField v)) (db_db_subnet_group_name (db_options params))
-    , let v = db_tags (db_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "allocated_storage" (db_allocated_storage params)
+    <> rfmField "engine" (db_engine params)
+    <> rfmOptionalDefField "engine_version" "" (db_engine_version (db_options params))
+    <> rfmOptionalDefField "identifier" "" (db_identifier (db_options params))
+    <> rfmField "instance_class" (db_instance_class params)
+    <> rfmOptionalDefField "name" "" (db_name' (db_options params))
+    <> rfmOptionalField "port" (db_port' (db_options params))
+    <> rfmField "username" (db_username' params)
+    <> rfmField "password" (db_password params)
+    <> rfmOptionalDefField "publicly_accessible" False (db_publicly_accessible (db_options params))
+    <> rfmOptionalDefField "backup_retention_period" 0 (db_backup_retention_period (db_options params))
+    <> rfmOptionalDefField "vpc_security_group_ids" [] (db_vpc_security_group_ids (db_options params))
+    <> rfmOptionalField "db_subnet_group_name" (db_db_subnet_group_name (db_options params))
+    <> rfmOptionalDefField "tags" M.empty (db_tags (db_options params))
+    
 
 instance ToResourceField AwsDbInstanceParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1599,12 +1601,12 @@ instance Default AwsDbSubnetGroupOptions where
   def = AwsDbSubnetGroupOptions "" M.empty
 
 instance ToResourceFieldMap AwsDbSubnetGroupParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name", toResourceField (dsg_name' params))
-    , let v = dsg_description (dsg_options params) in if v == "" then Nothing else (Just ("description", toResourceField v))
-    , Just ("subnet_ids", toResourceField (dsg_subnet_ids params))
-    , let v = dsg_tags (dsg_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "name" (dsg_name' params)
+    <> rfmOptionalDefField "description" "" (dsg_description (dsg_options params))
+    <> rfmField "subnet_ids" (dsg_subnet_ids params)
+    <> rfmOptionalDefField "tags" M.empty (dsg_tags (dsg_options params))
+    
 
 instance ToResourceField AwsDbSubnetGroupParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1655,14 +1657,14 @@ instance Default AwsRoute53ZoneOptions where
   def = AwsRoute53ZoneOptions "Managed by Terraform" Nothing Nothing False M.empty
 
 instance ToResourceFieldMap AwsRoute53ZoneParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name", toResourceField (r53z_name params))
-    , let v = r53z_comment (r53z_options params) in if v == "Managed by Terraform" then Nothing else (Just ("comment", toResourceField v))
-    , fmap (\v-> ("vpc_id", toResourceField v)) (r53z_vpc_id (r53z_options params))
-    , fmap (\v-> ("vpc_region", toResourceField v)) (r53z_vpc_region (r53z_options params))
-    , let v = r53z_force_destroy (r53z_options params) in if v == False then Nothing else (Just ("force_destroy", toResourceField v))
-    , let v = r53z_tags (r53z_options params) in if v == M.empty then Nothing else (Just ("tags", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "name" (r53z_name params)
+    <> rfmOptionalDefField "comment" "Managed by Terraform" (r53z_comment (r53z_options params))
+    <> rfmOptionalField "vpc_id" (r53z_vpc_id (r53z_options params))
+    <> rfmOptionalField "vpc_region" (r53z_vpc_region (r53z_options params))
+    <> rfmOptionalDefField "force_destroy" False (r53z_force_destroy (r53z_options params))
+    <> rfmOptionalDefField "tags" M.empty (r53z_tags (r53z_options params))
+    
 
 instance ToResourceField AwsRoute53ZoneParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1693,11 +1695,11 @@ instance Default Route53AliasOptions where
   def = Route53AliasOptions 
 
 instance ToResourceFieldMap Route53AliasParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("zone_id", toResourceField (r53a_zone_id params))
-    , Just ("name", toResourceField (r53a_name params))
-    , Just ("evaluate_target_health", toResourceField (r53a_evaluate_target_health params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "zone_id" (r53a_zone_id params)
+    <> rfmField "name" (r53a_name params)
+    <> rfmField "evaluate_target_health" (r53a_evaluate_target_health params)
+    
 
 instance ToResourceField Route53AliasParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1737,14 +1739,14 @@ instance Default AwsRoute53RecordOptions where
   def = AwsRoute53RecordOptions Nothing [] Nothing
 
 instance ToResourceFieldMap AwsRoute53RecordParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("zone_id", toResourceField (r53r_zone_id params))
-    , Just ("name", toResourceField (r53r_name params))
-    , Just ("type", toResourceField (r53r_type params))
-    , fmap (\v-> ("ttl", toResourceField v)) (r53r_ttl (r53r_options params))
-    , let v = r53r_records (r53r_options params) in if v == [] then Nothing else (Just ("records", toResourceField v))
-    , fmap (\v-> ("alias", toResourceField v)) (r53r_alias (r53r_options params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "zone_id" (r53r_zone_id params)
+    <> rfmField "name" (r53r_name params)
+    <> rfmField "type" (r53r_type params)
+    <> rfmOptionalField "ttl" (r53r_ttl (r53r_options params))
+    <> rfmOptionalDefField "records" [] (r53r_records (r53r_options params))
+    <> rfmOptionalField "alias" (r53r_alias (r53r_options params))
+    
 
 instance ToResourceField AwsRoute53RecordParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1797,18 +1799,18 @@ instance Default AwsSqsQueueOptions where
   def = AwsSqsQueueOptions 30 345600 262144 0 0 Nothing Nothing False False
 
 instance ToResourceFieldMap AwsSqsQueueParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("name", toResourceField (sqs_name params))
-    , let v = sqs_visibility_timeout_seconds (sqs_options params) in if v == 30 then Nothing else (Just ("visibility_timeout_seconds", toResourceField v))
-    , let v = sqs_message_retention_seconds (sqs_options params) in if v == 345600 then Nothing else (Just ("message_retention_seconds", toResourceField v))
-    , let v = sqs_max_message_size (sqs_options params) in if v == 262144 then Nothing else (Just ("max_message_size", toResourceField v))
-    , let v = sqs_delay_seconds (sqs_options params) in if v == 0 then Nothing else (Just ("delay_seconds", toResourceField v))
-    , let v = sqs_receive_wait_time_seconds (sqs_options params) in if v == 0 then Nothing else (Just ("receive_wait_time_seconds", toResourceField v))
-    , fmap (\v-> ("policy", toResourceField v)) (sqs_policy (sqs_options params))
-    , fmap (\v-> ("redrive_policy", toResourceField v)) (sqs_redrive_policy (sqs_options params))
-    , let v = sqs_fifo_queue (sqs_options params) in if v == False then Nothing else (Just ("fifo_queue", toResourceField v))
-    , let v = sqs_content_based_deduplication (sqs_options params) in if v == False then Nothing else (Just ("content_based_deduplication", toResourceField v))
-    ]
+  toResourceFieldMap params
+    =  rfmField "name" (sqs_name params)
+    <> rfmOptionalDefField "visibility_timeout_seconds" 30 (sqs_visibility_timeout_seconds (sqs_options params))
+    <> rfmOptionalDefField "message_retention_seconds" 345600 (sqs_message_retention_seconds (sqs_options params))
+    <> rfmOptionalDefField "max_message_size" 262144 (sqs_max_message_size (sqs_options params))
+    <> rfmOptionalDefField "delay_seconds" 0 (sqs_delay_seconds (sqs_options params))
+    <> rfmOptionalDefField "receive_wait_time_seconds" 0 (sqs_receive_wait_time_seconds (sqs_options params))
+    <> rfmOptionalField "policy" (sqs_policy (sqs_options params))
+    <> rfmOptionalField "redrive_policy" (sqs_redrive_policy (sqs_options params))
+    <> rfmOptionalDefField "fifo_queue" False (sqs_fifo_queue (sqs_options params))
+    <> rfmOptionalDefField "content_based_deduplication" False (sqs_content_based_deduplication (sqs_options params))
+    
 
 instance ToResourceField AwsSqsQueueParams where
   toResourceField = RF_Map . toResourceFieldMap 
@@ -1853,10 +1855,10 @@ instance Default AwsSqsQueuePolicyOptions where
   def = AwsSqsQueuePolicyOptions 
 
 instance ToResourceFieldMap AwsSqsQueuePolicyParams where
-  toResourceFieldMap params = M.fromList $ catMaybes
-    [ Just ("queue_url", toResourceField (sqsp_queue_url params))
-    , Just ("policy", toResourceField (sqsp_policy params))
-    ]
+  toResourceFieldMap params
+    =  rfmField "queue_url" (sqsp_queue_url params)
+    <> rfmField "policy" (sqsp_policy params)
+    
 
 instance ToResourceField AwsSqsQueuePolicyParams where
   toResourceField = RF_Map . toResourceFieldMap 

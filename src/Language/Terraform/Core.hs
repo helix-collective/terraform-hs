@@ -33,6 +33,7 @@ module Language.Terraform.Core(
   IsResource(..),
   
   ResourceField(..),
+  ResourceFieldMap(..),
   TF,
   TFRef(..),
   NameElement,
@@ -53,6 +54,10 @@ module Language.Terraform.Core(
   withContext,
   getContext,
   generateFiles,
+  rfmField,
+  rfmOptionalField,
+  rfmOptionalDefField,
+  rfmExpandedList,
   ) where
 
 import Data.Maybe(fromMaybe)
@@ -103,7 +108,28 @@ data Provisioner = Provisioner {
 }
 
 -- | A map to be embedded in the terraform output.
-type ResourceFieldMap = M.Map T.Text ResourceField
+--
+-- we can't actually use a regular map here, as repeated
+-- keys are allowed.
+newtype ResourceFieldMap = ResourceFieldMap { unResourceFieldMap :: [(T.Text,ResourceField)] }
+
+instance Monoid ResourceFieldMap where
+  mempty = ResourceFieldMap []
+  mappend (ResourceFieldMap f1) (ResourceFieldMap f2) = ResourceFieldMap (f1 <> f2)
+
+rfmField :: ToResourceField f => T.Text -> f -> ResourceFieldMap
+rfmField field v = ResourceFieldMap [(field, toResourceField v)]
+
+rfmOptionalField :: ToResourceField f => T.Text -> Maybe f -> ResourceFieldMap
+rfmOptionalField _ Nothing = mempty
+rfmOptionalField field (Just v) = rfmField field v
+
+rfmOptionalDefField :: (Eq f,ToResourceField f) => T.Text -> f -> f -> ResourceFieldMap
+rfmOptionalDefField field defv v | defv == v = mempty
+                                 | otherwise = rfmField field v
+
+rfmExpandedList :: ToResourceField f => T.Text -> [f]  -> ResourceFieldMap
+rfmExpandedList field vs = ResourceFieldMap [(field, toResourceField v) | v <- vs]
 
 -- | A value to be embedded in the terraform output.
 data ResourceField = RF_Text T.Text
@@ -161,7 +187,7 @@ instance ToResourceField a => ToResourceField [a] where
   toResourceField = RF_List . map toResourceField
 
 instance ToResourceField a => ToResourceField (M.Map T.Text a) where
-  toResourceField = RF_Map . M.map toResourceField
+  toResourceField = RF_Map . ResourceFieldMap . M.toList . M.map toResourceField
 
 data TFState = TFState {
   tf_nameContext :: [NameElement],
@@ -229,7 +255,7 @@ getContext = do
 mkProvider :: TFType -> [(T.Text,ResourceField)] -> TF ()
 mkProvider tftype fields  = do
   name <- fmap tf_nameContext get
-  let provider = Provider tftype name (M.fromList fields)
+  let provider = Provider tftype name (ResourceFieldMap fields)
   modify' (\s -> s{tf_providers=provider:tf_providers s})
 
 -- | Internal function for constructing terraform resources
@@ -268,7 +294,7 @@ ignoreChanges r attr = modify' (\s->s{tf_ignoreChanges=M.insertWith (<>)(resourc
 localExecProvisioner :: IsResource r => r -> T.Text -> TF ()
 localExecProvisioner r command = modify' (\s->s{tf_provisioners=M.insertWith (<>) (resourceId r) [provisioner] (tf_provisioners s)})
   where
-    provisioner = Provisioner "local-exec" (M.singleton "command" (RF_Text command))
+    provisioner = Provisioner "local-exec" (ResourceFieldMap [("command", (RF_Text command))])
 
 -- | Execute the TF monadic action to generating the graph of terraform
 -- resources, writing them to the specified directory.
@@ -317,9 +343,9 @@ generateFiles outDir tfa = do
       ["}"]
       )
       where
-        fieldMap = M.union (r_fields r) dependsMap
-        dependsMap | null depends = M.empty
-                   | otherwise = M.singleton "depends_on" (toResourceField [rtype <> "." <> nameText rname | (ResourceId rtype rname) <- depends])
+        fieldMap = r_fields r <> dependsMap
+        dependsMap | null depends = mempty
+                   | otherwise = ResourceFieldMap [("depends_on",(toResourceField [rtype <> "." <> nameText rname | (ResourceId rtype rname) <- depends]))]
         provisioners = fromMaybe [] (M.lookup rid (tf_provisioners state))
         rid = ResourceId (r_type r) (r_name r)
         depends = [r2 | (r1,r2) <- S.toList (tf_dependencies state), r1 == rid]
@@ -331,7 +357,8 @@ generateFiles outDir tfa = do
             , "  }"
             ]
 
-    generateFieldMap indent fieldMap = concatMap generateField (M.toList fieldMap)
+    generateFieldMap :: T.Text -> ResourceFieldMap -> [T.Text]
+    generateFieldMap indent fieldMap = concatMap generateField (unResourceFieldMap fieldMap)
       where
         generateField (field,RF_Text value)  =  [T.template "$1$2 = $3" [indent,field,quotedText value]]
         generateField (field,RF_List values)
