@@ -243,7 +243,7 @@ awsResources =
     [ ("instance_port", NamedType "Int", Required)
     , ("instance_protocol", NamedType "T.Text", Required)
     , ("lb_port", NamedType "Int", Required)
-    , ("lb_protocol", NamedType "Int", Required)
+    , ("lb_protocol", NamedType "T.Text", Required)
     , ("ssl_certificate_id", NamedType "Arn", Optional)
     ]
 
@@ -257,7 +257,7 @@ awsResources =
     
   , resourceCode "aws_elb" "elb"
     "https://www.terraform.io/docs/providers/aws/r/elb.html"
-    [ ("name", NamedType "T.Text", Optional)
+    [ ("name'", NamedType "T.Text", Optional)
     , ("access_logs", NamedType "AccessLogsParams", Optional)
     , ("security_groups", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
     , ("subnets", FTList (AwsIdRef "aws_subnet"), OptionalWithDefault "[]")
@@ -267,6 +267,8 @@ awsResources =
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
     [ ("id", TFRef "T.Text")
+    , ("name", TFRef "T.Text")
+    , ("dns_name", TFRef "T.Text")
     , ("zone_id", TFRef "T.Text")
     ]
 

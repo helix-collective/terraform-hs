@@ -882,7 +882,7 @@ data ListenerParams = ListenerParams
   { l_instance_port :: Int
   , l_instance_protocol :: T.Text
   , l_lb_port :: Int
-  , l_lb_protocol :: Int
+  , l_lb_protocol :: T.Text
   , l_options :: ListenerOptions
   }
   deriving (Eq)
@@ -954,6 +954,8 @@ awsElb' name0 params = do
   rid <- mkResource "aws_elb" name0 (toResourceFieldMap params)
   return AwsElb
     { elb_id = resourceAttr rid "id"
+    , elb_name = resourceAttr rid "name"
+    , elb_dns_name = resourceAttr rid "dns_name"
     , elb_zone_id = resourceAttr rid "zone_id"
     , elb_resource = rid
     }
@@ -964,7 +966,7 @@ data AwsElbParams = AwsElbParams
   }
 
 data AwsElbOptions = AwsElbOptions
-  { elb_name :: Maybe (T.Text)
+  { elb_name' :: Maybe (T.Text)
   , elb_access_logs :: Maybe (AccessLogsParams)
   , elb_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
   , elb_subnets :: [TFRef (AwsId AwsSubnet)]
@@ -978,7 +980,7 @@ instance Default AwsElbOptions where
 
 instance ToResourceFieldMap AwsElbParams where
   toResourceFieldMap params
-    =  rfmOptionalField "name" (elb_name (elb_options params))
+    =  rfmOptionalField "name" (elb_name' (elb_options params))
     <> rfmOptionalField "access_logs" (elb_access_logs (elb_options params))
     <> rfmOptionalDefField "security_groups" [] (elb_security_groups (elb_options params))
     <> rfmOptionalDefField "subnets" [] (elb_subnets (elb_options params))
@@ -993,6 +995,8 @@ instance ToResourceField AwsElbParams where
 
 data AwsElb = AwsElb
   { elb_id :: TFRef T.Text
+  , elb_name :: TFRef T.Text
+  , elb_dns_name :: TFRef T.Text
   , elb_zone_id :: TFRef T.Text
   , elb_resource :: ResourceId
   }
