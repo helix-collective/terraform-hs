@@ -46,6 +46,7 @@ module Language.Terraform.Core(
   resourceAttr,
   dependsOn,
   ignoreChanges,
+  createBeforeDestroy,
   localExecProvisioner,
   withNameScope,
   scopedName,
@@ -60,6 +61,7 @@ module Language.Terraform.Core(
   rfmExpandedList,
   ) where
 
+import Data.Default
 import Data.Maybe(fromMaybe)
 import Data.Monoid
 import Data.Typeable
@@ -136,6 +138,7 @@ data ResourceField = RF_Text T.Text
                    | RF_List [ResourceField]
                    | RF_Map ResourceFieldMap
 
+
 -- | Typeclass for overloading the conversion of values to
 -- a `ResourceField` value.
 class ToResourceField a where
@@ -189,6 +192,14 @@ instance ToResourceField a => ToResourceField [a] where
 instance ToResourceField a => ToResourceField (M.Map T.Text a) where
   toResourceField = RF_Map . ResourceFieldMap . M.toList . M.map toResourceField
 
+data ResourceLifeCycle = ResourceLifeCycle {
+  rlc_ignoreChanges :: S.Set T.Text,
+  rlc_createBeforeDestroy :: Bool
+  }
+
+instance Default ResourceLifeCycle where
+  def = ResourceLifeCycle S.empty False
+     
 data TFState = TFState {
   tf_nameContext :: [NameElement],
   tf_context :: M.Map TypeRep Dynamic,
@@ -196,7 +207,7 @@ data TFState = TFState {
   tf_resources :: [Resource],
   tf_outputs :: [Output],
   tf_dependencies :: S.Set (ResourceId,ResourceId),
-  tf_ignoreChanges :: M.Map ResourceId (S.Set T.Text),
+  tf_lifecycle :: M.Map ResourceId ResourceLifeCycle,
   tf_provisioners :: M.Map ResourceId [Provisioner]
   }
 
@@ -288,7 +299,20 @@ dependsOn r1 r2 = modify' (\s->s{tf_dependencies=S.insert (resourceId r1, resour
 -- | Specify that a resource will ignore changes to the specified attribute
 -- (See https://www.terraform.io/docs/configuration/resources.html#ignore_changes)
 ignoreChanges :: (IsResource r) => r -> T.Text -> TF ()
-ignoreChanges r attr = modify' (\s->s{tf_ignoreChanges=M.insertWith (<>)(resourceId r) (S.singleton attr) (tf_ignoreChanges s)})
+ignoreChanges r attr = modify' (\s->s{tf_lifecycle=M.alter (addIgnored attr) (resourceId r) (tf_lifecycle s)})
+  where
+    addIgnored :: T.Text -> Maybe ResourceLifeCycle -> Maybe ResourceLifeCycle
+    addIgnored field Nothing = addIgnored field (Just def)
+    addIgnored field (Just rlc) = Just rlc{rlc_ignoreChanges=S.insert field (rlc_ignoreChanges rlc)}
+
+-- | Specify that a new resource will be created before an old one is destroyed.
+-- (See https://www.terraform.io/docs/configuration/resources.html#createBeforeDestroy)
+createBeforeDestroy :: (IsResource r) => r -> Bool -> TF ()
+createBeforeDestroy r v = modify' (\s->s{tf_lifecycle=M.alter (setFlag v) (resourceId r) (tf_lifecycle s)})
+  where
+    setFlag :: Bool -> Maybe ResourceLifeCycle -> Maybe ResourceLifeCycle
+    setFlag v Nothing = setFlag v (Just def)
+    setFlag v (Just rlc) = Just rlc{rlc_createBeforeDestroy=v}
 
 -- | Add a local command to run after a resource is provisioned
 localExecProvisioner :: IsResource r => r -> T.Text -> TF ()
@@ -349,13 +373,17 @@ generateFiles outDir tfa = do
         provisioners = fromMaybe [] (M.lookup rid (tf_provisioners state))
         rid = ResourceId (r_type r) (r_name r)
         depends = [r2 | (r1,r2) <- S.toList (tf_dependencies state), r1 == rid]
-        lifecycle = case M.lookup rid (tf_ignoreChanges state) of
+        lifecycle = case M.lookup rid (tf_lifecycle state) of
           Nothing -> mempty
-          (Just attrs) ->
-            [ "  lifecycle {"
-            , T.template "    ignore_changes = [$1]" [T.intercalate ", " [ "\"" <> attr <> "\"" | attr <- S.toList attrs]]
-            , "  }"
-            ]
+          (Just rlc) ->
+            let ignoreChanges | S.null (rlc_ignoreChanges rlc) = mempty
+                              | otherwise = [T.template "    ignore_changes = [$1]"
+                                             [T.intercalate ", " [ "\"" <> attr <> "\"" | attr <- S.toList (rlc_ignoreChanges rlc)]]]
+                createBeforeDestroy | rlc_createBeforeDestroy rlc = ["    create_before_destroy = true"]
+                                    | otherwise = mempty
+            in case (ignoreChanges <> createBeforeDestroy) of
+                [] -> mempty
+                lines -> ["  lifecycle {"] <> lines <> ["  }"]
 
     generateFieldMap :: T.Text -> ResourceFieldMap -> [T.Text]
     generateFieldMap indent fieldMap = concatMap generateField (unResourceFieldMap fieldMap)
