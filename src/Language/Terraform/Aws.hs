@@ -1197,6 +1197,108 @@ instance IsResource AwsS3BucketObject where
 
 ----------------------------------------------------------------------
 
+-- | Add a resource of type AwsIamUser to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_user.html aws_iam_user> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamu_')
+
+awsIamUser :: NameElement -> T.Text -> AwsIamUserOptions -> TF AwsIamUser
+awsIamUser name0 name' opts = awsIamUser' name0 (AwsIamUserParams name' opts)
+
+awsIamUser' :: NameElement -> AwsIamUserParams -> TF AwsIamUser
+awsIamUser' name0 params = do
+  rid <- mkResource "aws_iam_user" name0 (toResourceFieldMap params)
+  return AwsIamUser
+    { iamu_arn = resourceAttr rid "arn"
+    , iamu_name = resourceAttr rid "name"
+    , iamu_unique_id = resourceAttr rid "unique_id"
+    , iamu_resource = rid
+    }
+
+data AwsIamUserParams = AwsIamUserParams
+  { iamu_name' :: T.Text
+  , iamu_options :: AwsIamUserOptions
+  }
+
+data AwsIamUserOptions = AwsIamUserOptions
+  { iamu_path :: T.Text
+  , iamu_force_destroy :: Bool
+  }
+
+instance Default AwsIamUserOptions where
+  def = AwsIamUserOptions "/" False
+
+instance ToResourceFieldMap AwsIamUserParams where
+  toResourceFieldMap params
+    =  rfmField "name" (iamu_name' params)
+    <> rfmOptionalDefField "path" "/" (iamu_path (iamu_options params))
+    <> rfmOptionalDefField "force_destroy" False (iamu_force_destroy (iamu_options params))
+    
+
+instance ToResourceField AwsIamUserParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamUser = AwsIamUser
+  { iamu_arn :: TFRef Arn
+  , iamu_name :: TFRef T.Text
+  , iamu_unique_id :: TFRef T.Text
+  , iamu_resource :: ResourceId
+  }
+
+instance IsResource AwsIamUser where
+  resourceId = iamu_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsIamUserPolicy to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_user_policy.html aws_iam_user_policy> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamup_')
+
+awsIamUserPolicy :: NameElement -> T.Text -> T.Text -> TFRef T.Text -> AwsIamUserPolicyOptions -> TF AwsIamUserPolicy
+awsIamUserPolicy name0 name policy user opts = awsIamUserPolicy' name0 (AwsIamUserPolicyParams name policy user opts)
+
+awsIamUserPolicy' :: NameElement -> AwsIamUserPolicyParams -> TF AwsIamUserPolicy
+awsIamUserPolicy' name0 params = do
+  rid <- mkResource "aws_iam_user_policy" name0 (toResourceFieldMap params)
+  return AwsIamUserPolicy
+    { iamup_resource = rid
+    }
+
+data AwsIamUserPolicyParams = AwsIamUserPolicyParams
+  { iamup_name :: T.Text
+  , iamup_policy :: T.Text
+  , iamup_user :: TFRef T.Text
+  , iamup_options :: AwsIamUserPolicyOptions
+  }
+
+data AwsIamUserPolicyOptions = AwsIamUserPolicyOptions
+  { }
+
+instance Default AwsIamUserPolicyOptions where
+  def = AwsIamUserPolicyOptions 
+
+instance ToResourceFieldMap AwsIamUserPolicyParams where
+  toResourceFieldMap params
+    =  rfmField "name" (iamup_name params)
+    <> rfmField "policy" (iamup_policy params)
+    <> rfmField "user" (iamup_user params)
+    
+
+instance ToResourceField AwsIamUserPolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamUserPolicy = AwsIamUserPolicy
+  { iamup_resource :: ResourceId
+  }
+
+instance IsResource AwsIamUserPolicy where
+  resourceId = iamup_resource
+
+----------------------------------------------------------------------
+
 -- | Add a resource of type AwsIamRole to the resource graph.
 --
 -- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_role.html aws_iam_role> documentation

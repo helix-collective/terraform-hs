@@ -313,6 +313,25 @@ awsResources =
     , ("version_id", TFRef "T.Text")
     ]
 
+  , resourceCode "aws_iam_user" "iamu"
+    "https://www.terraform.io/docs/providers/aws/r/iam_user.html"
+    [ ("name'", NamedType "T.Text", Required)
+    , ("path", NamedType "T.Text", OptionalWithDefault "\"/\"")
+    , ("force_destroy", NamedType "Bool", OptionalWithDefault "False")
+    ]
+    [ ("arn", TFRef "Arn")
+    , ("name", TFRef "T.Text")
+    , ("unique_id", TFRef "T.Text")
+    ]
+    
+  , resourceCode "aws_iam_user_policy" "iamup"
+    "https://www.terraform.io/docs/providers/aws/r/iam_user_policy.html"
+    [ ("name", NamedType "T.Text", Required)
+    , ("policy", NamedType "T.Text", Required)
+    , ("user", TFRef "T.Text", Required)
+    ]
+    []
+
   , resourceCode "aws_iam_role" "iamr"
     "https://www.terraform.io/docs/providers/aws/r/iam_role.html"
     [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
