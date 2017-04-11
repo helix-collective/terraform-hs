@@ -1299,6 +1299,52 @@ instance IsResource AwsIamUserPolicy where
 
 ----------------------------------------------------------------------
 
+-- | Add a resource of type AwsIamUserPolicyAttachment to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_user_policy_attachment.html aws_iam_user_policy_attachment> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'iamupa_')
+
+awsIamUserPolicyAttachment :: NameElement -> TFRef T.Text -> T.Text -> AwsIamUserPolicyAttachmentOptions -> TF AwsIamUserPolicyAttachment
+awsIamUserPolicyAttachment name0 user policyArn opts = awsIamUserPolicyAttachment' name0 (AwsIamUserPolicyAttachmentParams user policyArn opts)
+
+awsIamUserPolicyAttachment' :: NameElement -> AwsIamUserPolicyAttachmentParams -> TF AwsIamUserPolicyAttachment
+awsIamUserPolicyAttachment' name0 params = do
+  rid <- mkResource "aws_iam_user_policy_attachment" name0 (toResourceFieldMap params)
+  return AwsIamUserPolicyAttachment
+    { iamupa_resource = rid
+    }
+
+data AwsIamUserPolicyAttachmentParams = AwsIamUserPolicyAttachmentParams
+  { iamupa_user :: TFRef T.Text
+  , iamupa_policy_arn :: T.Text
+  , iamupa_options :: AwsIamUserPolicyAttachmentOptions
+  }
+
+data AwsIamUserPolicyAttachmentOptions = AwsIamUserPolicyAttachmentOptions
+  { }
+
+instance Default AwsIamUserPolicyAttachmentOptions where
+  def = AwsIamUserPolicyAttachmentOptions 
+
+instance ToResourceFieldMap AwsIamUserPolicyAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "user" (iamupa_user params)
+    <> rfmField "policy_arn" (iamupa_policy_arn params)
+    
+
+instance ToResourceField AwsIamUserPolicyAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsIamUserPolicyAttachment = AwsIamUserPolicyAttachment
+  { iamupa_resource :: ResourceId
+  }
+
+instance IsResource AwsIamUserPolicyAttachment where
+  resourceId = iamupa_resource
+
+----------------------------------------------------------------------
+
 -- | Add a resource of type AwsIamRole to the resource graph.
 --
 -- See the terraform <https://www.terraform.io/docs/providers/aws/r/iam_role.html aws_iam_role> documentation

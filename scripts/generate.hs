@@ -332,6 +332,13 @@ awsResources =
     ]
     []
 
+  , resourceCode "aws_iam_user_policy_attachment" "iamupa"
+    "https://www.terraform.io/docs/providers/aws/r/iam_user_policy_attachment.html"
+    [ ("user", TFRef "T.Text", Required)
+    , ("policy_arn", NamedType "T.Text", Required)
+    ]
+    []
+
   , resourceCode "aws_iam_role" "iamr"
     "https://www.terraform.io/docs/providers/aws/r/iam_role.html"
     [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
