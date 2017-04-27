@@ -170,6 +170,7 @@ awsResources =
     , ("ebs_optimized", NamedType "Bool", Optional)
     , ("instance_type", NamedType "InstanceType", Required)
     , ("key_name", NamedType "KeyName", Optional)
+    , ("monitoring", NamedType "Bool", OptionalWithDefault "True")
     , ("subnet_id", AwsIdRef "aws_subnet", Optional)
     , ("associate_public_ip_address", NamedType "Bool", Optional)
     , ("root_block_device", NamedType "RootBlockDeviceParams", Optional)
@@ -194,7 +195,9 @@ awsResources =
     , ("security_groups", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
     , ("associate_public_ip_address", NamedType "Bool", Optional)
     , ("user_data", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("enable_monitoring", NamedType "Bool", OptionalWithDefault "True")
     , ("ebs_optimized", NamedType "Bool", Optional)
+    , ("root_block_device", NamedType "RootBlockDeviceParams", Optional)
     ]
     [ ("id", AwsIdRef "aws_launch_configuration")
     , ("name", TFRef "T.Text")

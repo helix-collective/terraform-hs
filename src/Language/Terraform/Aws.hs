@@ -597,6 +597,7 @@ data AwsInstanceOptions = AwsInstanceOptions
   { i_availability_zone :: AvailabilityZone
   , i_ebs_optimized :: Maybe (Bool)
   , i_key_name :: Maybe (KeyName)
+  , i_monitoring :: Bool
   , i_subnet_id :: Maybe (TFRef (AwsId AwsSubnet))
   , i_associate_public_ip_address :: Maybe (Bool)
   , i_root_block_device :: Maybe (RootBlockDeviceParams)
@@ -607,7 +608,7 @@ data AwsInstanceOptions = AwsInstanceOptions
   }
 
 instance Default AwsInstanceOptions where
-  def = AwsInstanceOptions "" Nothing Nothing Nothing Nothing Nothing "" Nothing [] M.empty
+  def = AwsInstanceOptions "" Nothing Nothing True Nothing Nothing Nothing "" Nothing [] M.empty
 
 instance ToResourceFieldMap AwsInstanceParams where
   toResourceFieldMap params
@@ -616,6 +617,7 @@ instance ToResourceFieldMap AwsInstanceParams where
     <> rfmOptionalField "ebs_optimized" (i_ebs_optimized (i_options params))
     <> rfmField "instance_type" (i_instance_type params)
     <> rfmOptionalField "key_name" (i_key_name (i_options params))
+    <> rfmOptionalDefField "monitoring" True (i_monitoring (i_options params))
     <> rfmOptionalField "subnet_id" (i_subnet_id (i_options params))
     <> rfmOptionalField "associate_public_ip_address" (i_associate_public_ip_address (i_options params))
     <> rfmOptionalField "root_block_device" (i_root_block_device (i_options params))
@@ -672,11 +674,13 @@ data AwsLaunchConfigurationOptions = AwsLaunchConfigurationOptions
   , lc_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
   , lc_associate_public_ip_address :: Maybe (Bool)
   , lc_user_data :: T.Text
+  , lc_enable_monitoring :: Bool
   , lc_ebs_optimized :: Maybe (Bool)
+  , lc_root_block_device :: Maybe (RootBlockDeviceParams)
   }
 
 instance Default AwsLaunchConfigurationOptions where
-  def = AwsLaunchConfigurationOptions "" "" Nothing Nothing [] Nothing "" Nothing
+  def = AwsLaunchConfigurationOptions "" "" Nothing Nothing [] Nothing "" True Nothing Nothing
 
 instance ToResourceFieldMap AwsLaunchConfigurationParams where
   toResourceFieldMap params
@@ -689,7 +693,9 @@ instance ToResourceFieldMap AwsLaunchConfigurationParams where
     <> rfmOptionalDefField "security_groups" [] (lc_security_groups (lc_options params))
     <> rfmOptionalField "associate_public_ip_address" (lc_associate_public_ip_address (lc_options params))
     <> rfmOptionalDefField "user_data" "" (lc_user_data (lc_options params))
+    <> rfmOptionalDefField "enable_monitoring" True (lc_enable_monitoring (lc_options params))
     <> rfmOptionalField "ebs_optimized" (lc_ebs_optimized (lc_options params))
+    <> rfmOptionalField "root_block_device" (lc_root_block_device (lc_options params))
     
 
 instance ToResourceField AwsLaunchConfigurationParams where
