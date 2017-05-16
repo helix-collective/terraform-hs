@@ -2027,3 +2027,55 @@ data AwsSqsQueuePolicy = AwsSqsQueuePolicy
 
 instance IsResource AwsSqsQueuePolicy where
   resourceId = sqsp_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsEcrRepository to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/ecr_repository.html aws_ecr_repository> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ecr_')
+
+awsEcrRepository :: NameElement -> T.Text -> AwsEcrRepositoryOptions -> TF AwsEcrRepository
+awsEcrRepository name0 name' opts = awsEcrRepository' name0 (AwsEcrRepositoryParams name' opts)
+
+awsEcrRepository' :: NameElement -> AwsEcrRepositoryParams -> TF AwsEcrRepository
+awsEcrRepository' name0 params = do
+  rid <- mkResource "aws_ecr_repository" name0 (toResourceFieldMap params)
+  return AwsEcrRepository
+    { ecr_arn = resourceAttr rid "arn"
+    , ecr_name = resourceAttr rid "name"
+    , ecr_registry_id = resourceAttr rid "registry_id"
+    , ecr_repository_url = resourceAttr rid "repository_url"
+    , ecr_resource = rid
+    }
+
+data AwsEcrRepositoryParams = AwsEcrRepositoryParams
+  { ecr_name' :: T.Text
+  , ecr_options :: AwsEcrRepositoryOptions
+  }
+
+data AwsEcrRepositoryOptions = AwsEcrRepositoryOptions
+  { }
+
+instance Default AwsEcrRepositoryOptions where
+  def = AwsEcrRepositoryOptions 
+
+instance ToResourceFieldMap AwsEcrRepositoryParams where
+  toResourceFieldMap params
+    =  rfmField "name" (ecr_name' params)
+    
+
+instance ToResourceField AwsEcrRepositoryParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsEcrRepository = AwsEcrRepository
+  { ecr_arn :: TFRef Arn
+  , ecr_name :: TFRef T.Text
+  , ecr_registry_id :: TFRef T.Text
+  , ecr_repository_url :: TFRef T.Text
+  , ecr_resource :: ResourceId
+  }
+
+instance IsResource AwsEcrRepository where
+  resourceId = ecr_resource

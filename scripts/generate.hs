@@ -500,6 +500,15 @@ awsResources =
     [
     ]
 
+  , resourceCode "aws_ecr_repository" "ecr"
+    "https://www.terraform.io/docs/providers/aws/r/ecr_repository.html"
+    [ ("name'", NamedType "T.Text", Required)
+    ]
+    [ ("arn", TFRef "Arn")
+    , ("name", TFRef "T.Text")
+    , ("registry_id", TFRef "T.Text")
+    , ("repository_url", TFRef "T.Text")
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
