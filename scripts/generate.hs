@@ -293,6 +293,23 @@ awsResources =
     , ("expiration", NamedType "ExpirationParams", Optional)
     ]
 
+  , resourceCode "aws_elb_attachment" "elba"
+    "https://www.terraform.io/docs/providers/aws/r/elb_attachment.html"
+    [ ("elb", NamedType "T.Text", Required)
+    , ("instance", NamedType "T.Text", Required)
+    ]
+    [
+    ]
+
+  , resourceCode "aws_autoscaling_attachment" "asa"
+    "https://www.terraform.io/docs/providers/aws/r/autoscaling_attachment.html"
+    [ ("autoscaling_group_name", NamedType "T.Text", Required)
+    , ("elb", NamedType "T.Text", Optional)
+    , ("alb_target_group_arn", NamedType "T.Text", Optional)
+    ]
+    [
+    ]
+    
   , resourceCode "aws_s3_bucket" "s3"
     "https://www.terraform.io/docs/providers/aws/r/s3_bucket.html"
     [ ("bucket", NamedType "T.Text", Required)

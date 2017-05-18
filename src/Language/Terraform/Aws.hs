@@ -1093,6 +1093,100 @@ instance ToResourceField LifecycleRuleParams where
 
 ----------------------------------------------------------------------
 
+-- | Add a resource of type AwsElbAttachment to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/elb_attachment.html aws_elb_attachment> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'elba_')
+
+awsElbAttachment :: NameElement -> T.Text -> T.Text -> AwsElbAttachmentOptions -> TF AwsElbAttachment
+awsElbAttachment name0 elb instance_ opts = awsElbAttachment' name0 (AwsElbAttachmentParams elb instance_ opts)
+
+awsElbAttachment' :: NameElement -> AwsElbAttachmentParams -> TF AwsElbAttachment
+awsElbAttachment' name0 params = do
+  rid <- mkResource "aws_elb_attachment" name0 (toResourceFieldMap params)
+  return AwsElbAttachment
+    { elba_resource = rid
+    }
+
+data AwsElbAttachmentParams = AwsElbAttachmentParams
+  { elba_elb :: T.Text
+  , elba_instance :: T.Text
+  , elba_options :: AwsElbAttachmentOptions
+  }
+
+data AwsElbAttachmentOptions = AwsElbAttachmentOptions
+  { }
+
+instance Default AwsElbAttachmentOptions where
+  def = AwsElbAttachmentOptions 
+
+instance ToResourceFieldMap AwsElbAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "elb" (elba_elb params)
+    <> rfmField "instance" (elba_instance params)
+    
+
+instance ToResourceField AwsElbAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsElbAttachment = AwsElbAttachment
+  { elba_resource :: ResourceId
+  }
+
+instance IsResource AwsElbAttachment where
+  resourceId = elba_resource
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsAutoscalingAttachment to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/autoscaling_attachment.html aws_autoscaling_attachment> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'asa_')
+
+awsAutoscalingAttachment :: NameElement -> T.Text -> AwsAutoscalingAttachmentOptions -> TF AwsAutoscalingAttachment
+awsAutoscalingAttachment name0 autoscalingGroupName opts = awsAutoscalingAttachment' name0 (AwsAutoscalingAttachmentParams autoscalingGroupName opts)
+
+awsAutoscalingAttachment' :: NameElement -> AwsAutoscalingAttachmentParams -> TF AwsAutoscalingAttachment
+awsAutoscalingAttachment' name0 params = do
+  rid <- mkResource "aws_autoscaling_attachment" name0 (toResourceFieldMap params)
+  return AwsAutoscalingAttachment
+    { asa_resource = rid
+    }
+
+data AwsAutoscalingAttachmentParams = AwsAutoscalingAttachmentParams
+  { asa_autoscaling_group_name :: T.Text
+  , asa_options :: AwsAutoscalingAttachmentOptions
+  }
+
+data AwsAutoscalingAttachmentOptions = AwsAutoscalingAttachmentOptions
+  { asa_elb :: Maybe (T.Text)
+  , asa_alb_target_group_arn :: Maybe (T.Text)
+  }
+
+instance Default AwsAutoscalingAttachmentOptions where
+  def = AwsAutoscalingAttachmentOptions Nothing Nothing
+
+instance ToResourceFieldMap AwsAutoscalingAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "autoscaling_group_name" (asa_autoscaling_group_name params)
+    <> rfmOptionalField "elb" (asa_elb (asa_options params))
+    <> rfmOptionalField "alb_target_group_arn" (asa_alb_target_group_arn (asa_options params))
+    
+
+instance ToResourceField AwsAutoscalingAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+data AwsAutoscalingAttachment = AwsAutoscalingAttachment
+  { asa_resource :: ResourceId
+  }
+
+instance IsResource AwsAutoscalingAttachment where
+  resourceId = asa_resource
+
+----------------------------------------------------------------------
+
 -- | Add a resource of type AwsS3Bucket to the resource graph.
 --
 -- See the terraform <https://www.terraform.io/docs/providers/aws/r/s3_bucket.html aws_s3_bucket> documentation
