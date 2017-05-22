@@ -181,13 +181,14 @@ instance ToResourceField T.Text where
 
 instance ToResourceField Char where
   toResourceField c = RF_Text (T.singleton c)
+  toResourceFieldList cs = RF_Text (T.pack cs)
 
 instance ToResourceField Bool where
   toResourceField True = RF_Text "true"
   toResourceField False = RF_Text "false"
 
 instance ToResourceField a => ToResourceField [a] where
-  toResourceField = RF_List . map toResourceField
+  toResourceField = toResourceFieldList
 
 instance ToResourceField a => ToResourceField (M.Map T.Text a) where
   toResourceField = RF_Map . ResourceFieldMap . M.toList . M.map toResourceField
