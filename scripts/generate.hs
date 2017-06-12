@@ -41,26 +41,22 @@ awsHeader = clines
     , "-- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>"
     , "-- for details."
     , ""
-    , "aws :: AwsParams -> TF ()"
-    , "aws params ="
+    , "aws' :: AwsParams -> TF ()"
+    , "aws' params ="
     , "  mkProvider \"aws\" $ catMaybes"
     , "    [ Just (\"region\", toResourceField (aws_region params))"
-    , "    , let v = aws_access_key (aws_options params) in if v == \"\" then Nothing else (Just (\"access_key\", toResourceField v))"
-    , "    , let v = aws_secret_key (aws_options params) in if v == \"\" then Nothing else (Just (\"secret_key\", toResourceField v))"
+    , "    , let v = aws_access_key params in if v == \"\" then Nothing else (Just (\"access_key\", toResourceField v))"
+    , "    , let v = aws_secret_key params in if v == \"\" then Nothing else (Just (\"secret_key\", toResourceField v))"
     , "    ]"
     , ""
     , "data AwsParams = AwsParams"
     , "  { aws_region :: AwsRegion"
-    , "  , aws_options :: AwsOptions"
-    , "  }"
-    , ""
-    , "data AwsOptions = AwsOptions"
-    , "  { aws_access_key :: T.Text"
+    , "  , aws_access_key :: T.Text"
     , "  , aws_secret_key :: T.Text"
     , "  }"
     , ""
-    , "instance Default AwsOptions where"
-    , "  def = AwsOptions \"\" \"\""
+    , "makeAwsParams :: AwsRegion -> AwsParams"
+    , "makeAwsParams region = AwsParams region \"\" \"\""
     ]
     
 awsResources :: [Code]
@@ -572,27 +568,41 @@ cgroup begin sep end (t0:ts) = CLine (begin <> t0) <> cgroup1 ts
 
 fieldsCode :: T.Text -> T.Text -> Bool -> [(T.Text, FieldType, FieldMode)] -> Code
 fieldsCode htypename fieldprefix deriveInstances args
-  =  mconcat (intersperse cblank [params,options,defaultInstance,toResourceInstance])
+  =  mconcat (intersperse cblank [params,lenses,makeParams,toResourceInstance])
   where
     params =
       (  ctemplate "data $1Params = $1Params" [htypename]
       <> CIndent (cgroup "{ " ", " "}"
-          ( [T.template "$1 :: $2" [hname fname,hftype ftype] | (fname,ftype,Required) <- args]
+          ( [T.template "_$1 :: $2" [hname fname,hftype ftype] | (fname,ftype,Required) <- args]
             <>
-            [T.template "$1_options :: $2Options" [fieldprefix,htypename]]
+            [T.template "_$1 :: $2" [hname fname,optionalType ftype fmode] | (fname,ftype,fmode) <- args,  isOptional fmode]
           )
           <> if deriveInstances then cline "deriving (Eq)" else mempty
          )
       )
-    options =
-      (  ctemplate "data $1Options = $1Options" [htypename]
-      <> CIndent
-         (cgroup "{ " ", " "}" [ T.template "$1 :: $2" [hname fname,optionalType ftype fmode]
-                               | (fname,ftype,fmode) <- args,  isOptional fmode]
-          <> if deriveInstances then cline "deriving (Eq)" else mempty
+    lenses = mconcat [
+         ctemplate "-- $3 :: Lens' $1Params $2" [htypename,optionalType ftype optional,hname fname]
+      <> ctemplate "$3 :: Functor f => ($2 -> f ($2)) -> $1Params -> f $1Params" [htypename,optionalType ftype optional,hname fname]
+      <> ctemplate "$3 k atom = fmap (\\new$3 -> atom { _$3 = new$3 }) (k (_$3 atom))" [htypename,optionalType ftype optional,hname fname]
+      | (fname,ftype,optional) <- args
+      ]
+    makeParams
+      =  ctemplate
+           "make$1Params :: $2 $1Params"
+           [ htypename
+           , T.intercalate " " [hftype ftype <> " ->" | (_,ftype,Required) <- args]
+           ]
+      <> ctemplate
+           "make$1Params $2 = $1Params"
+           [ htypename
+           , T.intercalate " " [hfnname fname | (fname,_,Required) <- args]
+           ]
+      <> CIndent (cgroup "{ " ", " "}"
+          ( [T.template "_$1 = $2" [hname fname,hfnname fname] | (fname,ftype,Required) <- args]
+            <>
+            [T.template "_$1 = $2" [hname fname, optionalDefault fmode] | (fname,ftype,fmode) <- args,  isOptional fmode]
+          )
          )
-      )
-
     toResourceInstance
       =  (ctemplate "instance ToResourceFieldMap $1Params where" [htypename])
       <> CIndent
@@ -606,25 +616,21 @@ fieldsCode htypename fieldprefix deriveInstances args
          )
 
     createValue (fname,ftype,Required) =
-      T.template "rfmField \"$1\" ($2 params)" [dequote fname, hname fname]
+      T.template "rfmField \"$1\" (_$2 params)" [dequote fname, hname fname]
     createValue (fname,ftype,Optional) =
-      T.template "rfmOptionalField \"$1\" ($2 ($3_options params))" [dequote fname, hname fname,fieldprefix]
+      T.template "rfmOptionalField \"$1\" (_$2 params)" [dequote fname, hname fname]
     createValue (fname,ftype,OptionalWithDefault defv) =
-      T.template "rfmOptionalDefField \"$1\" $2 ($3 ($4_options params))" [dequote fname, defv, hname fname,fieldprefix]
+      T.template "rfmOptionalDefField \"$1\" $2 (_$3 params)" [dequote fname, defv, hname fname]
     createValue (fname,ftype,ExpandedList) =
-      T.template "rfmExpandedList \"$1\" ($2 ($3_options params))" [dequote fname, hname fname,fieldprefix]
+      T.template "rfmExpandedList \"$1\" (_$2 params)" [dequote fname, hname fname]
 
     dequote = T.takeWhile (/= '\'')
-
-    defaultInstance =
-      ctemplate "instance Default $1Options where" [htypename]
-      <> CIndent (ctemplate "def = $1Options $2" [htypename,T.intercalate " " [optionalDefault fmode | (_,_,fmode) <- args, isOptional fmode]])
 
     hname n = fieldprefix <> "_" <> n
     
 resourceCode :: T.Text -> T.Text -> T.Text -> [(T.Text, FieldType, FieldMode)] -> [(T.Text, FieldType)] -> Code
 resourceCode tftypename fieldprefix docurl args attrs
-  =  mconcat (intersperse cblank [function,function',argsTypes,value,isResourceInstance])
+  =  mconcat (intersperse cblank [function,function',value,isResourceInstance,argsTypes])
   where
     function
       =  ctemplate "-- | Add a resource of type $1 to the resource graph." [htypename tftypename]
@@ -634,13 +640,13 @@ resourceCode tftypename fieldprefix docurl args attrs
       <> ctemplate "-- (In this binding attribute and argument names all have the prefix '$1_')" [fieldprefix]
       <> cline     ""
       <> ctemplate
-           "$1 :: NameElement -> $2 $3Options -> TF $3"
+           "$1 :: NameElement -> $2($3Params -> $3Params) -> TF $3"
            [ hfnname tftypename
            , T.intercalate " " [hftype ftype <> " ->" | (_,ftype,Required) <- args]
            , htypename tftypename
            ]
       <> ctemplate
-           "$1 name0 $2 opts = $1' name0 ($3Params $2 opts)"
+           "$1 name0 $2 modf = $1' name0 (modf (make$3Params $2))"
            [ hfnname tftypename
            , T.intercalate " " [hfnname fname | (fname,_,Required) <- args]
            , htypename tftypename
@@ -674,14 +680,13 @@ resourceCode tftypename fieldprefix docurl args attrs
       ctemplate "instance IsResource $1 where" [htypename tftypename]
       <> CIndent (ctemplate "resourceId = $1_resource" [fieldprefix])
 
-    hfnname tftype = unreserve (T.toLower c1 <> cs)
-      where
-        (c1,cs) = T.splitAt 1 (htypename tftype)
-        unreserve n = if S.member n reserved then n <> "_" else n
-        reserved = S.fromList ["type","data","instance"]
-        
-
     hname n = fieldprefix <> "_" <> n
+
+hfnname tftype = unreserve (T.toLower c1 <> cs)
+  where
+    (c1,cs) = T.splitAt 1 (htypename tftype)
+    unreserve n = if S.member n reserved then n <> "_" else n
+    reserved = S.fromList ["type","data","instance"]
 
 htypename tftype = T.concat (map T.toTitle (T.splitOn "_" tftype))
 
@@ -730,8 +735,6 @@ generateModule outdir moduleName header resources = T.writeFile filepath (T.inte
       , ""
       , "import qualified Data.Map as M"
       , "import qualified Data.Text as T"
-      , ""
-      , "import Data.Default "
       , "import Data.Maybe(catMaybes)"
       , "import Data.Monoid"
       , "import Language.Terraform.Core"

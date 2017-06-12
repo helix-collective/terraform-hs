@@ -14,8 +14,6 @@ module Language.Terraform.Aws where
 
 import qualified Data.Map as M
 import qualified Data.Text as T
-
-import Data.Default 
 import Data.Maybe(catMaybes)
 import Data.Monoid
 import Language.Terraform.Core
@@ -48,26 +46,22 @@ type Route53RecordType = T.Text
 -- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>
 -- for details.
 
-aws :: AwsParams -> TF ()
-aws params =
+aws' :: AwsParams -> TF ()
+aws' params =
   mkProvider "aws" $ catMaybes
     [ Just ("region", toResourceField (aws_region params))
-    , let v = aws_access_key (aws_options params) in if v == "" then Nothing else (Just ("access_key", toResourceField v))
-    , let v = aws_secret_key (aws_options params) in if v == "" then Nothing else (Just ("secret_key", toResourceField v))
+    , let v = aws_access_key params in if v == "" then Nothing else (Just ("access_key", toResourceField v))
+    , let v = aws_secret_key params in if v == "" then Nothing else (Just ("secret_key", toResourceField v))
     ]
 
 data AwsParams = AwsParams
   { aws_region :: AwsRegion
-  , aws_options :: AwsOptions
-  }
-
-data AwsOptions = AwsOptions
-  { aws_access_key :: T.Text
+  , aws_access_key :: T.Text
   , aws_secret_key :: T.Text
   }
 
-instance Default AwsOptions where
-  def = AwsOptions "" ""
+makeAwsParams :: AwsRegion -> AwsParams
+makeAwsParams region = AwsParams region "" ""
 
 ----------------------------------------------------------------------
 
@@ -77,8 +71,8 @@ instance Default AwsOptions where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'vpc_')
 
-awsVpc :: NameElement -> CidrBlock -> AwsVpcOptions -> TF AwsVpc
-awsVpc name0 cidrBlock opts = awsVpc' name0 (AwsVpcParams cidrBlock opts)
+awsVpc :: NameElement -> CidrBlock ->(AwsVpcParams -> AwsVpcParams) -> TF AwsVpc
+awsVpc name0 cidrBlock modf = awsVpc' name0 (modf (makeAwsVpcParams cidrBlock))
 
 awsVpc' :: NameElement -> AwsVpcParams -> TF AwsVpc
 awsVpc' name0 params = do
@@ -88,35 +82,6 @@ awsVpc' name0 params = do
     , vpc_resource = rid
     }
 
-data AwsVpcParams = AwsVpcParams
-  { vpc_cidr_block :: CidrBlock
-  , vpc_options :: AwsVpcOptions
-  }
-
-data AwsVpcOptions = AwsVpcOptions
-  { vpc_instance_tenancy :: Maybe (T.Text)
-  , vpc_enable_dns_support :: Bool
-  , vpc_enable_dns_hostnames :: Bool
-  , vpc_enable_classic_link :: Bool
-  , vpc_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsVpcOptions where
-  def = AwsVpcOptions Nothing True False False M.empty
-
-instance ToResourceFieldMap AwsVpcParams where
-  toResourceFieldMap params
-    =  rfmField "cidr_block" (vpc_cidr_block params)
-    <> rfmOptionalField "instance_tenancy" (vpc_instance_tenancy (vpc_options params))
-    <> rfmOptionalDefField "enable_dns_support" True (vpc_enable_dns_support (vpc_options params))
-    <> rfmOptionalDefField "enable_dns_hostnames" False (vpc_enable_dns_hostnames (vpc_options params))
-    <> rfmOptionalDefField "enable_classic_link" False (vpc_enable_classic_link (vpc_options params))
-    <> rfmOptionalDefField "tags" M.empty (vpc_tags (vpc_options params))
-    
-
-instance ToResourceField AwsVpcParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsVpc = AwsVpc
   { vpc_id :: TFRef (AwsId AwsVpc)
   , vpc_resource :: ResourceId
@@ -124,6 +89,57 @@ data AwsVpc = AwsVpc
 
 instance IsResource AwsVpc where
   resourceId = vpc_resource
+
+data AwsVpcParams = AwsVpcParams
+  { _vpc_cidr_block :: CidrBlock
+  , _vpc_instance_tenancy :: Maybe (T.Text)
+  , _vpc_enable_dns_support :: Bool
+  , _vpc_enable_dns_hostnames :: Bool
+  , _vpc_enable_classic_link :: Bool
+  , _vpc_tags :: M.Map T.Text T.Text
+  }
+
+-- vpc_cidr_block :: Lens' AwsVpcParams CidrBlock
+vpc_cidr_block :: Functor f => (CidrBlock -> f (CidrBlock)) -> AwsVpcParams -> f AwsVpcParams
+vpc_cidr_block k atom = fmap (\newvpc_cidr_block -> atom { _vpc_cidr_block = newvpc_cidr_block }) (k (_vpc_cidr_block atom))
+-- vpc_instance_tenancy :: Lens' AwsVpcParams Maybe (T.Text)
+vpc_instance_tenancy :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsVpcParams -> f AwsVpcParams
+vpc_instance_tenancy k atom = fmap (\newvpc_instance_tenancy -> atom { _vpc_instance_tenancy = newvpc_instance_tenancy }) (k (_vpc_instance_tenancy atom))
+-- vpc_enable_dns_support :: Lens' AwsVpcParams Bool
+vpc_enable_dns_support :: Functor f => (Bool -> f (Bool)) -> AwsVpcParams -> f AwsVpcParams
+vpc_enable_dns_support k atom = fmap (\newvpc_enable_dns_support -> atom { _vpc_enable_dns_support = newvpc_enable_dns_support }) (k (_vpc_enable_dns_support atom))
+-- vpc_enable_dns_hostnames :: Lens' AwsVpcParams Bool
+vpc_enable_dns_hostnames :: Functor f => (Bool -> f (Bool)) -> AwsVpcParams -> f AwsVpcParams
+vpc_enable_dns_hostnames k atom = fmap (\newvpc_enable_dns_hostnames -> atom { _vpc_enable_dns_hostnames = newvpc_enable_dns_hostnames }) (k (_vpc_enable_dns_hostnames atom))
+-- vpc_enable_classic_link :: Lens' AwsVpcParams Bool
+vpc_enable_classic_link :: Functor f => (Bool -> f (Bool)) -> AwsVpcParams -> f AwsVpcParams
+vpc_enable_classic_link k atom = fmap (\newvpc_enable_classic_link -> atom { _vpc_enable_classic_link = newvpc_enable_classic_link }) (k (_vpc_enable_classic_link atom))
+-- vpc_tags :: Lens' AwsVpcParams M.Map T.Text T.Text
+vpc_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsVpcParams -> f AwsVpcParams
+vpc_tags k atom = fmap (\newvpc_tags -> atom { _vpc_tags = newvpc_tags }) (k (_vpc_tags atom))
+
+makeAwsVpcParams :: CidrBlock -> AwsVpcParams
+makeAwsVpcParams cidrBlock = AwsVpcParams
+  { _vpc_cidr_block = cidrBlock
+  , _vpc_instance_tenancy = Nothing
+  , _vpc_enable_dns_support = True
+  , _vpc_enable_dns_hostnames = False
+  , _vpc_enable_classic_link = False
+  , _vpc_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsVpcParams where
+  toResourceFieldMap params
+    =  rfmField "cidr_block" (_vpc_cidr_block params)
+    <> rfmOptionalField "instance_tenancy" (_vpc_instance_tenancy params)
+    <> rfmOptionalDefField "enable_dns_support" True (_vpc_enable_dns_support params)
+    <> rfmOptionalDefField "enable_dns_hostnames" False (_vpc_enable_dns_hostnames params)
+    <> rfmOptionalDefField "enable_classic_link" False (_vpc_enable_classic_link params)
+    <> rfmOptionalDefField "tags" M.empty (_vpc_tags params)
+    
+
+instance ToResourceField AwsVpcParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -133,8 +149,8 @@ instance IsResource AwsVpc where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'ng_')
 
-awsNatGateway :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) -> AwsNatGatewayOptions -> TF AwsNatGateway
-awsNatGateway name0 allocationId subnetId opts = awsNatGateway' name0 (AwsNatGatewayParams allocationId subnetId opts)
+awsNatGateway :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) ->(AwsNatGatewayParams -> AwsNatGatewayParams) -> TF AwsNatGateway
+awsNatGateway name0 allocationId subnetId modf = awsNatGateway' name0 (modf (makeAwsNatGatewayParams allocationId subnetId))
 
 awsNatGateway' :: NameElement -> AwsNatGatewayParams -> TF AwsNatGateway
 awsNatGateway' name0 params = do
@@ -144,27 +160,6 @@ awsNatGateway' name0 params = do
     , ng_resource = rid
     }
 
-data AwsNatGatewayParams = AwsNatGatewayParams
-  { ng_allocation_id :: TFRef (AwsId AwsEip)
-  , ng_subnet_id :: TFRef (AwsId AwsSubnet)
-  , ng_options :: AwsNatGatewayOptions
-  }
-
-data AwsNatGatewayOptions = AwsNatGatewayOptions
-  { }
-
-instance Default AwsNatGatewayOptions where
-  def = AwsNatGatewayOptions 
-
-instance ToResourceFieldMap AwsNatGatewayParams where
-  toResourceFieldMap params
-    =  rfmField "allocation_id" (ng_allocation_id params)
-    <> rfmField "subnet_id" (ng_subnet_id params)
-    
-
-instance ToResourceField AwsNatGatewayParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsNatGateway = AwsNatGateway
   { ng_id :: TFRef (AwsId AwsNatGateway)
   , ng_resource :: ResourceId
@@ -172,6 +167,33 @@ data AwsNatGateway = AwsNatGateway
 
 instance IsResource AwsNatGateway where
   resourceId = ng_resource
+
+data AwsNatGatewayParams = AwsNatGatewayParams
+  { _ng_allocation_id :: TFRef (AwsId AwsEip)
+  , _ng_subnet_id :: TFRef (AwsId AwsSubnet)
+  }
+
+-- ng_allocation_id :: Lens' AwsNatGatewayParams TFRef (AwsId AwsEip)
+ng_allocation_id :: Functor f => (TFRef (AwsId AwsEip) -> f (TFRef (AwsId AwsEip))) -> AwsNatGatewayParams -> f AwsNatGatewayParams
+ng_allocation_id k atom = fmap (\newng_allocation_id -> atom { _ng_allocation_id = newng_allocation_id }) (k (_ng_allocation_id atom))
+-- ng_subnet_id :: Lens' AwsNatGatewayParams TFRef (AwsId AwsSubnet)
+ng_subnet_id :: Functor f => (TFRef (AwsId AwsSubnet) -> f (TFRef (AwsId AwsSubnet))) -> AwsNatGatewayParams -> f AwsNatGatewayParams
+ng_subnet_id k atom = fmap (\newng_subnet_id -> atom { _ng_subnet_id = newng_subnet_id }) (k (_ng_subnet_id atom))
+
+makeAwsNatGatewayParams :: TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) -> AwsNatGatewayParams
+makeAwsNatGatewayParams allocationId subnetId = AwsNatGatewayParams
+  { _ng_allocation_id = allocationId
+  , _ng_subnet_id = subnetId
+  }
+
+instance ToResourceFieldMap AwsNatGatewayParams where
+  toResourceFieldMap params
+    =  rfmField "allocation_id" (_ng_allocation_id params)
+    <> rfmField "subnet_id" (_ng_subnet_id params)
+    
+
+instance ToResourceField AwsNatGatewayParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -181,8 +203,8 @@ instance IsResource AwsNatGateway where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'ig_')
 
-awsInternetGateway :: NameElement -> TFRef (AwsId AwsVpc) -> AwsInternetGatewayOptions -> TF AwsInternetGateway
-awsInternetGateway name0 vpcId opts = awsInternetGateway' name0 (AwsInternetGatewayParams vpcId opts)
+awsInternetGateway :: NameElement -> TFRef (AwsId AwsVpc) ->(AwsInternetGatewayParams -> AwsInternetGatewayParams) -> TF AwsInternetGateway
+awsInternetGateway name0 vpcId modf = awsInternetGateway' name0 (modf (makeAwsInternetGatewayParams vpcId))
 
 awsInternetGateway' :: NameElement -> AwsInternetGatewayParams -> TF AwsInternetGateway
 awsInternetGateway' name0 params = do
@@ -192,27 +214,6 @@ awsInternetGateway' name0 params = do
     , ig_resource = rid
     }
 
-data AwsInternetGatewayParams = AwsInternetGatewayParams
-  { ig_vpc_id :: TFRef (AwsId AwsVpc)
-  , ig_options :: AwsInternetGatewayOptions
-  }
-
-data AwsInternetGatewayOptions = AwsInternetGatewayOptions
-  { ig_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsInternetGatewayOptions where
-  def = AwsInternetGatewayOptions M.empty
-
-instance ToResourceFieldMap AwsInternetGatewayParams where
-  toResourceFieldMap params
-    =  rfmField "vpc_id" (ig_vpc_id params)
-    <> rfmOptionalDefField "tags" M.empty (ig_tags (ig_options params))
-    
-
-instance ToResourceField AwsInternetGatewayParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsInternetGateway = AwsInternetGateway
   { ig_id :: TFRef (AwsId AwsInternetGateway)
   , ig_resource :: ResourceId
@@ -220,6 +221,33 @@ data AwsInternetGateway = AwsInternetGateway
 
 instance IsResource AwsInternetGateway where
   resourceId = ig_resource
+
+data AwsInternetGatewayParams = AwsInternetGatewayParams
+  { _ig_vpc_id :: TFRef (AwsId AwsVpc)
+  , _ig_tags :: M.Map T.Text T.Text
+  }
+
+-- ig_vpc_id :: Lens' AwsInternetGatewayParams TFRef (AwsId AwsVpc)
+ig_vpc_id :: Functor f => (TFRef (AwsId AwsVpc) -> f (TFRef (AwsId AwsVpc))) -> AwsInternetGatewayParams -> f AwsInternetGatewayParams
+ig_vpc_id k atom = fmap (\newig_vpc_id -> atom { _ig_vpc_id = newig_vpc_id }) (k (_ig_vpc_id atom))
+-- ig_tags :: Lens' AwsInternetGatewayParams M.Map T.Text T.Text
+ig_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsInternetGatewayParams -> f AwsInternetGatewayParams
+ig_tags k atom = fmap (\newig_tags -> atom { _ig_tags = newig_tags }) (k (_ig_tags atom))
+
+makeAwsInternetGatewayParams :: TFRef (AwsId AwsVpc) -> AwsInternetGatewayParams
+makeAwsInternetGatewayParams vpcId = AwsInternetGatewayParams
+  { _ig_vpc_id = vpcId
+  , _ig_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsInternetGatewayParams where
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (_ig_vpc_id params)
+    <> rfmOptionalDefField "tags" M.empty (_ig_tags params)
+    
+
+instance ToResourceField AwsInternetGatewayParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -229,8 +257,8 @@ instance IsResource AwsInternetGateway where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'sn_')
 
-awsSubnet :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock -> AwsSubnetOptions -> TF AwsSubnet
-awsSubnet name0 vpcId cidrBlock opts = awsSubnet' name0 (AwsSubnetParams vpcId cidrBlock opts)
+awsSubnet :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock ->(AwsSubnetParams -> AwsSubnetParams) -> TF AwsSubnet
+awsSubnet name0 vpcId cidrBlock modf = awsSubnet' name0 (modf (makeAwsSubnetParams vpcId cidrBlock))
 
 awsSubnet' :: NameElement -> AwsSubnetParams -> TF AwsSubnet
 awsSubnet' name0 params = do
@@ -240,33 +268,6 @@ awsSubnet' name0 params = do
     , sn_resource = rid
     }
 
-data AwsSubnetParams = AwsSubnetParams
-  { sn_vpc_id :: TFRef (AwsId AwsVpc)
-  , sn_cidr_block :: CidrBlock
-  , sn_options :: AwsSubnetOptions
-  }
-
-data AwsSubnetOptions = AwsSubnetOptions
-  { sn_map_public_ip_on_launch :: Bool
-  , sn_availability_zone :: AvailabilityZone
-  , sn_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsSubnetOptions where
-  def = AwsSubnetOptions False "" M.empty
-
-instance ToResourceFieldMap AwsSubnetParams where
-  toResourceFieldMap params
-    =  rfmField "vpc_id" (sn_vpc_id params)
-    <> rfmField "cidr_block" (sn_cidr_block params)
-    <> rfmOptionalDefField "map_public_ip_on_launch" False (sn_map_public_ip_on_launch (sn_options params))
-    <> rfmOptionalDefField "availability_zone" "" (sn_availability_zone (sn_options params))
-    <> rfmOptionalDefField "tags" M.empty (sn_tags (sn_options params))
-    
-
-instance ToResourceField AwsSubnetParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsSubnet = AwsSubnet
   { sn_id :: TFRef (AwsId AwsSubnet)
   , sn_resource :: ResourceId
@@ -274,6 +275,51 @@ data AwsSubnet = AwsSubnet
 
 instance IsResource AwsSubnet where
   resourceId = sn_resource
+
+data AwsSubnetParams = AwsSubnetParams
+  { _sn_vpc_id :: TFRef (AwsId AwsVpc)
+  , _sn_cidr_block :: CidrBlock
+  , _sn_map_public_ip_on_launch :: Bool
+  , _sn_availability_zone :: AvailabilityZone
+  , _sn_tags :: M.Map T.Text T.Text
+  }
+
+-- sn_vpc_id :: Lens' AwsSubnetParams TFRef (AwsId AwsVpc)
+sn_vpc_id :: Functor f => (TFRef (AwsId AwsVpc) -> f (TFRef (AwsId AwsVpc))) -> AwsSubnetParams -> f AwsSubnetParams
+sn_vpc_id k atom = fmap (\newsn_vpc_id -> atom { _sn_vpc_id = newsn_vpc_id }) (k (_sn_vpc_id atom))
+-- sn_cidr_block :: Lens' AwsSubnetParams CidrBlock
+sn_cidr_block :: Functor f => (CidrBlock -> f (CidrBlock)) -> AwsSubnetParams -> f AwsSubnetParams
+sn_cidr_block k atom = fmap (\newsn_cidr_block -> atom { _sn_cidr_block = newsn_cidr_block }) (k (_sn_cidr_block atom))
+-- sn_map_public_ip_on_launch :: Lens' AwsSubnetParams Bool
+sn_map_public_ip_on_launch :: Functor f => (Bool -> f (Bool)) -> AwsSubnetParams -> f AwsSubnetParams
+sn_map_public_ip_on_launch k atom = fmap (\newsn_map_public_ip_on_launch -> atom { _sn_map_public_ip_on_launch = newsn_map_public_ip_on_launch }) (k (_sn_map_public_ip_on_launch atom))
+-- sn_availability_zone :: Lens' AwsSubnetParams AvailabilityZone
+sn_availability_zone :: Functor f => (AvailabilityZone -> f (AvailabilityZone)) -> AwsSubnetParams -> f AwsSubnetParams
+sn_availability_zone k atom = fmap (\newsn_availability_zone -> atom { _sn_availability_zone = newsn_availability_zone }) (k (_sn_availability_zone atom))
+-- sn_tags :: Lens' AwsSubnetParams M.Map T.Text T.Text
+sn_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsSubnetParams -> f AwsSubnetParams
+sn_tags k atom = fmap (\newsn_tags -> atom { _sn_tags = newsn_tags }) (k (_sn_tags atom))
+
+makeAwsSubnetParams :: TFRef (AwsId AwsVpc) -> CidrBlock -> AwsSubnetParams
+makeAwsSubnetParams vpcId cidrBlock = AwsSubnetParams
+  { _sn_vpc_id = vpcId
+  , _sn_cidr_block = cidrBlock
+  , _sn_map_public_ip_on_launch = False
+  , _sn_availability_zone = ""
+  , _sn_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsSubnetParams where
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (_sn_vpc_id params)
+    <> rfmField "cidr_block" (_sn_cidr_block params)
+    <> rfmOptionalDefField "map_public_ip_on_launch" False (_sn_map_public_ip_on_launch params)
+    <> rfmOptionalDefField "availability_zone" "" (_sn_availability_zone params)
+    <> rfmOptionalDefField "tags" M.empty (_sn_tags params)
+    
+
+instance ToResourceField AwsSubnetParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -283,8 +329,8 @@ instance IsResource AwsSubnet where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'rt_')
 
-awsRouteTable :: NameElement -> TFRef (AwsId AwsVpc) -> AwsRouteTableOptions -> TF AwsRouteTable
-awsRouteTable name0 vpcId opts = awsRouteTable' name0 (AwsRouteTableParams vpcId opts)
+awsRouteTable :: NameElement -> TFRef (AwsId AwsVpc) ->(AwsRouteTableParams -> AwsRouteTableParams) -> TF AwsRouteTable
+awsRouteTable name0 vpcId modf = awsRouteTable' name0 (modf (makeAwsRouteTableParams vpcId))
 
 awsRouteTable' :: NameElement -> AwsRouteTableParams -> TF AwsRouteTable
 awsRouteTable' name0 params = do
@@ -294,27 +340,6 @@ awsRouteTable' name0 params = do
     , rt_resource = rid
     }
 
-data AwsRouteTableParams = AwsRouteTableParams
-  { rt_vpc_id :: TFRef (AwsId AwsVpc)
-  , rt_options :: AwsRouteTableOptions
-  }
-
-data AwsRouteTableOptions = AwsRouteTableOptions
-  { rt_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsRouteTableOptions where
-  def = AwsRouteTableOptions M.empty
-
-instance ToResourceFieldMap AwsRouteTableParams where
-  toResourceFieldMap params
-    =  rfmField "vpc_id" (rt_vpc_id params)
-    <> rfmOptionalDefField "tags" M.empty (rt_tags (rt_options params))
-    
-
-instance ToResourceField AwsRouteTableParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsRouteTable = AwsRouteTable
   { rt_id :: TFRef (AwsId AwsRouteTable)
   , rt_resource :: ResourceId
@@ -322,6 +347,33 @@ data AwsRouteTable = AwsRouteTable
 
 instance IsResource AwsRouteTable where
   resourceId = rt_resource
+
+data AwsRouteTableParams = AwsRouteTableParams
+  { _rt_vpc_id :: TFRef (AwsId AwsVpc)
+  , _rt_tags :: M.Map T.Text T.Text
+  }
+
+-- rt_vpc_id :: Lens' AwsRouteTableParams TFRef (AwsId AwsVpc)
+rt_vpc_id :: Functor f => (TFRef (AwsId AwsVpc) -> f (TFRef (AwsId AwsVpc))) -> AwsRouteTableParams -> f AwsRouteTableParams
+rt_vpc_id k atom = fmap (\newrt_vpc_id -> atom { _rt_vpc_id = newrt_vpc_id }) (k (_rt_vpc_id atom))
+-- rt_tags :: Lens' AwsRouteTableParams M.Map T.Text T.Text
+rt_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsRouteTableParams -> f AwsRouteTableParams
+rt_tags k atom = fmap (\newrt_tags -> atom { _rt_tags = newrt_tags }) (k (_rt_tags atom))
+
+makeAwsRouteTableParams :: TFRef (AwsId AwsVpc) -> AwsRouteTableParams
+makeAwsRouteTableParams vpcId = AwsRouteTableParams
+  { _rt_vpc_id = vpcId
+  , _rt_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsRouteTableParams where
+  toResourceFieldMap params
+    =  rfmField "vpc_id" (_rt_vpc_id params)
+    <> rfmOptionalDefField "tags" M.empty (_rt_tags params)
+    
+
+instance ToResourceField AwsRouteTableParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -331,8 +383,8 @@ instance IsResource AwsRouteTable where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'r_')
 
-awsRoute :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock -> AwsRouteOptions -> TF AwsRoute
-awsRoute name0 routeTableId destinationCidrBlock opts = awsRoute' name0 (AwsRouteParams routeTableId destinationCidrBlock opts)
+awsRoute :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock ->(AwsRouteParams -> AwsRouteParams) -> TF AwsRoute
+awsRoute name0 routeTableId destinationCidrBlock modf = awsRoute' name0 (modf (makeAwsRouteParams routeTableId destinationCidrBlock))
 
 awsRoute' :: NameElement -> AwsRouteParams -> TF AwsRoute
 awsRoute' name0 params = do
@@ -341,37 +393,51 @@ awsRoute' name0 params = do
     { r_resource = rid
     }
 
-data AwsRouteParams = AwsRouteParams
-  { r_route_table_id :: TFRef (AwsId AwsRouteTable)
-  , r_destination_cidr_block :: CidrBlock
-  , r_options :: AwsRouteOptions
-  }
-
-data AwsRouteOptions = AwsRouteOptions
-  { r_nat_gateway_id :: Maybe (TFRef (AwsId AwsNatGateway))
-  , r_gateway_id :: Maybe (TFRef (AwsId AwsInternetGateway))
-  }
-
-instance Default AwsRouteOptions where
-  def = AwsRouteOptions Nothing Nothing
-
-instance ToResourceFieldMap AwsRouteParams where
-  toResourceFieldMap params
-    =  rfmField "route_table_id" (r_route_table_id params)
-    <> rfmField "destination_cidr_block" (r_destination_cidr_block params)
-    <> rfmOptionalField "nat_gateway_id" (r_nat_gateway_id (r_options params))
-    <> rfmOptionalField "gateway_id" (r_gateway_id (r_options params))
-    
-
-instance ToResourceField AwsRouteParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsRoute = AwsRoute
   { r_resource :: ResourceId
   }
 
 instance IsResource AwsRoute where
   resourceId = r_resource
+
+data AwsRouteParams = AwsRouteParams
+  { _r_route_table_id :: TFRef (AwsId AwsRouteTable)
+  , _r_destination_cidr_block :: CidrBlock
+  , _r_nat_gateway_id :: Maybe (TFRef (AwsId AwsNatGateway))
+  , _r_gateway_id :: Maybe (TFRef (AwsId AwsInternetGateway))
+  }
+
+-- r_route_table_id :: Lens' AwsRouteParams TFRef (AwsId AwsRouteTable)
+r_route_table_id :: Functor f => (TFRef (AwsId AwsRouteTable) -> f (TFRef (AwsId AwsRouteTable))) -> AwsRouteParams -> f AwsRouteParams
+r_route_table_id k atom = fmap (\newr_route_table_id -> atom { _r_route_table_id = newr_route_table_id }) (k (_r_route_table_id atom))
+-- r_destination_cidr_block :: Lens' AwsRouteParams CidrBlock
+r_destination_cidr_block :: Functor f => (CidrBlock -> f (CidrBlock)) -> AwsRouteParams -> f AwsRouteParams
+r_destination_cidr_block k atom = fmap (\newr_destination_cidr_block -> atom { _r_destination_cidr_block = newr_destination_cidr_block }) (k (_r_destination_cidr_block atom))
+-- r_nat_gateway_id :: Lens' AwsRouteParams Maybe (TFRef (AwsId AwsNatGateway))
+r_nat_gateway_id :: Functor f => (Maybe (TFRef (AwsId AwsNatGateway)) -> f (Maybe (TFRef (AwsId AwsNatGateway)))) -> AwsRouteParams -> f AwsRouteParams
+r_nat_gateway_id k atom = fmap (\newr_nat_gateway_id -> atom { _r_nat_gateway_id = newr_nat_gateway_id }) (k (_r_nat_gateway_id atom))
+-- r_gateway_id :: Lens' AwsRouteParams Maybe (TFRef (AwsId AwsInternetGateway))
+r_gateway_id :: Functor f => (Maybe (TFRef (AwsId AwsInternetGateway)) -> f (Maybe (TFRef (AwsId AwsInternetGateway)))) -> AwsRouteParams -> f AwsRouteParams
+r_gateway_id k atom = fmap (\newr_gateway_id -> atom { _r_gateway_id = newr_gateway_id }) (k (_r_gateway_id atom))
+
+makeAwsRouteParams :: TFRef (AwsId AwsRouteTable) -> CidrBlock -> AwsRouteParams
+makeAwsRouteParams routeTableId destinationCidrBlock = AwsRouteParams
+  { _r_route_table_id = routeTableId
+  , _r_destination_cidr_block = destinationCidrBlock
+  , _r_nat_gateway_id = Nothing
+  , _r_gateway_id = Nothing
+  }
+
+instance ToResourceFieldMap AwsRouteParams where
+  toResourceFieldMap params
+    =  rfmField "route_table_id" (_r_route_table_id params)
+    <> rfmField "destination_cidr_block" (_r_destination_cidr_block params)
+    <> rfmOptionalField "nat_gateway_id" (_r_nat_gateway_id params)
+    <> rfmOptionalField "gateway_id" (_r_gateway_id params)
+    
+
+instance ToResourceField AwsRouteParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -381,8 +447,8 @@ instance IsResource AwsRoute where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'rta_')
 
-awsRouteTableAssociation :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) -> AwsRouteTableAssociationOptions -> TF AwsRouteTableAssociation
-awsRouteTableAssociation name0 subnetId routeTableId opts = awsRouteTableAssociation' name0 (AwsRouteTableAssociationParams subnetId routeTableId opts)
+awsRouteTableAssociation :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) ->(AwsRouteTableAssociationParams -> AwsRouteTableAssociationParams) -> TF AwsRouteTableAssociation
+awsRouteTableAssociation name0 subnetId routeTableId modf = awsRouteTableAssociation' name0 (modf (makeAwsRouteTableAssociationParams subnetId routeTableId))
 
 awsRouteTableAssociation' :: NameElement -> AwsRouteTableAssociationParams -> TF AwsRouteTableAssociation
 awsRouteTableAssociation' name0 params = do
@@ -392,27 +458,6 @@ awsRouteTableAssociation' name0 params = do
     , rta_resource = rid
     }
 
-data AwsRouteTableAssociationParams = AwsRouteTableAssociationParams
-  { rta_subnet_id :: TFRef (AwsId AwsSubnet)
-  , rta_route_table_id :: TFRef (AwsId AwsRouteTable)
-  , rta_options :: AwsRouteTableAssociationOptions
-  }
-
-data AwsRouteTableAssociationOptions = AwsRouteTableAssociationOptions
-  { }
-
-instance Default AwsRouteTableAssociationOptions where
-  def = AwsRouteTableAssociationOptions 
-
-instance ToResourceFieldMap AwsRouteTableAssociationParams where
-  toResourceFieldMap params
-    =  rfmField "subnet_id" (rta_subnet_id params)
-    <> rfmField "route_table_id" (rta_route_table_id params)
-    
-
-instance ToResourceField AwsRouteTableAssociationParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsRouteTableAssociation = AwsRouteTableAssociation
   { rta_id :: TFRef (AwsId AwsRouteTableAssociation)
   , rta_resource :: ResourceId
@@ -421,30 +466,70 @@ data AwsRouteTableAssociation = AwsRouteTableAssociation
 instance IsResource AwsRouteTableAssociation where
   resourceId = rta_resource
 
+data AwsRouteTableAssociationParams = AwsRouteTableAssociationParams
+  { _rta_subnet_id :: TFRef (AwsId AwsSubnet)
+  , _rta_route_table_id :: TFRef (AwsId AwsRouteTable)
+  }
+
+-- rta_subnet_id :: Lens' AwsRouteTableAssociationParams TFRef (AwsId AwsSubnet)
+rta_subnet_id :: Functor f => (TFRef (AwsId AwsSubnet) -> f (TFRef (AwsId AwsSubnet))) -> AwsRouteTableAssociationParams -> f AwsRouteTableAssociationParams
+rta_subnet_id k atom = fmap (\newrta_subnet_id -> atom { _rta_subnet_id = newrta_subnet_id }) (k (_rta_subnet_id atom))
+-- rta_route_table_id :: Lens' AwsRouteTableAssociationParams TFRef (AwsId AwsRouteTable)
+rta_route_table_id :: Functor f => (TFRef (AwsId AwsRouteTable) -> f (TFRef (AwsId AwsRouteTable))) -> AwsRouteTableAssociationParams -> f AwsRouteTableAssociationParams
+rta_route_table_id k atom = fmap (\newrta_route_table_id -> atom { _rta_route_table_id = newrta_route_table_id }) (k (_rta_route_table_id atom))
+
+makeAwsRouteTableAssociationParams :: TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) -> AwsRouteTableAssociationParams
+makeAwsRouteTableAssociationParams subnetId routeTableId = AwsRouteTableAssociationParams
+  { _rta_subnet_id = subnetId
+  , _rta_route_table_id = routeTableId
+  }
+
+instance ToResourceFieldMap AwsRouteTableAssociationParams where
+  toResourceFieldMap params
+    =  rfmField "subnet_id" (_rta_subnet_id params)
+    <> rfmField "route_table_id" (_rta_route_table_id params)
+    
+
+instance ToResourceField AwsRouteTableAssociationParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data IngressRuleParams = IngressRuleParams
-  { ir_from_port :: Int
-  , ir_to_port :: Int
-  , ir_protocol :: T.Text
-  , ir_options :: IngressRuleOptions
+  { _ir_from_port :: Int
+  , _ir_to_port :: Int
+  , _ir_protocol :: T.Text
+  , _ir_cidr_blocks :: [CidrBlock]
   }
   deriving (Eq)
 
-data IngressRuleOptions = IngressRuleOptions
-  { ir_cidr_blocks :: [CidrBlock]
-  }
-  deriving (Eq)
+-- ir_from_port :: Lens' IngressRuleParams Int
+ir_from_port :: Functor f => (Int -> f (Int)) -> IngressRuleParams -> f IngressRuleParams
+ir_from_port k atom = fmap (\newir_from_port -> atom { _ir_from_port = newir_from_port }) (k (_ir_from_port atom))
+-- ir_to_port :: Lens' IngressRuleParams Int
+ir_to_port :: Functor f => (Int -> f (Int)) -> IngressRuleParams -> f IngressRuleParams
+ir_to_port k atom = fmap (\newir_to_port -> atom { _ir_to_port = newir_to_port }) (k (_ir_to_port atom))
+-- ir_protocol :: Lens' IngressRuleParams T.Text
+ir_protocol :: Functor f => (T.Text -> f (T.Text)) -> IngressRuleParams -> f IngressRuleParams
+ir_protocol k atom = fmap (\newir_protocol -> atom { _ir_protocol = newir_protocol }) (k (_ir_protocol atom))
+-- ir_cidr_blocks :: Lens' IngressRuleParams [CidrBlock]
+ir_cidr_blocks :: Functor f => ([CidrBlock] -> f ([CidrBlock])) -> IngressRuleParams -> f IngressRuleParams
+ir_cidr_blocks k atom = fmap (\newir_cidr_blocks -> atom { _ir_cidr_blocks = newir_cidr_blocks }) (k (_ir_cidr_blocks atom))
 
-instance Default IngressRuleOptions where
-  def = IngressRuleOptions []
+makeIngressRuleParams :: Int -> Int -> T.Text -> IngressRuleParams
+makeIngressRuleParams fromPort toPort protocol = IngressRuleParams
+  { _ir_from_port = fromPort
+  , _ir_to_port = toPort
+  , _ir_protocol = protocol
+  , _ir_cidr_blocks = []
+  }
 
 instance ToResourceFieldMap IngressRuleParams where
   toResourceFieldMap params
-    =  rfmField "from_port" (ir_from_port params)
-    <> rfmField "to_port" (ir_to_port params)
-    <> rfmField "protocol" (ir_protocol params)
-    <> rfmOptionalDefField "cidr_blocks" [] (ir_cidr_blocks (ir_options params))
+    =  rfmField "from_port" (_ir_from_port params)
+    <> rfmField "to_port" (_ir_to_port params)
+    <> rfmField "protocol" (_ir_protocol params)
+    <> rfmOptionalDefField "cidr_blocks" [] (_ir_cidr_blocks params)
     
 
 instance ToResourceField IngressRuleParams where
@@ -453,27 +538,40 @@ instance ToResourceField IngressRuleParams where
 ----------------------------------------------------------------------
 
 data EgressRuleParams = EgressRuleParams
-  { er_from_port :: Int
-  , er_to_port :: Int
-  , er_protocol :: T.Text
-  , er_options :: EgressRuleOptions
+  { _er_from_port :: Int
+  , _er_to_port :: Int
+  , _er_protocol :: T.Text
+  , _er_cidr_blocks :: [CidrBlock]
   }
   deriving (Eq)
 
-data EgressRuleOptions = EgressRuleOptions
-  { er_cidr_blocks :: [CidrBlock]
-  }
-  deriving (Eq)
+-- er_from_port :: Lens' EgressRuleParams Int
+er_from_port :: Functor f => (Int -> f (Int)) -> EgressRuleParams -> f EgressRuleParams
+er_from_port k atom = fmap (\newer_from_port -> atom { _er_from_port = newer_from_port }) (k (_er_from_port atom))
+-- er_to_port :: Lens' EgressRuleParams Int
+er_to_port :: Functor f => (Int -> f (Int)) -> EgressRuleParams -> f EgressRuleParams
+er_to_port k atom = fmap (\newer_to_port -> atom { _er_to_port = newer_to_port }) (k (_er_to_port atom))
+-- er_protocol :: Lens' EgressRuleParams T.Text
+er_protocol :: Functor f => (T.Text -> f (T.Text)) -> EgressRuleParams -> f EgressRuleParams
+er_protocol k atom = fmap (\newer_protocol -> atom { _er_protocol = newer_protocol }) (k (_er_protocol atom))
+-- er_cidr_blocks :: Lens' EgressRuleParams [CidrBlock]
+er_cidr_blocks :: Functor f => ([CidrBlock] -> f ([CidrBlock])) -> EgressRuleParams -> f EgressRuleParams
+er_cidr_blocks k atom = fmap (\newer_cidr_blocks -> atom { _er_cidr_blocks = newer_cidr_blocks }) (k (_er_cidr_blocks atom))
 
-instance Default EgressRuleOptions where
-  def = EgressRuleOptions []
+makeEgressRuleParams :: Int -> Int -> T.Text -> EgressRuleParams
+makeEgressRuleParams fromPort toPort protocol = EgressRuleParams
+  { _er_from_port = fromPort
+  , _er_to_port = toPort
+  , _er_protocol = protocol
+  , _er_cidr_blocks = []
+  }
 
 instance ToResourceFieldMap EgressRuleParams where
   toResourceFieldMap params
-    =  rfmField "from_port" (er_from_port params)
-    <> rfmField "to_port" (er_to_port params)
-    <> rfmField "protocol" (er_protocol params)
-    <> rfmOptionalDefField "cidr_blocks" [] (er_cidr_blocks (er_options params))
+    =  rfmField "from_port" (_er_from_port params)
+    <> rfmField "to_port" (_er_to_port params)
+    <> rfmField "protocol" (_er_protocol params)
+    <> rfmOptionalDefField "cidr_blocks" [] (_er_cidr_blocks params)
     
 
 instance ToResourceField EgressRuleParams where
@@ -487,8 +585,8 @@ instance ToResourceField EgressRuleParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'sg_')
 
-awsSecurityGroup :: NameElement ->  AwsSecurityGroupOptions -> TF AwsSecurityGroup
-awsSecurityGroup name0  opts = awsSecurityGroup' name0 (AwsSecurityGroupParams  opts)
+awsSecurityGroup :: NameElement -> (AwsSecurityGroupParams -> AwsSecurityGroupParams) -> TF AwsSecurityGroup
+awsSecurityGroup name0  modf = awsSecurityGroup' name0 (modf (makeAwsSecurityGroupParams ))
 
 awsSecurityGroup' :: NameElement -> AwsSecurityGroupParams -> TF AwsSecurityGroup
 awsSecurityGroup' name0 params = do
@@ -499,37 +597,6 @@ awsSecurityGroup' name0 params = do
     , sg_resource = rid
     }
 
-data AwsSecurityGroupParams = AwsSecurityGroupParams
-  { sg_options :: AwsSecurityGroupOptions
-  }
-
-data AwsSecurityGroupOptions = AwsSecurityGroupOptions
-  { sg_name :: T.Text
-  , sg_name_prefix :: T.Text
-  , sg_description :: T.Text
-  , sg_ingress :: [IngressRuleParams]
-  , sg_egress :: [EgressRuleParams]
-  , sg_vpc_id :: Maybe (TFRef (AwsId AwsVpc))
-  , sg_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsSecurityGroupOptions where
-  def = AwsSecurityGroupOptions "" "" "" [] [] Nothing M.empty
-
-instance ToResourceFieldMap AwsSecurityGroupParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "name" "" (sg_name (sg_options params))
-    <> rfmOptionalDefField "name_prefix" "" (sg_name_prefix (sg_options params))
-    <> rfmOptionalDefField "description" "" (sg_description (sg_options params))
-    <> rfmOptionalDefField "ingress" [] (sg_ingress (sg_options params))
-    <> rfmOptionalDefField "egress" [] (sg_egress (sg_options params))
-    <> rfmOptionalField "vpc_id" (sg_vpc_id (sg_options params))
-    <> rfmOptionalDefField "tags" M.empty (sg_tags (sg_options params))
-    
-
-instance ToResourceField AwsSecurityGroupParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsSecurityGroup = AwsSecurityGroup
   { sg_id :: TFRef (AwsId AwsSecurityGroup)
   , sg_owner_id :: TFRef T.Text
@@ -539,28 +606,94 @@ data AwsSecurityGroup = AwsSecurityGroup
 instance IsResource AwsSecurityGroup where
   resourceId = sg_resource
 
+data AwsSecurityGroupParams = AwsSecurityGroupParams
+  { _sg_name :: T.Text
+  , _sg_name_prefix :: T.Text
+  , _sg_description :: T.Text
+  , _sg_ingress :: [IngressRuleParams]
+  , _sg_egress :: [EgressRuleParams]
+  , _sg_vpc_id :: Maybe (TFRef (AwsId AwsVpc))
+  , _sg_tags :: M.Map T.Text T.Text
+  }
+
+-- sg_name :: Lens' AwsSecurityGroupParams T.Text
+sg_name :: Functor f => (T.Text -> f (T.Text)) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_name k atom = fmap (\newsg_name -> atom { _sg_name = newsg_name }) (k (_sg_name atom))
+-- sg_name_prefix :: Lens' AwsSecurityGroupParams T.Text
+sg_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_name_prefix k atom = fmap (\newsg_name_prefix -> atom { _sg_name_prefix = newsg_name_prefix }) (k (_sg_name_prefix atom))
+-- sg_description :: Lens' AwsSecurityGroupParams T.Text
+sg_description :: Functor f => (T.Text -> f (T.Text)) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_description k atom = fmap (\newsg_description -> atom { _sg_description = newsg_description }) (k (_sg_description atom))
+-- sg_ingress :: Lens' AwsSecurityGroupParams [IngressRuleParams]
+sg_ingress :: Functor f => ([IngressRuleParams] -> f ([IngressRuleParams])) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_ingress k atom = fmap (\newsg_ingress -> atom { _sg_ingress = newsg_ingress }) (k (_sg_ingress atom))
+-- sg_egress :: Lens' AwsSecurityGroupParams [EgressRuleParams]
+sg_egress :: Functor f => ([EgressRuleParams] -> f ([EgressRuleParams])) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_egress k atom = fmap (\newsg_egress -> atom { _sg_egress = newsg_egress }) (k (_sg_egress atom))
+-- sg_vpc_id :: Lens' AwsSecurityGroupParams Maybe (TFRef (AwsId AwsVpc))
+sg_vpc_id :: Functor f => (Maybe (TFRef (AwsId AwsVpc)) -> f (Maybe (TFRef (AwsId AwsVpc)))) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_vpc_id k atom = fmap (\newsg_vpc_id -> atom { _sg_vpc_id = newsg_vpc_id }) (k (_sg_vpc_id atom))
+-- sg_tags :: Lens' AwsSecurityGroupParams M.Map T.Text T.Text
+sg_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsSecurityGroupParams -> f AwsSecurityGroupParams
+sg_tags k atom = fmap (\newsg_tags -> atom { _sg_tags = newsg_tags }) (k (_sg_tags atom))
+
+makeAwsSecurityGroupParams ::  AwsSecurityGroupParams
+makeAwsSecurityGroupParams  = AwsSecurityGroupParams
+  { _sg_name = ""
+  , _sg_name_prefix = ""
+  , _sg_description = ""
+  , _sg_ingress = []
+  , _sg_egress = []
+  , _sg_vpc_id = Nothing
+  , _sg_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsSecurityGroupParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (_sg_name params)
+    <> rfmOptionalDefField "name_prefix" "" (_sg_name_prefix params)
+    <> rfmOptionalDefField "description" "" (_sg_description params)
+    <> rfmOptionalDefField "ingress" [] (_sg_ingress params)
+    <> rfmOptionalDefField "egress" [] (_sg_egress params)
+    <> rfmOptionalField "vpc_id" (_sg_vpc_id params)
+    <> rfmOptionalDefField "tags" M.empty (_sg_tags params)
+    
+
+instance ToResourceField AwsSecurityGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data RootBlockDeviceParams = RootBlockDeviceParams
-  { rbd_options :: RootBlockDeviceOptions
+  { _rbd_volume_type :: VolumeType
+  , _rbd_volume_size :: Maybe (Int)
+  , _rbd_delete_on_termination :: Bool
   }
   deriving (Eq)
 
-data RootBlockDeviceOptions = RootBlockDeviceOptions
-  { rbd_volume_type :: VolumeType
-  , rbd_volume_size :: Maybe (Int)
-  , rbd_delete_on_termination :: Bool
-  }
-  deriving (Eq)
+-- rbd_volume_type :: Lens' RootBlockDeviceParams VolumeType
+rbd_volume_type :: Functor f => (VolumeType -> f (VolumeType)) -> RootBlockDeviceParams -> f RootBlockDeviceParams
+rbd_volume_type k atom = fmap (\newrbd_volume_type -> atom { _rbd_volume_type = newrbd_volume_type }) (k (_rbd_volume_type atom))
+-- rbd_volume_size :: Lens' RootBlockDeviceParams Maybe (Int)
+rbd_volume_size :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> RootBlockDeviceParams -> f RootBlockDeviceParams
+rbd_volume_size k atom = fmap (\newrbd_volume_size -> atom { _rbd_volume_size = newrbd_volume_size }) (k (_rbd_volume_size atom))
+-- rbd_delete_on_termination :: Lens' RootBlockDeviceParams Bool
+rbd_delete_on_termination :: Functor f => (Bool -> f (Bool)) -> RootBlockDeviceParams -> f RootBlockDeviceParams
+rbd_delete_on_termination k atom = fmap (\newrbd_delete_on_termination -> atom { _rbd_delete_on_termination = newrbd_delete_on_termination }) (k (_rbd_delete_on_termination atom))
 
-instance Default RootBlockDeviceOptions where
-  def = RootBlockDeviceOptions "standard" Nothing True
+makeRootBlockDeviceParams ::  RootBlockDeviceParams
+makeRootBlockDeviceParams  = RootBlockDeviceParams
+  { _rbd_volume_type = "standard"
+  , _rbd_volume_size = Nothing
+  , _rbd_delete_on_termination = True
+  }
 
 instance ToResourceFieldMap RootBlockDeviceParams where
   toResourceFieldMap params
-    =  rfmOptionalDefField "volume_type" "standard" (rbd_volume_type (rbd_options params))
-    <> rfmOptionalField "volume_size" (rbd_volume_size (rbd_options params))
-    <> rfmOptionalDefField "delete_on_termination" True (rbd_delete_on_termination (rbd_options params))
+    =  rfmOptionalDefField "volume_type" "standard" (_rbd_volume_type params)
+    <> rfmOptionalField "volume_size" (_rbd_volume_size params)
+    <> rfmOptionalDefField "delete_on_termination" True (_rbd_delete_on_termination params)
     
 
 instance ToResourceField RootBlockDeviceParams where
@@ -574,8 +707,8 @@ instance ToResourceField RootBlockDeviceParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'i_')
 
-awsInstance :: NameElement -> Ami -> InstanceType -> AwsInstanceOptions -> TF AwsInstance
-awsInstance name0 ami instanceType opts = awsInstance' name0 (AwsInstanceParams ami instanceType opts)
+awsInstance :: NameElement -> Ami -> InstanceType ->(AwsInstanceParams -> AwsInstanceParams) -> TF AwsInstance
+awsInstance name0 ami instanceType modf = awsInstance' name0 (modf (makeAwsInstanceParams ami instanceType))
 
 awsInstance' :: NameElement -> AwsInstanceParams -> TF AwsInstance
 awsInstance' name0 params = do
@@ -587,49 +720,6 @@ awsInstance' name0 params = do
     , i_resource = rid
     }
 
-data AwsInstanceParams = AwsInstanceParams
-  { i_ami :: Ami
-  , i_instance_type :: InstanceType
-  , i_options :: AwsInstanceOptions
-  }
-
-data AwsInstanceOptions = AwsInstanceOptions
-  { i_availability_zone :: AvailabilityZone
-  , i_ebs_optimized :: Maybe (Bool)
-  , i_key_name :: Maybe (KeyName)
-  , i_monitoring :: Bool
-  , i_subnet_id :: Maybe (TFRef (AwsId AwsSubnet))
-  , i_associate_public_ip_address :: Maybe (Bool)
-  , i_root_block_device :: Maybe (RootBlockDeviceParams)
-  , i_user_data :: T.Text
-  , i_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
-  , i_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
-  , i_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsInstanceOptions where
-  def = AwsInstanceOptions "" Nothing Nothing True Nothing Nothing Nothing "" Nothing [] M.empty
-
-instance ToResourceFieldMap AwsInstanceParams where
-  toResourceFieldMap params
-    =  rfmField "ami" (i_ami params)
-    <> rfmOptionalDefField "availability_zone" "" (i_availability_zone (i_options params))
-    <> rfmOptionalField "ebs_optimized" (i_ebs_optimized (i_options params))
-    <> rfmField "instance_type" (i_instance_type params)
-    <> rfmOptionalField "key_name" (i_key_name (i_options params))
-    <> rfmOptionalDefField "monitoring" True (i_monitoring (i_options params))
-    <> rfmOptionalField "subnet_id" (i_subnet_id (i_options params))
-    <> rfmOptionalField "associate_public_ip_address" (i_associate_public_ip_address (i_options params))
-    <> rfmOptionalField "root_block_device" (i_root_block_device (i_options params))
-    <> rfmOptionalDefField "user_data" "" (i_user_data (i_options params))
-    <> rfmOptionalField "iam_instance_profile" (i_iam_instance_profile (i_options params))
-    <> rfmOptionalDefField "vpc_security_group_ids" [] (i_vpc_security_group_ids (i_options params))
-    <> rfmOptionalDefField "tags" M.empty (i_tags (i_options params))
-    
-
-instance ToResourceField AwsInstanceParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsInstance = AwsInstance
   { i_id :: TFRef (AwsId AwsInstance)
   , i_public_ip :: TFRef IpAddress
@@ -640,6 +730,99 @@ data AwsInstance = AwsInstance
 instance IsResource AwsInstance where
   resourceId = i_resource
 
+data AwsInstanceParams = AwsInstanceParams
+  { _i_ami :: Ami
+  , _i_instance_type :: InstanceType
+  , _i_availability_zone :: AvailabilityZone
+  , _i_ebs_optimized :: Maybe (Bool)
+  , _i_key_name :: Maybe (KeyName)
+  , _i_monitoring :: Bool
+  , _i_subnet_id :: Maybe (TFRef (AwsId AwsSubnet))
+  , _i_associate_public_ip_address :: Maybe (Bool)
+  , _i_root_block_device :: Maybe (RootBlockDeviceParams)
+  , _i_user_data :: T.Text
+  , _i_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
+  , _i_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
+  , _i_tags :: M.Map T.Text T.Text
+  }
+
+-- i_ami :: Lens' AwsInstanceParams Ami
+i_ami :: Functor f => (Ami -> f (Ami)) -> AwsInstanceParams -> f AwsInstanceParams
+i_ami k atom = fmap (\newi_ami -> atom { _i_ami = newi_ami }) (k (_i_ami atom))
+-- i_availability_zone :: Lens' AwsInstanceParams AvailabilityZone
+i_availability_zone :: Functor f => (AvailabilityZone -> f (AvailabilityZone)) -> AwsInstanceParams -> f AwsInstanceParams
+i_availability_zone k atom = fmap (\newi_availability_zone -> atom { _i_availability_zone = newi_availability_zone }) (k (_i_availability_zone atom))
+-- i_ebs_optimized :: Lens' AwsInstanceParams Maybe (Bool)
+i_ebs_optimized :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> AwsInstanceParams -> f AwsInstanceParams
+i_ebs_optimized k atom = fmap (\newi_ebs_optimized -> atom { _i_ebs_optimized = newi_ebs_optimized }) (k (_i_ebs_optimized atom))
+-- i_instance_type :: Lens' AwsInstanceParams InstanceType
+i_instance_type :: Functor f => (InstanceType -> f (InstanceType)) -> AwsInstanceParams -> f AwsInstanceParams
+i_instance_type k atom = fmap (\newi_instance_type -> atom { _i_instance_type = newi_instance_type }) (k (_i_instance_type atom))
+-- i_key_name :: Lens' AwsInstanceParams Maybe (KeyName)
+i_key_name :: Functor f => (Maybe (KeyName) -> f (Maybe (KeyName))) -> AwsInstanceParams -> f AwsInstanceParams
+i_key_name k atom = fmap (\newi_key_name -> atom { _i_key_name = newi_key_name }) (k (_i_key_name atom))
+-- i_monitoring :: Lens' AwsInstanceParams Bool
+i_monitoring :: Functor f => (Bool -> f (Bool)) -> AwsInstanceParams -> f AwsInstanceParams
+i_monitoring k atom = fmap (\newi_monitoring -> atom { _i_monitoring = newi_monitoring }) (k (_i_monitoring atom))
+-- i_subnet_id :: Lens' AwsInstanceParams Maybe (TFRef (AwsId AwsSubnet))
+i_subnet_id :: Functor f => (Maybe (TFRef (AwsId AwsSubnet)) -> f (Maybe (TFRef (AwsId AwsSubnet)))) -> AwsInstanceParams -> f AwsInstanceParams
+i_subnet_id k atom = fmap (\newi_subnet_id -> atom { _i_subnet_id = newi_subnet_id }) (k (_i_subnet_id atom))
+-- i_associate_public_ip_address :: Lens' AwsInstanceParams Maybe (Bool)
+i_associate_public_ip_address :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> AwsInstanceParams -> f AwsInstanceParams
+i_associate_public_ip_address k atom = fmap (\newi_associate_public_ip_address -> atom { _i_associate_public_ip_address = newi_associate_public_ip_address }) (k (_i_associate_public_ip_address atom))
+-- i_root_block_device :: Lens' AwsInstanceParams Maybe (RootBlockDeviceParams)
+i_root_block_device :: Functor f => (Maybe (RootBlockDeviceParams) -> f (Maybe (RootBlockDeviceParams))) -> AwsInstanceParams -> f AwsInstanceParams
+i_root_block_device k atom = fmap (\newi_root_block_device -> atom { _i_root_block_device = newi_root_block_device }) (k (_i_root_block_device atom))
+-- i_user_data :: Lens' AwsInstanceParams T.Text
+i_user_data :: Functor f => (T.Text -> f (T.Text)) -> AwsInstanceParams -> f AwsInstanceParams
+i_user_data k atom = fmap (\newi_user_data -> atom { _i_user_data = newi_user_data }) (k (_i_user_data atom))
+-- i_iam_instance_profile :: Lens' AwsInstanceParams Maybe (TFRef (AwsId AwsIamInstanceProfile))
+i_iam_instance_profile :: Functor f => (Maybe (TFRef (AwsId AwsIamInstanceProfile)) -> f (Maybe (TFRef (AwsId AwsIamInstanceProfile)))) -> AwsInstanceParams -> f AwsInstanceParams
+i_iam_instance_profile k atom = fmap (\newi_iam_instance_profile -> atom { _i_iam_instance_profile = newi_iam_instance_profile }) (k (_i_iam_instance_profile atom))
+-- i_vpc_security_group_ids :: Lens' AwsInstanceParams [TFRef (AwsId AwsSecurityGroup)]
+i_vpc_security_group_ids :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsInstanceParams -> f AwsInstanceParams
+i_vpc_security_group_ids k atom = fmap (\newi_vpc_security_group_ids -> atom { _i_vpc_security_group_ids = newi_vpc_security_group_ids }) (k (_i_vpc_security_group_ids atom))
+-- i_tags :: Lens' AwsInstanceParams M.Map T.Text T.Text
+i_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsInstanceParams -> f AwsInstanceParams
+i_tags k atom = fmap (\newi_tags -> atom { _i_tags = newi_tags }) (k (_i_tags atom))
+
+makeAwsInstanceParams :: Ami -> InstanceType -> AwsInstanceParams
+makeAwsInstanceParams ami instanceType = AwsInstanceParams
+  { _i_ami = ami
+  , _i_instance_type = instanceType
+  , _i_availability_zone = ""
+  , _i_ebs_optimized = Nothing
+  , _i_key_name = Nothing
+  , _i_monitoring = True
+  , _i_subnet_id = Nothing
+  , _i_associate_public_ip_address = Nothing
+  , _i_root_block_device = Nothing
+  , _i_user_data = ""
+  , _i_iam_instance_profile = Nothing
+  , _i_vpc_security_group_ids = []
+  , _i_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsInstanceParams where
+  toResourceFieldMap params
+    =  rfmField "ami" (_i_ami params)
+    <> rfmOptionalDefField "availability_zone" "" (_i_availability_zone params)
+    <> rfmOptionalField "ebs_optimized" (_i_ebs_optimized params)
+    <> rfmField "instance_type" (_i_instance_type params)
+    <> rfmOptionalField "key_name" (_i_key_name params)
+    <> rfmOptionalDefField "monitoring" True (_i_monitoring params)
+    <> rfmOptionalField "subnet_id" (_i_subnet_id params)
+    <> rfmOptionalField "associate_public_ip_address" (_i_associate_public_ip_address params)
+    <> rfmOptionalField "root_block_device" (_i_root_block_device params)
+    <> rfmOptionalDefField "user_data" "" (_i_user_data params)
+    <> rfmOptionalField "iam_instance_profile" (_i_iam_instance_profile params)
+    <> rfmOptionalDefField "vpc_security_group_ids" [] (_i_vpc_security_group_ids params)
+    <> rfmOptionalDefField "tags" M.empty (_i_tags params)
+    
+
+instance ToResourceField AwsInstanceParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsLaunchConfiguration to the resource graph.
@@ -648,8 +831,8 @@ instance IsResource AwsInstance where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'lc_')
 
-awsLaunchConfiguration :: NameElement -> Ami -> InstanceType -> AwsLaunchConfigurationOptions -> TF AwsLaunchConfiguration
-awsLaunchConfiguration name0 imageId instanceType opts = awsLaunchConfiguration' name0 (AwsLaunchConfigurationParams imageId instanceType opts)
+awsLaunchConfiguration :: NameElement -> Ami -> InstanceType ->(AwsLaunchConfigurationParams -> AwsLaunchConfigurationParams) -> TF AwsLaunchConfiguration
+awsLaunchConfiguration name0 imageId instanceType modf = awsLaunchConfiguration' name0 (modf (makeAwsLaunchConfigurationParams imageId instanceType))
 
 awsLaunchConfiguration' :: NameElement -> AwsLaunchConfigurationParams -> TF AwsLaunchConfiguration
 awsLaunchConfiguration' name0 params = do
@@ -660,47 +843,6 @@ awsLaunchConfiguration' name0 params = do
     , lc_resource = rid
     }
 
-data AwsLaunchConfigurationParams = AwsLaunchConfigurationParams
-  { lc_image_id :: Ami
-  , lc_instance_type :: InstanceType
-  , lc_options :: AwsLaunchConfigurationOptions
-  }
-
-data AwsLaunchConfigurationOptions = AwsLaunchConfigurationOptions
-  { lc_name' :: T.Text
-  , lc_name_prefix :: T.Text
-  , lc_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
-  , lc_key_name :: Maybe (KeyName)
-  , lc_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
-  , lc_associate_public_ip_address :: Maybe (Bool)
-  , lc_user_data :: T.Text
-  , lc_enable_monitoring :: Bool
-  , lc_ebs_optimized :: Maybe (Bool)
-  , lc_root_block_device :: Maybe (RootBlockDeviceParams)
-  }
-
-instance Default AwsLaunchConfigurationOptions where
-  def = AwsLaunchConfigurationOptions "" "" Nothing Nothing [] Nothing "" True Nothing Nothing
-
-instance ToResourceFieldMap AwsLaunchConfigurationParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "name" "" (lc_name' (lc_options params))
-    <> rfmOptionalDefField "name_prefix" "" (lc_name_prefix (lc_options params))
-    <> rfmField "image_id" (lc_image_id params)
-    <> rfmField "instance_type" (lc_instance_type params)
-    <> rfmOptionalField "iam_instance_profile" (lc_iam_instance_profile (lc_options params))
-    <> rfmOptionalField "key_name" (lc_key_name (lc_options params))
-    <> rfmOptionalDefField "security_groups" [] (lc_security_groups (lc_options params))
-    <> rfmOptionalField "associate_public_ip_address" (lc_associate_public_ip_address (lc_options params))
-    <> rfmOptionalDefField "user_data" "" (lc_user_data (lc_options params))
-    <> rfmOptionalDefField "enable_monitoring" True (lc_enable_monitoring (lc_options params))
-    <> rfmOptionalField "ebs_optimized" (lc_ebs_optimized (lc_options params))
-    <> rfmOptionalField "root_block_device" (lc_root_block_device (lc_options params))
-    
-
-instance ToResourceField AwsLaunchConfigurationParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsLaunchConfiguration = AwsLaunchConfiguration
   { lc_id :: TFRef (AwsId AwsLaunchConfiguration)
   , lc_name :: TFRef T.Text
@@ -710,6 +852,93 @@ data AwsLaunchConfiguration = AwsLaunchConfiguration
 instance IsResource AwsLaunchConfiguration where
   resourceId = lc_resource
 
+data AwsLaunchConfigurationParams = AwsLaunchConfigurationParams
+  { _lc_image_id :: Ami
+  , _lc_instance_type :: InstanceType
+  , _lc_name' :: T.Text
+  , _lc_name_prefix :: T.Text
+  , _lc_iam_instance_profile :: Maybe (TFRef (AwsId AwsIamInstanceProfile))
+  , _lc_key_name :: Maybe (KeyName)
+  , _lc_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
+  , _lc_associate_public_ip_address :: Maybe (Bool)
+  , _lc_user_data :: T.Text
+  , _lc_enable_monitoring :: Bool
+  , _lc_ebs_optimized :: Maybe (Bool)
+  , _lc_root_block_device :: Maybe (RootBlockDeviceParams)
+  }
+
+-- lc_name' :: Lens' AwsLaunchConfigurationParams T.Text
+lc_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_name' k atom = fmap (\newlc_name' -> atom { _lc_name' = newlc_name' }) (k (_lc_name' atom))
+-- lc_name_prefix :: Lens' AwsLaunchConfigurationParams T.Text
+lc_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_name_prefix k atom = fmap (\newlc_name_prefix -> atom { _lc_name_prefix = newlc_name_prefix }) (k (_lc_name_prefix atom))
+-- lc_image_id :: Lens' AwsLaunchConfigurationParams Ami
+lc_image_id :: Functor f => (Ami -> f (Ami)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_image_id k atom = fmap (\newlc_image_id -> atom { _lc_image_id = newlc_image_id }) (k (_lc_image_id atom))
+-- lc_instance_type :: Lens' AwsLaunchConfigurationParams InstanceType
+lc_instance_type :: Functor f => (InstanceType -> f (InstanceType)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_instance_type k atom = fmap (\newlc_instance_type -> atom { _lc_instance_type = newlc_instance_type }) (k (_lc_instance_type atom))
+-- lc_iam_instance_profile :: Lens' AwsLaunchConfigurationParams Maybe (TFRef (AwsId AwsIamInstanceProfile))
+lc_iam_instance_profile :: Functor f => (Maybe (TFRef (AwsId AwsIamInstanceProfile)) -> f (Maybe (TFRef (AwsId AwsIamInstanceProfile)))) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_iam_instance_profile k atom = fmap (\newlc_iam_instance_profile -> atom { _lc_iam_instance_profile = newlc_iam_instance_profile }) (k (_lc_iam_instance_profile atom))
+-- lc_key_name :: Lens' AwsLaunchConfigurationParams Maybe (KeyName)
+lc_key_name :: Functor f => (Maybe (KeyName) -> f (Maybe (KeyName))) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_key_name k atom = fmap (\newlc_key_name -> atom { _lc_key_name = newlc_key_name }) (k (_lc_key_name atom))
+-- lc_security_groups :: Lens' AwsLaunchConfigurationParams [TFRef (AwsId AwsSecurityGroup)]
+lc_security_groups :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_security_groups k atom = fmap (\newlc_security_groups -> atom { _lc_security_groups = newlc_security_groups }) (k (_lc_security_groups atom))
+-- lc_associate_public_ip_address :: Lens' AwsLaunchConfigurationParams Maybe (Bool)
+lc_associate_public_ip_address :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_associate_public_ip_address k atom = fmap (\newlc_associate_public_ip_address -> atom { _lc_associate_public_ip_address = newlc_associate_public_ip_address }) (k (_lc_associate_public_ip_address atom))
+-- lc_user_data :: Lens' AwsLaunchConfigurationParams T.Text
+lc_user_data :: Functor f => (T.Text -> f (T.Text)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_user_data k atom = fmap (\newlc_user_data -> atom { _lc_user_data = newlc_user_data }) (k (_lc_user_data atom))
+-- lc_enable_monitoring :: Lens' AwsLaunchConfigurationParams Bool
+lc_enable_monitoring :: Functor f => (Bool -> f (Bool)) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_enable_monitoring k atom = fmap (\newlc_enable_monitoring -> atom { _lc_enable_monitoring = newlc_enable_monitoring }) (k (_lc_enable_monitoring atom))
+-- lc_ebs_optimized :: Lens' AwsLaunchConfigurationParams Maybe (Bool)
+lc_ebs_optimized :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_ebs_optimized k atom = fmap (\newlc_ebs_optimized -> atom { _lc_ebs_optimized = newlc_ebs_optimized }) (k (_lc_ebs_optimized atom))
+-- lc_root_block_device :: Lens' AwsLaunchConfigurationParams Maybe (RootBlockDeviceParams)
+lc_root_block_device :: Functor f => (Maybe (RootBlockDeviceParams) -> f (Maybe (RootBlockDeviceParams))) -> AwsLaunchConfigurationParams -> f AwsLaunchConfigurationParams
+lc_root_block_device k atom = fmap (\newlc_root_block_device -> atom { _lc_root_block_device = newlc_root_block_device }) (k (_lc_root_block_device atom))
+
+makeAwsLaunchConfigurationParams :: Ami -> InstanceType -> AwsLaunchConfigurationParams
+makeAwsLaunchConfigurationParams imageId instanceType = AwsLaunchConfigurationParams
+  { _lc_image_id = imageId
+  , _lc_instance_type = instanceType
+  , _lc_name' = ""
+  , _lc_name_prefix = ""
+  , _lc_iam_instance_profile = Nothing
+  , _lc_key_name = Nothing
+  , _lc_security_groups = []
+  , _lc_associate_public_ip_address = Nothing
+  , _lc_user_data = ""
+  , _lc_enable_monitoring = True
+  , _lc_ebs_optimized = Nothing
+  , _lc_root_block_device = Nothing
+  }
+
+instance ToResourceFieldMap AwsLaunchConfigurationParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (_lc_name' params)
+    <> rfmOptionalDefField "name_prefix" "" (_lc_name_prefix params)
+    <> rfmField "image_id" (_lc_image_id params)
+    <> rfmField "instance_type" (_lc_instance_type params)
+    <> rfmOptionalField "iam_instance_profile" (_lc_iam_instance_profile params)
+    <> rfmOptionalField "key_name" (_lc_key_name params)
+    <> rfmOptionalDefField "security_groups" [] (_lc_security_groups params)
+    <> rfmOptionalField "associate_public_ip_address" (_lc_associate_public_ip_address params)
+    <> rfmOptionalDefField "user_data" "" (_lc_user_data params)
+    <> rfmOptionalDefField "enable_monitoring" True (_lc_enable_monitoring params)
+    <> rfmOptionalField "ebs_optimized" (_lc_ebs_optimized params)
+    <> rfmOptionalField "root_block_device" (_lc_root_block_device params)
+    
+
+instance ToResourceField AwsLaunchConfigurationParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsAutoscalingGroup to the resource graph.
@@ -718,8 +947,8 @@ instance IsResource AwsLaunchConfiguration where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'ag_')
 
-awsAutoscalingGroup :: NameElement -> Int -> Int -> TFRef T.Text -> AwsAutoscalingGroupOptions -> TF AwsAutoscalingGroup
-awsAutoscalingGroup name0 maxSize minSize launchConfiguration opts = awsAutoscalingGroup' name0 (AwsAutoscalingGroupParams maxSize minSize launchConfiguration opts)
+awsAutoscalingGroup :: NameElement -> Int -> Int -> TFRef T.Text ->(AwsAutoscalingGroupParams -> AwsAutoscalingGroupParams) -> TF AwsAutoscalingGroup
+awsAutoscalingGroup name0 maxSize minSize launchConfiguration modf = awsAutoscalingGroup' name0 (modf (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration))
 
 awsAutoscalingGroup' :: NameElement -> AwsAutoscalingGroupParams -> TF AwsAutoscalingGroup
 awsAutoscalingGroup' name0 params = do
@@ -731,39 +960,6 @@ awsAutoscalingGroup' name0 params = do
     , ag_resource = rid
     }
 
-data AwsAutoscalingGroupParams = AwsAutoscalingGroupParams
-  { ag_max_size :: Int
-  , ag_min_size :: Int
-  , ag_launch_configuration :: TFRef T.Text
-  , ag_options :: AwsAutoscalingGroupOptions
-  }
-
-data AwsAutoscalingGroupOptions = AwsAutoscalingGroupOptions
-  { ag_name' :: T.Text
-  , ag_name_prefix :: T.Text
-  , ag_vpc_zone_identifier :: [TFRef (AwsId AwsSubnet)]
-  , ag_load_balancers :: [TFRef T.Text]
-  , ag_tag :: [AsgTagParams]
-  }
-
-instance Default AwsAutoscalingGroupOptions where
-  def = AwsAutoscalingGroupOptions "" "" [] [] []
-
-instance ToResourceFieldMap AwsAutoscalingGroupParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "name" "" (ag_name' (ag_options params))
-    <> rfmOptionalDefField "name_prefix" "" (ag_name_prefix (ag_options params))
-    <> rfmField "max_size" (ag_max_size params)
-    <> rfmField "min_size" (ag_min_size params)
-    <> rfmOptionalDefField "vpc_zone_identifier" [] (ag_vpc_zone_identifier (ag_options params))
-    <> rfmField "launch_configuration" (ag_launch_configuration params)
-    <> rfmOptionalDefField "load_balancers" [] (ag_load_balancers (ag_options params))
-    <> rfmExpandedList "tag" (ag_tag (ag_options params))
-    
-
-instance ToResourceField AwsAutoscalingGroupParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsAutoscalingGroup = AwsAutoscalingGroup
   { ag_id :: TFRef (AwsId AwsAutoscalingGroup)
   , ag_arn :: TFRef Arn
@@ -774,28 +970,100 @@ data AwsAutoscalingGroup = AwsAutoscalingGroup
 instance IsResource AwsAutoscalingGroup where
   resourceId = ag_resource
 
+data AwsAutoscalingGroupParams = AwsAutoscalingGroupParams
+  { _ag_max_size :: Int
+  , _ag_min_size :: Int
+  , _ag_launch_configuration :: TFRef T.Text
+  , _ag_name' :: T.Text
+  , _ag_name_prefix :: T.Text
+  , _ag_vpc_zone_identifier :: [TFRef (AwsId AwsSubnet)]
+  , _ag_load_balancers :: [TFRef T.Text]
+  , _ag_tag :: [AsgTagParams]
+  }
+
+-- ag_name' :: Lens' AwsAutoscalingGroupParams T.Text
+ag_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_name' k atom = fmap (\newag_name' -> atom { _ag_name' = newag_name' }) (k (_ag_name' atom))
+-- ag_name_prefix :: Lens' AwsAutoscalingGroupParams T.Text
+ag_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_name_prefix k atom = fmap (\newag_name_prefix -> atom { _ag_name_prefix = newag_name_prefix }) (k (_ag_name_prefix atom))
+-- ag_max_size :: Lens' AwsAutoscalingGroupParams Int
+ag_max_size :: Functor f => (Int -> f (Int)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_max_size k atom = fmap (\newag_max_size -> atom { _ag_max_size = newag_max_size }) (k (_ag_max_size atom))
+-- ag_min_size :: Lens' AwsAutoscalingGroupParams Int
+ag_min_size :: Functor f => (Int -> f (Int)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_min_size k atom = fmap (\newag_min_size -> atom { _ag_min_size = newag_min_size }) (k (_ag_min_size atom))
+-- ag_vpc_zone_identifier :: Lens' AwsAutoscalingGroupParams [TFRef (AwsId AwsSubnet)]
+ag_vpc_zone_identifier :: Functor f => ([TFRef (AwsId AwsSubnet)] -> f ([TFRef (AwsId AwsSubnet)])) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_vpc_zone_identifier k atom = fmap (\newag_vpc_zone_identifier -> atom { _ag_vpc_zone_identifier = newag_vpc_zone_identifier }) (k (_ag_vpc_zone_identifier atom))
+-- ag_launch_configuration :: Lens' AwsAutoscalingGroupParams TFRef T.Text
+ag_launch_configuration :: Functor f => (TFRef T.Text -> f (TFRef T.Text)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_launch_configuration k atom = fmap (\newag_launch_configuration -> atom { _ag_launch_configuration = newag_launch_configuration }) (k (_ag_launch_configuration atom))
+-- ag_load_balancers :: Lens' AwsAutoscalingGroupParams [TFRef T.Text]
+ag_load_balancers :: Functor f => ([TFRef T.Text] -> f ([TFRef T.Text])) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_load_balancers k atom = fmap (\newag_load_balancers -> atom { _ag_load_balancers = newag_load_balancers }) (k (_ag_load_balancers atom))
+-- ag_tag :: Lens' AwsAutoscalingGroupParams [AsgTagParams]
+ag_tag :: Functor f => ([AsgTagParams] -> f ([AsgTagParams])) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_tag k atom = fmap (\newag_tag -> atom { _ag_tag = newag_tag }) (k (_ag_tag atom))
+
+makeAwsAutoscalingGroupParams :: Int -> Int -> TFRef T.Text -> AwsAutoscalingGroupParams
+makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration = AwsAutoscalingGroupParams
+  { _ag_max_size = maxSize
+  , _ag_min_size = minSize
+  , _ag_launch_configuration = launchConfiguration
+  , _ag_name' = ""
+  , _ag_name_prefix = ""
+  , _ag_vpc_zone_identifier = []
+  , _ag_load_balancers = []
+  , _ag_tag = []
+  }
+
+instance ToResourceFieldMap AwsAutoscalingGroupParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (_ag_name' params)
+    <> rfmOptionalDefField "name_prefix" "" (_ag_name_prefix params)
+    <> rfmField "max_size" (_ag_max_size params)
+    <> rfmField "min_size" (_ag_min_size params)
+    <> rfmOptionalDefField "vpc_zone_identifier" [] (_ag_vpc_zone_identifier params)
+    <> rfmField "launch_configuration" (_ag_launch_configuration params)
+    <> rfmOptionalDefField "load_balancers" [] (_ag_load_balancers params)
+    <> rfmExpandedList "tag" (_ag_tag params)
+    
+
+instance ToResourceField AwsAutoscalingGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data AsgTagParams = AsgTagParams
-  { asg_key :: T.Text
-  , asg_value :: T.Text
-  , asg_propagate_at_launch :: Bool
-  , asg_options :: AsgTagOptions
+  { _asg_key :: T.Text
+  , _asg_value :: T.Text
+  , _asg_propagate_at_launch :: Bool
   }
   deriving (Eq)
 
-data AsgTagOptions = AsgTagOptions
-  { }
-  deriving (Eq)
+-- asg_key :: Lens' AsgTagParams T.Text
+asg_key :: Functor f => (T.Text -> f (T.Text)) -> AsgTagParams -> f AsgTagParams
+asg_key k atom = fmap (\newasg_key -> atom { _asg_key = newasg_key }) (k (_asg_key atom))
+-- asg_value :: Lens' AsgTagParams T.Text
+asg_value :: Functor f => (T.Text -> f (T.Text)) -> AsgTagParams -> f AsgTagParams
+asg_value k atom = fmap (\newasg_value -> atom { _asg_value = newasg_value }) (k (_asg_value atom))
+-- asg_propagate_at_launch :: Lens' AsgTagParams Bool
+asg_propagate_at_launch :: Functor f => (Bool -> f (Bool)) -> AsgTagParams -> f AsgTagParams
+asg_propagate_at_launch k atom = fmap (\newasg_propagate_at_launch -> atom { _asg_propagate_at_launch = newasg_propagate_at_launch }) (k (_asg_propagate_at_launch atom))
 
-instance Default AsgTagOptions where
-  def = AsgTagOptions 
+makeAsgTagParams :: T.Text -> T.Text -> Bool -> AsgTagParams
+makeAsgTagParams key value propagateAtLaunch = AsgTagParams
+  { _asg_key = key
+  , _asg_value = value
+  , _asg_propagate_at_launch = propagateAtLaunch
+  }
 
 instance ToResourceFieldMap AsgTagParams where
   toResourceFieldMap params
-    =  rfmField "key" (asg_key params)
-    <> rfmField "value" (asg_value params)
-    <> rfmField "propagate_at_launch" (asg_propagate_at_launch params)
+    =  rfmField "key" (_asg_key params)
+    <> rfmField "value" (_asg_value params)
+    <> rfmField "propagate_at_launch" (_asg_propagate_at_launch params)
     
 
 instance ToResourceField AsgTagParams where
@@ -809,8 +1077,8 @@ instance ToResourceField AsgTagParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'eip_')
 
-awsEip :: NameElement ->  AwsEipOptions -> TF AwsEip
-awsEip name0  opts = awsEip' name0 (AwsEipParams  opts)
+awsEip :: NameElement -> (AwsEipParams -> AwsEipParams) -> TF AwsEip
+awsEip name0  modf = awsEip' name0 (modf (makeAwsEipParams ))
 
 awsEip' :: NameElement -> AwsEipParams -> TF AwsEip
 awsEip' name0 params = do
@@ -822,27 +1090,6 @@ awsEip' name0 params = do
     , eip_resource = rid
     }
 
-data AwsEipParams = AwsEipParams
-  { eip_options :: AwsEipOptions
-  }
-
-data AwsEipOptions = AwsEipOptions
-  { eip_vpc :: Bool
-  , eip_instance :: Maybe (TFRef (AwsId AwsInstance))
-  }
-
-instance Default AwsEipOptions where
-  def = AwsEipOptions False Nothing
-
-instance ToResourceFieldMap AwsEipParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "vpc" False (eip_vpc (eip_options params))
-    <> rfmOptionalField "instance" (eip_instance (eip_options params))
-    
-
-instance ToResourceField AwsEipParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsEip = AwsEip
   { eip_id :: TFRef (AwsId AwsEip)
   , eip_private_ip :: TFRef IpAddress
@@ -853,30 +1100,70 @@ data AwsEip = AwsEip
 instance IsResource AwsEip where
   resourceId = eip_resource
 
+data AwsEipParams = AwsEipParams
+  { _eip_vpc :: Bool
+  , _eip_instance :: Maybe (TFRef (AwsId AwsInstance))
+  }
+
+-- eip_vpc :: Lens' AwsEipParams Bool
+eip_vpc :: Functor f => (Bool -> f (Bool)) -> AwsEipParams -> f AwsEipParams
+eip_vpc k atom = fmap (\neweip_vpc -> atom { _eip_vpc = neweip_vpc }) (k (_eip_vpc atom))
+-- eip_instance :: Lens' AwsEipParams Maybe (TFRef (AwsId AwsInstance))
+eip_instance :: Functor f => (Maybe (TFRef (AwsId AwsInstance)) -> f (Maybe (TFRef (AwsId AwsInstance)))) -> AwsEipParams -> f AwsEipParams
+eip_instance k atom = fmap (\neweip_instance -> atom { _eip_instance = neweip_instance }) (k (_eip_instance atom))
+
+makeAwsEipParams ::  AwsEipParams
+makeAwsEipParams  = AwsEipParams
+  { _eip_vpc = False
+  , _eip_instance = Nothing
+  }
+
+instance ToResourceFieldMap AwsEipParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "vpc" False (_eip_vpc params)
+    <> rfmOptionalField "instance" (_eip_instance params)
+    
+
+instance ToResourceField AwsEipParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data AccessLogsParams = AccessLogsParams
-  { al_bucket :: S3BucketName
-  , al_options :: AccessLogsOptions
+  { _al_bucket :: S3BucketName
+  , _al_bucket_prefix :: S3Key
+  , _al_interval :: Int
+  , _al_enabled :: Bool
   }
   deriving (Eq)
 
-data AccessLogsOptions = AccessLogsOptions
-  { al_bucket_prefix :: S3Key
-  , al_interval :: Int
-  , al_enabled :: Bool
-  }
-  deriving (Eq)
+-- al_bucket :: Lens' AccessLogsParams S3BucketName
+al_bucket :: Functor f => (S3BucketName -> f (S3BucketName)) -> AccessLogsParams -> f AccessLogsParams
+al_bucket k atom = fmap (\newal_bucket -> atom { _al_bucket = newal_bucket }) (k (_al_bucket atom))
+-- al_bucket_prefix :: Lens' AccessLogsParams S3Key
+al_bucket_prefix :: Functor f => (S3Key -> f (S3Key)) -> AccessLogsParams -> f AccessLogsParams
+al_bucket_prefix k atom = fmap (\newal_bucket_prefix -> atom { _al_bucket_prefix = newal_bucket_prefix }) (k (_al_bucket_prefix atom))
+-- al_interval :: Lens' AccessLogsParams Int
+al_interval :: Functor f => (Int -> f (Int)) -> AccessLogsParams -> f AccessLogsParams
+al_interval k atom = fmap (\newal_interval -> atom { _al_interval = newal_interval }) (k (_al_interval atom))
+-- al_enabled :: Lens' AccessLogsParams Bool
+al_enabled :: Functor f => (Bool -> f (Bool)) -> AccessLogsParams -> f AccessLogsParams
+al_enabled k atom = fmap (\newal_enabled -> atom { _al_enabled = newal_enabled }) (k (_al_enabled atom))
 
-instance Default AccessLogsOptions where
-  def = AccessLogsOptions "" 60 True
+makeAccessLogsParams :: S3BucketName -> AccessLogsParams
+makeAccessLogsParams bucket = AccessLogsParams
+  { _al_bucket = bucket
+  , _al_bucket_prefix = ""
+  , _al_interval = 60
+  , _al_enabled = True
+  }
 
 instance ToResourceFieldMap AccessLogsParams where
   toResourceFieldMap params
-    =  rfmField "bucket" (al_bucket params)
-    <> rfmOptionalDefField "bucket_prefix" "" (al_bucket_prefix (al_options params))
-    <> rfmOptionalDefField "interval" 60 (al_interval (al_options params))
-    <> rfmOptionalDefField "enabled" True (al_enabled (al_options params))
+    =  rfmField "bucket" (_al_bucket params)
+    <> rfmOptionalDefField "bucket_prefix" "" (_al_bucket_prefix params)
+    <> rfmOptionalDefField "interval" 60 (_al_interval params)
+    <> rfmOptionalDefField "enabled" True (_al_enabled params)
     
 
 instance ToResourceField AccessLogsParams where
@@ -885,29 +1172,46 @@ instance ToResourceField AccessLogsParams where
 ----------------------------------------------------------------------
 
 data ListenerParams = ListenerParams
-  { l_instance_port :: Int
-  , l_instance_protocol :: T.Text
-  , l_lb_port :: Int
-  , l_lb_protocol :: T.Text
-  , l_options :: ListenerOptions
+  { _l_instance_port :: Int
+  , _l_instance_protocol :: T.Text
+  , _l_lb_port :: Int
+  , _l_lb_protocol :: T.Text
+  , _l_ssl_certificate_id :: Maybe (Arn)
   }
   deriving (Eq)
 
-data ListenerOptions = ListenerOptions
-  { l_ssl_certificate_id :: Maybe (Arn)
-  }
-  deriving (Eq)
+-- l_instance_port :: Lens' ListenerParams Int
+l_instance_port :: Functor f => (Int -> f (Int)) -> ListenerParams -> f ListenerParams
+l_instance_port k atom = fmap (\newl_instance_port -> atom { _l_instance_port = newl_instance_port }) (k (_l_instance_port atom))
+-- l_instance_protocol :: Lens' ListenerParams T.Text
+l_instance_protocol :: Functor f => (T.Text -> f (T.Text)) -> ListenerParams -> f ListenerParams
+l_instance_protocol k atom = fmap (\newl_instance_protocol -> atom { _l_instance_protocol = newl_instance_protocol }) (k (_l_instance_protocol atom))
+-- l_lb_port :: Lens' ListenerParams Int
+l_lb_port :: Functor f => (Int -> f (Int)) -> ListenerParams -> f ListenerParams
+l_lb_port k atom = fmap (\newl_lb_port -> atom { _l_lb_port = newl_lb_port }) (k (_l_lb_port atom))
+-- l_lb_protocol :: Lens' ListenerParams T.Text
+l_lb_protocol :: Functor f => (T.Text -> f (T.Text)) -> ListenerParams -> f ListenerParams
+l_lb_protocol k atom = fmap (\newl_lb_protocol -> atom { _l_lb_protocol = newl_lb_protocol }) (k (_l_lb_protocol atom))
+-- l_ssl_certificate_id :: Lens' ListenerParams Maybe (Arn)
+l_ssl_certificate_id :: Functor f => (Maybe (Arn) -> f (Maybe (Arn))) -> ListenerParams -> f ListenerParams
+l_ssl_certificate_id k atom = fmap (\newl_ssl_certificate_id -> atom { _l_ssl_certificate_id = newl_ssl_certificate_id }) (k (_l_ssl_certificate_id atom))
 
-instance Default ListenerOptions where
-  def = ListenerOptions Nothing
+makeListenerParams :: Int -> T.Text -> Int -> T.Text -> ListenerParams
+makeListenerParams instancePort instanceProtocol lbPort lbProtocol = ListenerParams
+  { _l_instance_port = instancePort
+  , _l_instance_protocol = instanceProtocol
+  , _l_lb_port = lbPort
+  , _l_lb_protocol = lbProtocol
+  , _l_ssl_certificate_id = Nothing
+  }
 
 instance ToResourceFieldMap ListenerParams where
   toResourceFieldMap params
-    =  rfmField "instance_port" (l_instance_port params)
-    <> rfmField "instance_protocol" (l_instance_protocol params)
-    <> rfmField "lb_port" (l_lb_port params)
-    <> rfmField "lb_protocol" (l_lb_protocol params)
-    <> rfmOptionalField "ssl_certificate_id" (l_ssl_certificate_id (l_options params))
+    =  rfmField "instance_port" (_l_instance_port params)
+    <> rfmField "instance_protocol" (_l_instance_protocol params)
+    <> rfmField "lb_port" (_l_lb_port params)
+    <> rfmField "lb_protocol" (_l_lb_protocol params)
+    <> rfmOptionalField "ssl_certificate_id" (_l_ssl_certificate_id params)
     
 
 instance ToResourceField ListenerParams where
@@ -916,29 +1220,46 @@ instance ToResourceField ListenerParams where
 ----------------------------------------------------------------------
 
 data HealthCheckParams = HealthCheckParams
-  { hc_healthy_threshold :: Int
-  , hc_unhealthy_threshold :: Int
-  , hc_target :: T.Text
-  , hc_interval :: Int
-  , hc_timeout :: Int
-  , hc_options :: HealthCheckOptions
+  { _hc_healthy_threshold :: Int
+  , _hc_unhealthy_threshold :: Int
+  , _hc_target :: T.Text
+  , _hc_interval :: Int
+  , _hc_timeout :: Int
   }
   deriving (Eq)
 
-data HealthCheckOptions = HealthCheckOptions
-  { }
-  deriving (Eq)
+-- hc_healthy_threshold :: Lens' HealthCheckParams Int
+hc_healthy_threshold :: Functor f => (Int -> f (Int)) -> HealthCheckParams -> f HealthCheckParams
+hc_healthy_threshold k atom = fmap (\newhc_healthy_threshold -> atom { _hc_healthy_threshold = newhc_healthy_threshold }) (k (_hc_healthy_threshold atom))
+-- hc_unhealthy_threshold :: Lens' HealthCheckParams Int
+hc_unhealthy_threshold :: Functor f => (Int -> f (Int)) -> HealthCheckParams -> f HealthCheckParams
+hc_unhealthy_threshold k atom = fmap (\newhc_unhealthy_threshold -> atom { _hc_unhealthy_threshold = newhc_unhealthy_threshold }) (k (_hc_unhealthy_threshold atom))
+-- hc_target :: Lens' HealthCheckParams T.Text
+hc_target :: Functor f => (T.Text -> f (T.Text)) -> HealthCheckParams -> f HealthCheckParams
+hc_target k atom = fmap (\newhc_target -> atom { _hc_target = newhc_target }) (k (_hc_target atom))
+-- hc_interval :: Lens' HealthCheckParams Int
+hc_interval :: Functor f => (Int -> f (Int)) -> HealthCheckParams -> f HealthCheckParams
+hc_interval k atom = fmap (\newhc_interval -> atom { _hc_interval = newhc_interval }) (k (_hc_interval atom))
+-- hc_timeout :: Lens' HealthCheckParams Int
+hc_timeout :: Functor f => (Int -> f (Int)) -> HealthCheckParams -> f HealthCheckParams
+hc_timeout k atom = fmap (\newhc_timeout -> atom { _hc_timeout = newhc_timeout }) (k (_hc_timeout atom))
 
-instance Default HealthCheckOptions where
-  def = HealthCheckOptions 
+makeHealthCheckParams :: Int -> Int -> T.Text -> Int -> Int -> HealthCheckParams
+makeHealthCheckParams healthyThreshold unhealthyThreshold target interval timeout = HealthCheckParams
+  { _hc_healthy_threshold = healthyThreshold
+  , _hc_unhealthy_threshold = unhealthyThreshold
+  , _hc_target = target
+  , _hc_interval = interval
+  , _hc_timeout = timeout
+  }
 
 instance ToResourceFieldMap HealthCheckParams where
   toResourceFieldMap params
-    =  rfmField "healthy_threshold" (hc_healthy_threshold params)
-    <> rfmField "unhealthy_threshold" (hc_unhealthy_threshold params)
-    <> rfmField "target" (hc_target params)
-    <> rfmField "interval" (hc_interval params)
-    <> rfmField "timeout" (hc_timeout params)
+    =  rfmField "healthy_threshold" (_hc_healthy_threshold params)
+    <> rfmField "unhealthy_threshold" (_hc_unhealthy_threshold params)
+    <> rfmField "target" (_hc_target params)
+    <> rfmField "interval" (_hc_interval params)
+    <> rfmField "timeout" (_hc_timeout params)
     
 
 instance ToResourceField HealthCheckParams where
@@ -952,8 +1273,8 @@ instance ToResourceField HealthCheckParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'elb_')
 
-awsElb :: NameElement -> [ListenerParams] -> AwsElbOptions -> TF AwsElb
-awsElb name0 listener opts = awsElb' name0 (AwsElbParams listener opts)
+awsElb :: NameElement -> [ListenerParams] ->(AwsElbParams -> AwsElbParams) -> TF AwsElb
+awsElb name0 listener modf = awsElb' name0 (modf (makeAwsElbParams listener))
 
 awsElb' :: NameElement -> AwsElbParams -> TF AwsElb
 awsElb' name0 params = do
@@ -966,39 +1287,6 @@ awsElb' name0 params = do
     , elb_resource = rid
     }
 
-data AwsElbParams = AwsElbParams
-  { elb_listener :: [ListenerParams]
-  , elb_options :: AwsElbOptions
-  }
-
-data AwsElbOptions = AwsElbOptions
-  { elb_name' :: Maybe (T.Text)
-  , elb_access_logs :: Maybe (AccessLogsParams)
-  , elb_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
-  , elb_subnets :: [TFRef (AwsId AwsSubnet)]
-  , elb_instances :: [TFRef (AwsId AwsInstance)]
-  , elb_health_check :: Maybe (HealthCheckParams)
-  , elb_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsElbOptions where
-  def = AwsElbOptions Nothing Nothing [] [] [] Nothing M.empty
-
-instance ToResourceFieldMap AwsElbParams where
-  toResourceFieldMap params
-    =  rfmOptionalField "name" (elb_name' (elb_options params))
-    <> rfmOptionalField "access_logs" (elb_access_logs (elb_options params))
-    <> rfmOptionalDefField "security_groups" [] (elb_security_groups (elb_options params))
-    <> rfmOptionalDefField "subnets" [] (elb_subnets (elb_options params))
-    <> rfmOptionalDefField "instances" [] (elb_instances (elb_options params))
-    <> rfmField "listener" (elb_listener params)
-    <> rfmOptionalField "health_check" (elb_health_check (elb_options params))
-    <> rfmOptionalDefField "tags" M.empty (elb_tags (elb_options params))
-    
-
-instance ToResourceField AwsElbParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsElb = AwsElb
   { elb_id :: TFRef T.Text
   , elb_name :: TFRef T.Text
@@ -1010,26 +1298,94 @@ data AwsElb = AwsElb
 instance IsResource AwsElb where
   resourceId = elb_resource
 
+data AwsElbParams = AwsElbParams
+  { _elb_listener :: [ListenerParams]
+  , _elb_name' :: Maybe (T.Text)
+  , _elb_access_logs :: Maybe (AccessLogsParams)
+  , _elb_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
+  , _elb_subnets :: [TFRef (AwsId AwsSubnet)]
+  , _elb_instances :: [TFRef (AwsId AwsInstance)]
+  , _elb_health_check :: Maybe (HealthCheckParams)
+  , _elb_tags :: M.Map T.Text T.Text
+  }
+
+-- elb_name' :: Lens' AwsElbParams Maybe (T.Text)
+elb_name' :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsElbParams -> f AwsElbParams
+elb_name' k atom = fmap (\newelb_name' -> atom { _elb_name' = newelb_name' }) (k (_elb_name' atom))
+-- elb_access_logs :: Lens' AwsElbParams Maybe (AccessLogsParams)
+elb_access_logs :: Functor f => (Maybe (AccessLogsParams) -> f (Maybe (AccessLogsParams))) -> AwsElbParams -> f AwsElbParams
+elb_access_logs k atom = fmap (\newelb_access_logs -> atom { _elb_access_logs = newelb_access_logs }) (k (_elb_access_logs atom))
+-- elb_security_groups :: Lens' AwsElbParams [TFRef (AwsId AwsSecurityGroup)]
+elb_security_groups :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsElbParams -> f AwsElbParams
+elb_security_groups k atom = fmap (\newelb_security_groups -> atom { _elb_security_groups = newelb_security_groups }) (k (_elb_security_groups atom))
+-- elb_subnets :: Lens' AwsElbParams [TFRef (AwsId AwsSubnet)]
+elb_subnets :: Functor f => ([TFRef (AwsId AwsSubnet)] -> f ([TFRef (AwsId AwsSubnet)])) -> AwsElbParams -> f AwsElbParams
+elb_subnets k atom = fmap (\newelb_subnets -> atom { _elb_subnets = newelb_subnets }) (k (_elb_subnets atom))
+-- elb_instances :: Lens' AwsElbParams [TFRef (AwsId AwsInstance)]
+elb_instances :: Functor f => ([TFRef (AwsId AwsInstance)] -> f ([TFRef (AwsId AwsInstance)])) -> AwsElbParams -> f AwsElbParams
+elb_instances k atom = fmap (\newelb_instances -> atom { _elb_instances = newelb_instances }) (k (_elb_instances atom))
+-- elb_listener :: Lens' AwsElbParams [ListenerParams]
+elb_listener :: Functor f => ([ListenerParams] -> f ([ListenerParams])) -> AwsElbParams -> f AwsElbParams
+elb_listener k atom = fmap (\newelb_listener -> atom { _elb_listener = newelb_listener }) (k (_elb_listener atom))
+-- elb_health_check :: Lens' AwsElbParams Maybe (HealthCheckParams)
+elb_health_check :: Functor f => (Maybe (HealthCheckParams) -> f (Maybe (HealthCheckParams))) -> AwsElbParams -> f AwsElbParams
+elb_health_check k atom = fmap (\newelb_health_check -> atom { _elb_health_check = newelb_health_check }) (k (_elb_health_check atom))
+-- elb_tags :: Lens' AwsElbParams M.Map T.Text T.Text
+elb_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsElbParams -> f AwsElbParams
+elb_tags k atom = fmap (\newelb_tags -> atom { _elb_tags = newelb_tags }) (k (_elb_tags atom))
+
+makeAwsElbParams :: [ListenerParams] -> AwsElbParams
+makeAwsElbParams listener = AwsElbParams
+  { _elb_listener = listener
+  , _elb_name' = Nothing
+  , _elb_access_logs = Nothing
+  , _elb_security_groups = []
+  , _elb_subnets = []
+  , _elb_instances = []
+  , _elb_health_check = Nothing
+  , _elb_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsElbParams where
+  toResourceFieldMap params
+    =  rfmOptionalField "name" (_elb_name' params)
+    <> rfmOptionalField "access_logs" (_elb_access_logs params)
+    <> rfmOptionalDefField "security_groups" [] (_elb_security_groups params)
+    <> rfmOptionalDefField "subnets" [] (_elb_subnets params)
+    <> rfmOptionalDefField "instances" [] (_elb_instances params)
+    <> rfmField "listener" (_elb_listener params)
+    <> rfmOptionalField "health_check" (_elb_health_check params)
+    <> rfmOptionalDefField "tags" M.empty (_elb_tags params)
+    
+
+instance ToResourceField AwsElbParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data BucketVersioningParams = BucketVersioningParams
-  { bv_options :: BucketVersioningOptions
+  { _bv_enabled :: Bool
+  , _bv_mfa_delete :: Bool
   }
   deriving (Eq)
 
-data BucketVersioningOptions = BucketVersioningOptions
-  { bv_enabled :: Bool
-  , bv_mfa_delete :: Bool
-  }
-  deriving (Eq)
+-- bv_enabled :: Lens' BucketVersioningParams Bool
+bv_enabled :: Functor f => (Bool -> f (Bool)) -> BucketVersioningParams -> f BucketVersioningParams
+bv_enabled k atom = fmap (\newbv_enabled -> atom { _bv_enabled = newbv_enabled }) (k (_bv_enabled atom))
+-- bv_mfa_delete :: Lens' BucketVersioningParams Bool
+bv_mfa_delete :: Functor f => (Bool -> f (Bool)) -> BucketVersioningParams -> f BucketVersioningParams
+bv_mfa_delete k atom = fmap (\newbv_mfa_delete -> atom { _bv_mfa_delete = newbv_mfa_delete }) (k (_bv_mfa_delete atom))
 
-instance Default BucketVersioningOptions where
-  def = BucketVersioningOptions False False
+makeBucketVersioningParams ::  BucketVersioningParams
+makeBucketVersioningParams  = BucketVersioningParams
+  { _bv_enabled = False
+  , _bv_mfa_delete = False
+  }
 
 instance ToResourceFieldMap BucketVersioningParams where
   toResourceFieldMap params
-    =  rfmOptionalDefField "enabled" False (bv_enabled (bv_options params))
-    <> rfmOptionalDefField "mfa_delete" False (bv_mfa_delete (bv_options params))
+    =  rfmOptionalDefField "enabled" False (_bv_enabled params)
+    <> rfmOptionalDefField "mfa_delete" False (_bv_mfa_delete params)
     
 
 instance ToResourceField BucketVersioningParams where
@@ -1038,25 +1394,34 @@ instance ToResourceField BucketVersioningParams where
 ----------------------------------------------------------------------
 
 data ExpirationParams = ExpirationParams
-  { e_options :: ExpirationOptions
+  { _e_days :: Maybe (Int)
+  , _e_date :: Maybe (T.Text)
+  , _e_expired_object_delete_marker :: Bool
   }
   deriving (Eq)
 
-data ExpirationOptions = ExpirationOptions
-  { e_days :: Maybe (Int)
-  , e_date :: Maybe (T.Text)
-  , e_expired_object_delete_marker :: Bool
-  }
-  deriving (Eq)
+-- e_days :: Lens' ExpirationParams Maybe (Int)
+e_days :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> ExpirationParams -> f ExpirationParams
+e_days k atom = fmap (\newe_days -> atom { _e_days = newe_days }) (k (_e_days atom))
+-- e_date :: Lens' ExpirationParams Maybe (T.Text)
+e_date :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> ExpirationParams -> f ExpirationParams
+e_date k atom = fmap (\newe_date -> atom { _e_date = newe_date }) (k (_e_date atom))
+-- e_expired_object_delete_marker :: Lens' ExpirationParams Bool
+e_expired_object_delete_marker :: Functor f => (Bool -> f (Bool)) -> ExpirationParams -> f ExpirationParams
+e_expired_object_delete_marker k atom = fmap (\newe_expired_object_delete_marker -> atom { _e_expired_object_delete_marker = newe_expired_object_delete_marker }) (k (_e_expired_object_delete_marker atom))
 
-instance Default ExpirationOptions where
-  def = ExpirationOptions Nothing Nothing False
+makeExpirationParams ::  ExpirationParams
+makeExpirationParams  = ExpirationParams
+  { _e_days = Nothing
+  , _e_date = Nothing
+  , _e_expired_object_delete_marker = False
+  }
 
 instance ToResourceFieldMap ExpirationParams where
   toResourceFieldMap params
-    =  rfmOptionalField "days" (e_days (e_options params))
-    <> rfmOptionalField "date" (e_date (e_options params))
-    <> rfmOptionalDefField "expired_object_delete_marker" False (e_expired_object_delete_marker (e_options params))
+    =  rfmOptionalField "days" (_e_days params)
+    <> rfmOptionalField "date" (_e_date params)
+    <> rfmOptionalDefField "expired_object_delete_marker" False (_e_expired_object_delete_marker params)
     
 
 instance ToResourceField ExpirationParams where
@@ -1065,27 +1430,40 @@ instance ToResourceField ExpirationParams where
 ----------------------------------------------------------------------
 
 data LifecycleRuleParams = LifecycleRuleParams
-  { lr_prefix :: T.Text
-  , lr_enabled :: Bool
-  , lr_options :: LifecycleRuleOptions
+  { _lr_prefix :: T.Text
+  , _lr_enabled :: Bool
+  , _lr_id :: Maybe (T.Text)
+  , _lr_expiration :: Maybe (ExpirationParams)
   }
   deriving (Eq)
 
-data LifecycleRuleOptions = LifecycleRuleOptions
-  { lr_id :: Maybe (T.Text)
-  , lr_expiration :: Maybe (ExpirationParams)
-  }
-  deriving (Eq)
+-- lr_id :: Lens' LifecycleRuleParams Maybe (T.Text)
+lr_id :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> LifecycleRuleParams -> f LifecycleRuleParams
+lr_id k atom = fmap (\newlr_id -> atom { _lr_id = newlr_id }) (k (_lr_id atom))
+-- lr_prefix :: Lens' LifecycleRuleParams T.Text
+lr_prefix :: Functor f => (T.Text -> f (T.Text)) -> LifecycleRuleParams -> f LifecycleRuleParams
+lr_prefix k atom = fmap (\newlr_prefix -> atom { _lr_prefix = newlr_prefix }) (k (_lr_prefix atom))
+-- lr_enabled :: Lens' LifecycleRuleParams Bool
+lr_enabled :: Functor f => (Bool -> f (Bool)) -> LifecycleRuleParams -> f LifecycleRuleParams
+lr_enabled k atom = fmap (\newlr_enabled -> atom { _lr_enabled = newlr_enabled }) (k (_lr_enabled atom))
+-- lr_expiration :: Lens' LifecycleRuleParams Maybe (ExpirationParams)
+lr_expiration :: Functor f => (Maybe (ExpirationParams) -> f (Maybe (ExpirationParams))) -> LifecycleRuleParams -> f LifecycleRuleParams
+lr_expiration k atom = fmap (\newlr_expiration -> atom { _lr_expiration = newlr_expiration }) (k (_lr_expiration atom))
 
-instance Default LifecycleRuleOptions where
-  def = LifecycleRuleOptions Nothing Nothing
+makeLifecycleRuleParams :: T.Text -> Bool -> LifecycleRuleParams
+makeLifecycleRuleParams prefix enabled = LifecycleRuleParams
+  { _lr_prefix = prefix
+  , _lr_enabled = enabled
+  , _lr_id = Nothing
+  , _lr_expiration = Nothing
+  }
 
 instance ToResourceFieldMap LifecycleRuleParams where
   toResourceFieldMap params
-    =  rfmOptionalField "id" (lr_id (lr_options params))
-    <> rfmField "prefix" (lr_prefix params)
-    <> rfmField "enabled" (lr_enabled params)
-    <> rfmOptionalField "expiration" (lr_expiration (lr_options params))
+    =  rfmOptionalField "id" (_lr_id params)
+    <> rfmField "prefix" (_lr_prefix params)
+    <> rfmField "enabled" (_lr_enabled params)
+    <> rfmOptionalField "expiration" (_lr_expiration params)
     
 
 instance ToResourceField LifecycleRuleParams where
@@ -1099,8 +1477,8 @@ instance ToResourceField LifecycleRuleParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'elba_')
 
-awsElbAttachment :: NameElement -> T.Text -> T.Text -> AwsElbAttachmentOptions -> TF AwsElbAttachment
-awsElbAttachment name0 elb instance_ opts = awsElbAttachment' name0 (AwsElbAttachmentParams elb instance_ opts)
+awsElbAttachment :: NameElement -> T.Text -> T.Text ->(AwsElbAttachmentParams -> AwsElbAttachmentParams) -> TF AwsElbAttachment
+awsElbAttachment name0 elb instance_ modf = awsElbAttachment' name0 (modf (makeAwsElbAttachmentParams elb instance_))
 
 awsElbAttachment' :: NameElement -> AwsElbAttachmentParams -> TF AwsElbAttachment
 awsElbAttachment' name0 params = do
@@ -1109,33 +1487,39 @@ awsElbAttachment' name0 params = do
     { elba_resource = rid
     }
 
-data AwsElbAttachmentParams = AwsElbAttachmentParams
-  { elba_elb :: T.Text
-  , elba_instance :: T.Text
-  , elba_options :: AwsElbAttachmentOptions
-  }
-
-data AwsElbAttachmentOptions = AwsElbAttachmentOptions
-  { }
-
-instance Default AwsElbAttachmentOptions where
-  def = AwsElbAttachmentOptions 
-
-instance ToResourceFieldMap AwsElbAttachmentParams where
-  toResourceFieldMap params
-    =  rfmField "elb" (elba_elb params)
-    <> rfmField "instance" (elba_instance params)
-    
-
-instance ToResourceField AwsElbAttachmentParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsElbAttachment = AwsElbAttachment
   { elba_resource :: ResourceId
   }
 
 instance IsResource AwsElbAttachment where
   resourceId = elba_resource
+
+data AwsElbAttachmentParams = AwsElbAttachmentParams
+  { _elba_elb :: T.Text
+  , _elba_instance :: T.Text
+  }
+
+-- elba_elb :: Lens' AwsElbAttachmentParams T.Text
+elba_elb :: Functor f => (T.Text -> f (T.Text)) -> AwsElbAttachmentParams -> f AwsElbAttachmentParams
+elba_elb k atom = fmap (\newelba_elb -> atom { _elba_elb = newelba_elb }) (k (_elba_elb atom))
+-- elba_instance :: Lens' AwsElbAttachmentParams T.Text
+elba_instance :: Functor f => (T.Text -> f (T.Text)) -> AwsElbAttachmentParams -> f AwsElbAttachmentParams
+elba_instance k atom = fmap (\newelba_instance -> atom { _elba_instance = newelba_instance }) (k (_elba_instance atom))
+
+makeAwsElbAttachmentParams :: T.Text -> T.Text -> AwsElbAttachmentParams
+makeAwsElbAttachmentParams elb instance_ = AwsElbAttachmentParams
+  { _elba_elb = elb
+  , _elba_instance = instance_
+  }
+
+instance ToResourceFieldMap AwsElbAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "elb" (_elba_elb params)
+    <> rfmField "instance" (_elba_instance params)
+    
+
+instance ToResourceField AwsElbAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1145,8 +1529,8 @@ instance IsResource AwsElbAttachment where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'asa_')
 
-awsAutoscalingAttachment :: NameElement -> T.Text -> AwsAutoscalingAttachmentOptions -> TF AwsAutoscalingAttachment
-awsAutoscalingAttachment name0 autoscalingGroupName opts = awsAutoscalingAttachment' name0 (AwsAutoscalingAttachmentParams autoscalingGroupName opts)
+awsAutoscalingAttachment :: NameElement -> T.Text ->(AwsAutoscalingAttachmentParams -> AwsAutoscalingAttachmentParams) -> TF AwsAutoscalingAttachment
+awsAutoscalingAttachment name0 autoscalingGroupName modf = awsAutoscalingAttachment' name0 (modf (makeAwsAutoscalingAttachmentParams autoscalingGroupName))
 
 awsAutoscalingAttachment' :: NameElement -> AwsAutoscalingAttachmentParams -> TF AwsAutoscalingAttachment
 awsAutoscalingAttachment' name0 params = do
@@ -1155,35 +1539,45 @@ awsAutoscalingAttachment' name0 params = do
     { asa_resource = rid
     }
 
-data AwsAutoscalingAttachmentParams = AwsAutoscalingAttachmentParams
-  { asa_autoscaling_group_name :: T.Text
-  , asa_options :: AwsAutoscalingAttachmentOptions
-  }
-
-data AwsAutoscalingAttachmentOptions = AwsAutoscalingAttachmentOptions
-  { asa_elb :: Maybe (T.Text)
-  , asa_alb_target_group_arn :: Maybe (T.Text)
-  }
-
-instance Default AwsAutoscalingAttachmentOptions where
-  def = AwsAutoscalingAttachmentOptions Nothing Nothing
-
-instance ToResourceFieldMap AwsAutoscalingAttachmentParams where
-  toResourceFieldMap params
-    =  rfmField "autoscaling_group_name" (asa_autoscaling_group_name params)
-    <> rfmOptionalField "elb" (asa_elb (asa_options params))
-    <> rfmOptionalField "alb_target_group_arn" (asa_alb_target_group_arn (asa_options params))
-    
-
-instance ToResourceField AwsAutoscalingAttachmentParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsAutoscalingAttachment = AwsAutoscalingAttachment
   { asa_resource :: ResourceId
   }
 
 instance IsResource AwsAutoscalingAttachment where
   resourceId = asa_resource
+
+data AwsAutoscalingAttachmentParams = AwsAutoscalingAttachmentParams
+  { _asa_autoscaling_group_name :: T.Text
+  , _asa_elb :: Maybe (T.Text)
+  , _asa_alb_target_group_arn :: Maybe (T.Text)
+  }
+
+-- asa_autoscaling_group_name :: Lens' AwsAutoscalingAttachmentParams T.Text
+asa_autoscaling_group_name :: Functor f => (T.Text -> f (T.Text)) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
+asa_autoscaling_group_name k atom = fmap (\newasa_autoscaling_group_name -> atom { _asa_autoscaling_group_name = newasa_autoscaling_group_name }) (k (_asa_autoscaling_group_name atom))
+-- asa_elb :: Lens' AwsAutoscalingAttachmentParams Maybe (T.Text)
+asa_elb :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
+asa_elb k atom = fmap (\newasa_elb -> atom { _asa_elb = newasa_elb }) (k (_asa_elb atom))
+-- asa_alb_target_group_arn :: Lens' AwsAutoscalingAttachmentParams Maybe (T.Text)
+asa_alb_target_group_arn :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
+asa_alb_target_group_arn k atom = fmap (\newasa_alb_target_group_arn -> atom { _asa_alb_target_group_arn = newasa_alb_target_group_arn }) (k (_asa_alb_target_group_arn atom))
+
+makeAwsAutoscalingAttachmentParams :: T.Text -> AwsAutoscalingAttachmentParams
+makeAwsAutoscalingAttachmentParams autoscalingGroupName = AwsAutoscalingAttachmentParams
+  { _asa_autoscaling_group_name = autoscalingGroupName
+  , _asa_elb = Nothing
+  , _asa_alb_target_group_arn = Nothing
+  }
+
+instance ToResourceFieldMap AwsAutoscalingAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "autoscaling_group_name" (_asa_autoscaling_group_name params)
+    <> rfmOptionalField "elb" (_asa_elb params)
+    <> rfmOptionalField "alb_target_group_arn" (_asa_alb_target_group_arn params)
+    
+
+instance ToResourceField AwsAutoscalingAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1193,8 +1587,8 @@ instance IsResource AwsAutoscalingAttachment where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 's3_')
 
-awsS3Bucket :: NameElement -> T.Text -> AwsS3BucketOptions -> TF AwsS3Bucket
-awsS3Bucket name0 bucket opts = awsS3Bucket' name0 (AwsS3BucketParams bucket opts)
+awsS3Bucket :: NameElement -> T.Text ->(AwsS3BucketParams -> AwsS3BucketParams) -> TF AwsS3Bucket
+awsS3Bucket name0 bucket modf = awsS3Bucket' name0 (modf (makeAwsS3BucketParams bucket))
 
 awsS3Bucket' :: NameElement -> AwsS3BucketParams -> TF AwsS3Bucket
 awsS3Bucket' name0 params = do
@@ -1204,33 +1598,6 @@ awsS3Bucket' name0 params = do
     , s3_resource = rid
     }
 
-data AwsS3BucketParams = AwsS3BucketParams
-  { s3_bucket :: T.Text
-  , s3_options :: AwsS3BucketOptions
-  }
-
-data AwsS3BucketOptions = AwsS3BucketOptions
-  { s3_acl :: CannedAcl
-  , s3_tags :: M.Map T.Text T.Text
-  , s3_versioning :: Maybe (BucketVersioningParams)
-  , s3_lifecycle_rule :: Maybe (LifecycleRuleParams)
-  }
-
-instance Default AwsS3BucketOptions where
-  def = AwsS3BucketOptions "private" M.empty Nothing Nothing
-
-instance ToResourceFieldMap AwsS3BucketParams where
-  toResourceFieldMap params
-    =  rfmField "bucket" (s3_bucket params)
-    <> rfmOptionalDefField "acl" "private" (s3_acl (s3_options params))
-    <> rfmOptionalDefField "tags" M.empty (s3_tags (s3_options params))
-    <> rfmOptionalField "versioning" (s3_versioning (s3_options params))
-    <> rfmOptionalField "lifecycle_rule" (s3_lifecycle_rule (s3_options params))
-    
-
-instance ToResourceField AwsS3BucketParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsS3Bucket = AwsS3Bucket
   { s3_id :: TFRef S3BucketName
   , s3_resource :: ResourceId
@@ -1238,6 +1605,51 @@ data AwsS3Bucket = AwsS3Bucket
 
 instance IsResource AwsS3Bucket where
   resourceId = s3_resource
+
+data AwsS3BucketParams = AwsS3BucketParams
+  { _s3_bucket :: T.Text
+  , _s3_acl :: CannedAcl
+  , _s3_tags :: M.Map T.Text T.Text
+  , _s3_versioning :: Maybe (BucketVersioningParams)
+  , _s3_lifecycle_rule :: Maybe (LifecycleRuleParams)
+  }
+
+-- s3_bucket :: Lens' AwsS3BucketParams T.Text
+s3_bucket :: Functor f => (T.Text -> f (T.Text)) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_bucket k atom = fmap (\news3_bucket -> atom { _s3_bucket = news3_bucket }) (k (_s3_bucket atom))
+-- s3_acl :: Lens' AwsS3BucketParams CannedAcl
+s3_acl :: Functor f => (CannedAcl -> f (CannedAcl)) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_acl k atom = fmap (\news3_acl -> atom { _s3_acl = news3_acl }) (k (_s3_acl atom))
+-- s3_tags :: Lens' AwsS3BucketParams M.Map T.Text T.Text
+s3_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_tags k atom = fmap (\news3_tags -> atom { _s3_tags = news3_tags }) (k (_s3_tags atom))
+-- s3_versioning :: Lens' AwsS3BucketParams Maybe (BucketVersioningParams)
+s3_versioning :: Functor f => (Maybe (BucketVersioningParams) -> f (Maybe (BucketVersioningParams))) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_versioning k atom = fmap (\news3_versioning -> atom { _s3_versioning = news3_versioning }) (k (_s3_versioning atom))
+-- s3_lifecycle_rule :: Lens' AwsS3BucketParams Maybe (LifecycleRuleParams)
+s3_lifecycle_rule :: Functor f => (Maybe (LifecycleRuleParams) -> f (Maybe (LifecycleRuleParams))) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_lifecycle_rule k atom = fmap (\news3_lifecycle_rule -> atom { _s3_lifecycle_rule = news3_lifecycle_rule }) (k (_s3_lifecycle_rule atom))
+
+makeAwsS3BucketParams :: T.Text -> AwsS3BucketParams
+makeAwsS3BucketParams bucket = AwsS3BucketParams
+  { _s3_bucket = bucket
+  , _s3_acl = "private"
+  , _s3_tags = M.empty
+  , _s3_versioning = Nothing
+  , _s3_lifecycle_rule = Nothing
+  }
+
+instance ToResourceFieldMap AwsS3BucketParams where
+  toResourceFieldMap params
+    =  rfmField "bucket" (_s3_bucket params)
+    <> rfmOptionalDefField "acl" "private" (_s3_acl params)
+    <> rfmOptionalDefField "tags" M.empty (_s3_tags params)
+    <> rfmOptionalField "versioning" (_s3_versioning params)
+    <> rfmOptionalField "lifecycle_rule" (_s3_lifecycle_rule params)
+    
+
+instance ToResourceField AwsS3BucketParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1247,8 +1659,8 @@ instance IsResource AwsS3Bucket where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 's3o_')
 
-awsS3BucketObject :: NameElement -> TFRef S3BucketName -> S3Key -> AwsS3BucketObjectOptions -> TF AwsS3BucketObject
-awsS3BucketObject name0 bucket key opts = awsS3BucketObject' name0 (AwsS3BucketObjectParams bucket key opts)
+awsS3BucketObject :: NameElement -> TFRef S3BucketName -> S3Key ->(AwsS3BucketObjectParams -> AwsS3BucketObjectParams) -> TF AwsS3BucketObject
+awsS3BucketObject name0 bucket key modf = awsS3BucketObject' name0 (modf (makeAwsS3BucketObjectParams bucket key))
 
 awsS3BucketObject' :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
 awsS3BucketObject' name0 params = do
@@ -1260,31 +1672,6 @@ awsS3BucketObject' name0 params = do
     , s3o_resource = rid
     }
 
-data AwsS3BucketObjectParams = AwsS3BucketObjectParams
-  { s3o_bucket :: TFRef S3BucketName
-  , s3o_key :: S3Key
-  , s3o_options :: AwsS3BucketObjectOptions
-  }
-
-data AwsS3BucketObjectOptions = AwsS3BucketObjectOptions
-  { s3o_source :: Maybe ( FilePath)
-  , s3o_content :: Maybe ( T.Text)
-  }
-
-instance Default AwsS3BucketObjectOptions where
-  def = AwsS3BucketObjectOptions Nothing Nothing
-
-instance ToResourceFieldMap AwsS3BucketObjectParams where
-  toResourceFieldMap params
-    =  rfmField "bucket" (s3o_bucket params)
-    <> rfmField "key" (s3o_key params)
-    <> rfmOptionalField "source" (s3o_source (s3o_options params))
-    <> rfmOptionalField "content" (s3o_content (s3o_options params))
-    
-
-instance ToResourceField AwsS3BucketObjectParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsS3BucketObject = AwsS3BucketObject
   { s3o_id :: TFRef T.Text
   , s3o_etag :: TFRef T.Text
@@ -1295,6 +1682,45 @@ data AwsS3BucketObject = AwsS3BucketObject
 instance IsResource AwsS3BucketObject where
   resourceId = s3o_resource
 
+data AwsS3BucketObjectParams = AwsS3BucketObjectParams
+  { _s3o_bucket :: TFRef S3BucketName
+  , _s3o_key :: S3Key
+  , _s3o_source :: Maybe ( FilePath)
+  , _s3o_content :: Maybe ( T.Text)
+  }
+
+-- s3o_bucket :: Lens' AwsS3BucketObjectParams TFRef S3BucketName
+s3o_bucket :: Functor f => (TFRef S3BucketName -> f (TFRef S3BucketName)) -> AwsS3BucketObjectParams -> f AwsS3BucketObjectParams
+s3o_bucket k atom = fmap (\news3o_bucket -> atom { _s3o_bucket = news3o_bucket }) (k (_s3o_bucket atom))
+-- s3o_key :: Lens' AwsS3BucketObjectParams S3Key
+s3o_key :: Functor f => (S3Key -> f (S3Key)) -> AwsS3BucketObjectParams -> f AwsS3BucketObjectParams
+s3o_key k atom = fmap (\news3o_key -> atom { _s3o_key = news3o_key }) (k (_s3o_key atom))
+-- s3o_source :: Lens' AwsS3BucketObjectParams Maybe ( FilePath)
+s3o_source :: Functor f => (Maybe ( FilePath) -> f (Maybe ( FilePath))) -> AwsS3BucketObjectParams -> f AwsS3BucketObjectParams
+s3o_source k atom = fmap (\news3o_source -> atom { _s3o_source = news3o_source }) (k (_s3o_source atom))
+-- s3o_content :: Lens' AwsS3BucketObjectParams Maybe ( T.Text)
+s3o_content :: Functor f => (Maybe ( T.Text) -> f (Maybe ( T.Text))) -> AwsS3BucketObjectParams -> f AwsS3BucketObjectParams
+s3o_content k atom = fmap (\news3o_content -> atom { _s3o_content = news3o_content }) (k (_s3o_content atom))
+
+makeAwsS3BucketObjectParams :: TFRef S3BucketName -> S3Key -> AwsS3BucketObjectParams
+makeAwsS3BucketObjectParams bucket key = AwsS3BucketObjectParams
+  { _s3o_bucket = bucket
+  , _s3o_key = key
+  , _s3o_source = Nothing
+  , _s3o_content = Nothing
+  }
+
+instance ToResourceFieldMap AwsS3BucketObjectParams where
+  toResourceFieldMap params
+    =  rfmField "bucket" (_s3o_bucket params)
+    <> rfmField "key" (_s3o_key params)
+    <> rfmOptionalField "source" (_s3o_source params)
+    <> rfmOptionalField "content" (_s3o_content params)
+    
+
+instance ToResourceField AwsS3BucketObjectParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsIamUser to the resource graph.
@@ -1303,8 +1729,8 @@ instance IsResource AwsS3BucketObject where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamu_')
 
-awsIamUser :: NameElement -> T.Text -> AwsIamUserOptions -> TF AwsIamUser
-awsIamUser name0 name' opts = awsIamUser' name0 (AwsIamUserParams name' opts)
+awsIamUser :: NameElement -> T.Text ->(AwsIamUserParams -> AwsIamUserParams) -> TF AwsIamUser
+awsIamUser name0 name' modf = awsIamUser' name0 (modf (makeAwsIamUserParams name'))
 
 awsIamUser' :: NameElement -> AwsIamUserParams -> TF AwsIamUser
 awsIamUser' name0 params = do
@@ -1316,29 +1742,6 @@ awsIamUser' name0 params = do
     , iamu_resource = rid
     }
 
-data AwsIamUserParams = AwsIamUserParams
-  { iamu_name' :: T.Text
-  , iamu_options :: AwsIamUserOptions
-  }
-
-data AwsIamUserOptions = AwsIamUserOptions
-  { iamu_path :: T.Text
-  , iamu_force_destroy :: Bool
-  }
-
-instance Default AwsIamUserOptions where
-  def = AwsIamUserOptions "/" False
-
-instance ToResourceFieldMap AwsIamUserParams where
-  toResourceFieldMap params
-    =  rfmField "name" (iamu_name' params)
-    <> rfmOptionalDefField "path" "/" (iamu_path (iamu_options params))
-    <> rfmOptionalDefField "force_destroy" False (iamu_force_destroy (iamu_options params))
-    
-
-instance ToResourceField AwsIamUserParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamUser = AwsIamUser
   { iamu_arn :: TFRef Arn
   , iamu_name :: TFRef T.Text
@@ -1349,6 +1752,39 @@ data AwsIamUser = AwsIamUser
 instance IsResource AwsIamUser where
   resourceId = iamu_resource
 
+data AwsIamUserParams = AwsIamUserParams
+  { _iamu_name' :: T.Text
+  , _iamu_path :: T.Text
+  , _iamu_force_destroy :: Bool
+  }
+
+-- iamu_name' :: Lens' AwsIamUserParams T.Text
+iamu_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsIamUserParams -> f AwsIamUserParams
+iamu_name' k atom = fmap (\newiamu_name' -> atom { _iamu_name' = newiamu_name' }) (k (_iamu_name' atom))
+-- iamu_path :: Lens' AwsIamUserParams T.Text
+iamu_path :: Functor f => (T.Text -> f (T.Text)) -> AwsIamUserParams -> f AwsIamUserParams
+iamu_path k atom = fmap (\newiamu_path -> atom { _iamu_path = newiamu_path }) (k (_iamu_path atom))
+-- iamu_force_destroy :: Lens' AwsIamUserParams Bool
+iamu_force_destroy :: Functor f => (Bool -> f (Bool)) -> AwsIamUserParams -> f AwsIamUserParams
+iamu_force_destroy k atom = fmap (\newiamu_force_destroy -> atom { _iamu_force_destroy = newiamu_force_destroy }) (k (_iamu_force_destroy atom))
+
+makeAwsIamUserParams :: T.Text -> AwsIamUserParams
+makeAwsIamUserParams name' = AwsIamUserParams
+  { _iamu_name' = name'
+  , _iamu_path = "/"
+  , _iamu_force_destroy = False
+  }
+
+instance ToResourceFieldMap AwsIamUserParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_iamu_name' params)
+    <> rfmOptionalDefField "path" "/" (_iamu_path params)
+    <> rfmOptionalDefField "force_destroy" False (_iamu_force_destroy params)
+    
+
+instance ToResourceField AwsIamUserParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsIamUserPolicy to the resource graph.
@@ -1357,8 +1793,8 @@ instance IsResource AwsIamUser where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamup_')
 
-awsIamUserPolicy :: NameElement -> T.Text -> T.Text -> TFRef T.Text -> AwsIamUserPolicyOptions -> TF AwsIamUserPolicy
-awsIamUserPolicy name0 name policy user opts = awsIamUserPolicy' name0 (AwsIamUserPolicyParams name policy user opts)
+awsIamUserPolicy :: NameElement -> T.Text -> T.Text -> TFRef T.Text ->(AwsIamUserPolicyParams -> AwsIamUserPolicyParams) -> TF AwsIamUserPolicy
+awsIamUserPolicy name0 name policy user modf = awsIamUserPolicy' name0 (modf (makeAwsIamUserPolicyParams name policy user))
 
 awsIamUserPolicy' :: NameElement -> AwsIamUserPolicyParams -> TF AwsIamUserPolicy
 awsIamUserPolicy' name0 params = do
@@ -1367,35 +1803,45 @@ awsIamUserPolicy' name0 params = do
     { iamup_resource = rid
     }
 
-data AwsIamUserPolicyParams = AwsIamUserPolicyParams
-  { iamup_name :: T.Text
-  , iamup_policy :: T.Text
-  , iamup_user :: TFRef T.Text
-  , iamup_options :: AwsIamUserPolicyOptions
-  }
-
-data AwsIamUserPolicyOptions = AwsIamUserPolicyOptions
-  { }
-
-instance Default AwsIamUserPolicyOptions where
-  def = AwsIamUserPolicyOptions 
-
-instance ToResourceFieldMap AwsIamUserPolicyParams where
-  toResourceFieldMap params
-    =  rfmField "name" (iamup_name params)
-    <> rfmField "policy" (iamup_policy params)
-    <> rfmField "user" (iamup_user params)
-    
-
-instance ToResourceField AwsIamUserPolicyParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamUserPolicy = AwsIamUserPolicy
   { iamup_resource :: ResourceId
   }
 
 instance IsResource AwsIamUserPolicy where
   resourceId = iamup_resource
+
+data AwsIamUserPolicyParams = AwsIamUserPolicyParams
+  { _iamup_name :: T.Text
+  , _iamup_policy :: T.Text
+  , _iamup_user :: TFRef T.Text
+  }
+
+-- iamup_name :: Lens' AwsIamUserPolicyParams T.Text
+iamup_name :: Functor f => (T.Text -> f (T.Text)) -> AwsIamUserPolicyParams -> f AwsIamUserPolicyParams
+iamup_name k atom = fmap (\newiamup_name -> atom { _iamup_name = newiamup_name }) (k (_iamup_name atom))
+-- iamup_policy :: Lens' AwsIamUserPolicyParams T.Text
+iamup_policy :: Functor f => (T.Text -> f (T.Text)) -> AwsIamUserPolicyParams -> f AwsIamUserPolicyParams
+iamup_policy k atom = fmap (\newiamup_policy -> atom { _iamup_policy = newiamup_policy }) (k (_iamup_policy atom))
+-- iamup_user :: Lens' AwsIamUserPolicyParams TFRef T.Text
+iamup_user :: Functor f => (TFRef T.Text -> f (TFRef T.Text)) -> AwsIamUserPolicyParams -> f AwsIamUserPolicyParams
+iamup_user k atom = fmap (\newiamup_user -> atom { _iamup_user = newiamup_user }) (k (_iamup_user atom))
+
+makeAwsIamUserPolicyParams :: T.Text -> T.Text -> TFRef T.Text -> AwsIamUserPolicyParams
+makeAwsIamUserPolicyParams name policy user = AwsIamUserPolicyParams
+  { _iamup_name = name
+  , _iamup_policy = policy
+  , _iamup_user = user
+  }
+
+instance ToResourceFieldMap AwsIamUserPolicyParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_iamup_name params)
+    <> rfmField "policy" (_iamup_policy params)
+    <> rfmField "user" (_iamup_user params)
+    
+
+instance ToResourceField AwsIamUserPolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1405,8 +1851,8 @@ instance IsResource AwsIamUserPolicy where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamupa_')
 
-awsIamUserPolicyAttachment :: NameElement -> TFRef T.Text -> T.Text -> AwsIamUserPolicyAttachmentOptions -> TF AwsIamUserPolicyAttachment
-awsIamUserPolicyAttachment name0 user policyArn opts = awsIamUserPolicyAttachment' name0 (AwsIamUserPolicyAttachmentParams user policyArn opts)
+awsIamUserPolicyAttachment :: NameElement -> TFRef T.Text -> T.Text ->(AwsIamUserPolicyAttachmentParams -> AwsIamUserPolicyAttachmentParams) -> TF AwsIamUserPolicyAttachment
+awsIamUserPolicyAttachment name0 user policyArn modf = awsIamUserPolicyAttachment' name0 (modf (makeAwsIamUserPolicyAttachmentParams user policyArn))
 
 awsIamUserPolicyAttachment' :: NameElement -> AwsIamUserPolicyAttachmentParams -> TF AwsIamUserPolicyAttachment
 awsIamUserPolicyAttachment' name0 params = do
@@ -1415,33 +1861,39 @@ awsIamUserPolicyAttachment' name0 params = do
     { iamupa_resource = rid
     }
 
-data AwsIamUserPolicyAttachmentParams = AwsIamUserPolicyAttachmentParams
-  { iamupa_user :: TFRef T.Text
-  , iamupa_policy_arn :: T.Text
-  , iamupa_options :: AwsIamUserPolicyAttachmentOptions
-  }
-
-data AwsIamUserPolicyAttachmentOptions = AwsIamUserPolicyAttachmentOptions
-  { }
-
-instance Default AwsIamUserPolicyAttachmentOptions where
-  def = AwsIamUserPolicyAttachmentOptions 
-
-instance ToResourceFieldMap AwsIamUserPolicyAttachmentParams where
-  toResourceFieldMap params
-    =  rfmField "user" (iamupa_user params)
-    <> rfmField "policy_arn" (iamupa_policy_arn params)
-    
-
-instance ToResourceField AwsIamUserPolicyAttachmentParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamUserPolicyAttachment = AwsIamUserPolicyAttachment
   { iamupa_resource :: ResourceId
   }
 
 instance IsResource AwsIamUserPolicyAttachment where
   resourceId = iamupa_resource
+
+data AwsIamUserPolicyAttachmentParams = AwsIamUserPolicyAttachmentParams
+  { _iamupa_user :: TFRef T.Text
+  , _iamupa_policy_arn :: T.Text
+  }
+
+-- iamupa_user :: Lens' AwsIamUserPolicyAttachmentParams TFRef T.Text
+iamupa_user :: Functor f => (TFRef T.Text -> f (TFRef T.Text)) -> AwsIamUserPolicyAttachmentParams -> f AwsIamUserPolicyAttachmentParams
+iamupa_user k atom = fmap (\newiamupa_user -> atom { _iamupa_user = newiamupa_user }) (k (_iamupa_user atom))
+-- iamupa_policy_arn :: Lens' AwsIamUserPolicyAttachmentParams T.Text
+iamupa_policy_arn :: Functor f => (T.Text -> f (T.Text)) -> AwsIamUserPolicyAttachmentParams -> f AwsIamUserPolicyAttachmentParams
+iamupa_policy_arn k atom = fmap (\newiamupa_policy_arn -> atom { _iamupa_policy_arn = newiamupa_policy_arn }) (k (_iamupa_policy_arn atom))
+
+makeAwsIamUserPolicyAttachmentParams :: TFRef T.Text -> T.Text -> AwsIamUserPolicyAttachmentParams
+makeAwsIamUserPolicyAttachmentParams user policyArn = AwsIamUserPolicyAttachmentParams
+  { _iamupa_user = user
+  , _iamupa_policy_arn = policyArn
+  }
+
+instance ToResourceFieldMap AwsIamUserPolicyAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "user" (_iamupa_user params)
+    <> rfmField "policy_arn" (_iamupa_policy_arn params)
+    
+
+instance ToResourceField AwsIamUserPolicyAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1451,8 +1903,8 @@ instance IsResource AwsIamUserPolicyAttachment where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamr_')
 
-awsIamRole :: NameElement -> T.Text -> AwsIamRoleOptions -> TF AwsIamRole
-awsIamRole name0 assumeRolePolicy opts = awsIamRole' name0 (AwsIamRoleParams assumeRolePolicy opts)
+awsIamRole :: NameElement -> T.Text ->(AwsIamRoleParams -> AwsIamRoleParams) -> TF AwsIamRole
+awsIamRole name0 assumeRolePolicy modf = awsIamRole' name0 (modf (makeAwsIamRoleParams assumeRolePolicy))
 
 awsIamRole' :: NameElement -> AwsIamRoleParams -> TF AwsIamRole
 awsIamRole' name0 params = do
@@ -1466,31 +1918,6 @@ awsIamRole' name0 params = do
     , iamr_resource = rid
     }
 
-data AwsIamRoleParams = AwsIamRoleParams
-  { iamr_assume_role_policy :: T.Text
-  , iamr_options :: AwsIamRoleOptions
-  }
-
-data AwsIamRoleOptions = AwsIamRoleOptions
-  { iamr_name' :: T.Text
-  , iamr_name_prefix :: T.Text
-  , iamr_path :: T.Text
-  }
-
-instance Default AwsIamRoleOptions where
-  def = AwsIamRoleOptions "" "" ""
-
-instance ToResourceFieldMap AwsIamRoleParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "name" "" (iamr_name' (iamr_options params))
-    <> rfmOptionalDefField "name_prefix" "" (iamr_name_prefix (iamr_options params))
-    <> rfmField "assume_role_policy" (iamr_assume_role_policy params)
-    <> rfmOptionalDefField "path" "" (iamr_path (iamr_options params))
-    
-
-instance ToResourceField AwsIamRoleParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamRole = AwsIamRole
   { iamr_id :: TFRef (AwsId AwsIamRole)
   , iamr_arn :: TFRef Arn
@@ -1503,6 +1930,45 @@ data AwsIamRole = AwsIamRole
 instance IsResource AwsIamRole where
   resourceId = iamr_resource
 
+data AwsIamRoleParams = AwsIamRoleParams
+  { _iamr_assume_role_policy :: T.Text
+  , _iamr_name' :: T.Text
+  , _iamr_name_prefix :: T.Text
+  , _iamr_path :: T.Text
+  }
+
+-- iamr_name' :: Lens' AwsIamRoleParams T.Text
+iamr_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRoleParams -> f AwsIamRoleParams
+iamr_name' k atom = fmap (\newiamr_name' -> atom { _iamr_name' = newiamr_name' }) (k (_iamr_name' atom))
+-- iamr_name_prefix :: Lens' AwsIamRoleParams T.Text
+iamr_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRoleParams -> f AwsIamRoleParams
+iamr_name_prefix k atom = fmap (\newiamr_name_prefix -> atom { _iamr_name_prefix = newiamr_name_prefix }) (k (_iamr_name_prefix atom))
+-- iamr_assume_role_policy :: Lens' AwsIamRoleParams T.Text
+iamr_assume_role_policy :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRoleParams -> f AwsIamRoleParams
+iamr_assume_role_policy k atom = fmap (\newiamr_assume_role_policy -> atom { _iamr_assume_role_policy = newiamr_assume_role_policy }) (k (_iamr_assume_role_policy atom))
+-- iamr_path :: Lens' AwsIamRoleParams T.Text
+iamr_path :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRoleParams -> f AwsIamRoleParams
+iamr_path k atom = fmap (\newiamr_path -> atom { _iamr_path = newiamr_path }) (k (_iamr_path atom))
+
+makeAwsIamRoleParams :: T.Text -> AwsIamRoleParams
+makeAwsIamRoleParams assumeRolePolicy = AwsIamRoleParams
+  { _iamr_assume_role_policy = assumeRolePolicy
+  , _iamr_name' = ""
+  , _iamr_name_prefix = ""
+  , _iamr_path = ""
+  }
+
+instance ToResourceFieldMap AwsIamRoleParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (_iamr_name' params)
+    <> rfmOptionalDefField "name_prefix" "" (_iamr_name_prefix params)
+    <> rfmField "assume_role_policy" (_iamr_assume_role_policy params)
+    <> rfmOptionalDefField "path" "" (_iamr_path params)
+    
+
+instance ToResourceField AwsIamRoleParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsIamInstanceProfile to the resource graph.
@@ -1511,8 +1977,8 @@ instance IsResource AwsIamRole where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamip_')
 
-awsIamInstanceProfile :: NameElement ->  AwsIamInstanceProfileOptions -> TF AwsIamInstanceProfile
-awsIamInstanceProfile name0  opts = awsIamInstanceProfile' name0 (AwsIamInstanceProfileParams  opts)
+awsIamInstanceProfile :: NameElement -> (AwsIamInstanceProfileParams -> AwsIamInstanceProfileParams) -> TF AwsIamInstanceProfile
+awsIamInstanceProfile name0  modf = awsIamInstanceProfile' name0 (modf (makeAwsIamInstanceProfileParams ))
 
 awsIamInstanceProfile' :: NameElement -> AwsIamInstanceProfileParams -> TF AwsIamInstanceProfile
 awsIamInstanceProfile' name0 params = do
@@ -1525,31 +1991,6 @@ awsIamInstanceProfile' name0 params = do
     , iamip_resource = rid
     }
 
-data AwsIamInstanceProfileParams = AwsIamInstanceProfileParams
-  { iamip_options :: AwsIamInstanceProfileOptions
-  }
-
-data AwsIamInstanceProfileOptions = AwsIamInstanceProfileOptions
-  { iamip_name :: T.Text
-  , iamip_name_prefix :: T.Text
-  , iamip_path :: T.Text
-  , iamip_roles :: [TFRef T.Text]
-  }
-
-instance Default AwsIamInstanceProfileOptions where
-  def = AwsIamInstanceProfileOptions "" "" "/" []
-
-instance ToResourceFieldMap AwsIamInstanceProfileParams where
-  toResourceFieldMap params
-    =  rfmOptionalDefField "name" "" (iamip_name (iamip_options params))
-    <> rfmOptionalDefField "name_prefix" "" (iamip_name_prefix (iamip_options params))
-    <> rfmOptionalDefField "path" "/" (iamip_path (iamip_options params))
-    <> rfmOptionalDefField "roles" [] (iamip_roles (iamip_options params))
-    
-
-instance ToResourceField AwsIamInstanceProfileParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamInstanceProfile = AwsIamInstanceProfile
   { iamip_id :: TFRef (AwsId AwsIamInstanceProfile)
   , iamip_arn :: TFRef Arn
@@ -1561,6 +2002,45 @@ data AwsIamInstanceProfile = AwsIamInstanceProfile
 instance IsResource AwsIamInstanceProfile where
   resourceId = iamip_resource
 
+data AwsIamInstanceProfileParams = AwsIamInstanceProfileParams
+  { _iamip_name :: T.Text
+  , _iamip_name_prefix :: T.Text
+  , _iamip_path :: T.Text
+  , _iamip_roles :: [TFRef T.Text]
+  }
+
+-- iamip_name :: Lens' AwsIamInstanceProfileParams T.Text
+iamip_name :: Functor f => (T.Text -> f (T.Text)) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
+iamip_name k atom = fmap (\newiamip_name -> atom { _iamip_name = newiamip_name }) (k (_iamip_name atom))
+-- iamip_name_prefix :: Lens' AwsIamInstanceProfileParams T.Text
+iamip_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
+iamip_name_prefix k atom = fmap (\newiamip_name_prefix -> atom { _iamip_name_prefix = newiamip_name_prefix }) (k (_iamip_name_prefix atom))
+-- iamip_path :: Lens' AwsIamInstanceProfileParams T.Text
+iamip_path :: Functor f => (T.Text -> f (T.Text)) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
+iamip_path k atom = fmap (\newiamip_path -> atom { _iamip_path = newiamip_path }) (k (_iamip_path atom))
+-- iamip_roles :: Lens' AwsIamInstanceProfileParams [TFRef T.Text]
+iamip_roles :: Functor f => ([TFRef T.Text] -> f ([TFRef T.Text])) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
+iamip_roles k atom = fmap (\newiamip_roles -> atom { _iamip_roles = newiamip_roles }) (k (_iamip_roles atom))
+
+makeAwsIamInstanceProfileParams ::  AwsIamInstanceProfileParams
+makeAwsIamInstanceProfileParams  = AwsIamInstanceProfileParams
+  { _iamip_name = ""
+  , _iamip_name_prefix = ""
+  , _iamip_path = "/"
+  , _iamip_roles = []
+  }
+
+instance ToResourceFieldMap AwsIamInstanceProfileParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "name" "" (_iamip_name params)
+    <> rfmOptionalDefField "name_prefix" "" (_iamip_name_prefix params)
+    <> rfmOptionalDefField "path" "/" (_iamip_path params)
+    <> rfmOptionalDefField "roles" [] (_iamip_roles params)
+    
+
+instance ToResourceField AwsIamInstanceProfileParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsIamRolePolicy to the resource graph.
@@ -1569,8 +2049,8 @@ instance IsResource AwsIamInstanceProfile where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'iamrp_')
 
-awsIamRolePolicy :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) -> AwsIamRolePolicyOptions -> TF AwsIamRolePolicy
-awsIamRolePolicy name0 name policy role opts = awsIamRolePolicy' name0 (AwsIamRolePolicyParams name policy role opts)
+awsIamRolePolicy :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) ->(AwsIamRolePolicyParams -> AwsIamRolePolicyParams) -> TF AwsIamRolePolicy
+awsIamRolePolicy name0 name policy role modf = awsIamRolePolicy' name0 (modf (makeAwsIamRolePolicyParams name policy role))
 
 awsIamRolePolicy' :: NameElement -> AwsIamRolePolicyParams -> TF AwsIamRolePolicy
 awsIamRolePolicy' name0 params = do
@@ -1580,29 +2060,6 @@ awsIamRolePolicy' name0 params = do
     , iamrp_resource = rid
     }
 
-data AwsIamRolePolicyParams = AwsIamRolePolicyParams
-  { iamrp_name :: T.Text
-  , iamrp_policy :: T.Text
-  , iamrp_role :: TFRef (AwsId AwsIamRole)
-  , iamrp_options :: AwsIamRolePolicyOptions
-  }
-
-data AwsIamRolePolicyOptions = AwsIamRolePolicyOptions
-  { }
-
-instance Default AwsIamRolePolicyOptions where
-  def = AwsIamRolePolicyOptions 
-
-instance ToResourceFieldMap AwsIamRolePolicyParams where
-  toResourceFieldMap params
-    =  rfmField "name" (iamrp_name params)
-    <> rfmField "policy" (iamrp_policy params)
-    <> rfmField "role" (iamrp_role params)
-    
-
-instance ToResourceField AwsIamRolePolicyParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsIamRolePolicy = AwsIamRolePolicy
   { iamrp_id :: TFRef (AwsId AwsIamInstanceProfile)
   , iamrp_resource :: ResourceId
@@ -1610,6 +2067,39 @@ data AwsIamRolePolicy = AwsIamRolePolicy
 
 instance IsResource AwsIamRolePolicy where
   resourceId = iamrp_resource
+
+data AwsIamRolePolicyParams = AwsIamRolePolicyParams
+  { _iamrp_name :: T.Text
+  , _iamrp_policy :: T.Text
+  , _iamrp_role :: TFRef (AwsId AwsIamRole)
+  }
+
+-- iamrp_name :: Lens' AwsIamRolePolicyParams T.Text
+iamrp_name :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRolePolicyParams -> f AwsIamRolePolicyParams
+iamrp_name k atom = fmap (\newiamrp_name -> atom { _iamrp_name = newiamrp_name }) (k (_iamrp_name atom))
+-- iamrp_policy :: Lens' AwsIamRolePolicyParams T.Text
+iamrp_policy :: Functor f => (T.Text -> f (T.Text)) -> AwsIamRolePolicyParams -> f AwsIamRolePolicyParams
+iamrp_policy k atom = fmap (\newiamrp_policy -> atom { _iamrp_policy = newiamrp_policy }) (k (_iamrp_policy atom))
+-- iamrp_role :: Lens' AwsIamRolePolicyParams TFRef (AwsId AwsIamRole)
+iamrp_role :: Functor f => (TFRef (AwsId AwsIamRole) -> f (TFRef (AwsId AwsIamRole))) -> AwsIamRolePolicyParams -> f AwsIamRolePolicyParams
+iamrp_role k atom = fmap (\newiamrp_role -> atom { _iamrp_role = newiamrp_role }) (k (_iamrp_role atom))
+
+makeAwsIamRolePolicyParams :: T.Text -> T.Text -> TFRef (AwsId AwsIamRole) -> AwsIamRolePolicyParams
+makeAwsIamRolePolicyParams name policy role = AwsIamRolePolicyParams
+  { _iamrp_name = name
+  , _iamrp_policy = policy
+  , _iamrp_role = role
+  }
+
+instance ToResourceFieldMap AwsIamRolePolicyParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_iamrp_name params)
+    <> rfmField "policy" (_iamrp_policy params)
+    <> rfmField "role" (_iamrp_role params)
+    
+
+instance ToResourceField AwsIamRolePolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1619,8 +2109,8 @@ instance IsResource AwsIamRolePolicy where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'sns_')
 
-awsSnsTopic :: NameElement -> T.Text -> AwsSnsTopicOptions -> TF AwsSnsTopic
-awsSnsTopic name0 name opts = awsSnsTopic' name0 (AwsSnsTopicParams name opts)
+awsSnsTopic :: NameElement -> T.Text ->(AwsSnsTopicParams -> AwsSnsTopicParams) -> TF AwsSnsTopic
+awsSnsTopic name0 name modf = awsSnsTopic' name0 (modf (makeAwsSnsTopicParams name))
 
 awsSnsTopic' :: NameElement -> AwsSnsTopicParams -> TF AwsSnsTopic
 awsSnsTopic' name0 params = do
@@ -1631,27 +2121,6 @@ awsSnsTopic' name0 params = do
     , sns_resource = rid
     }
 
-data AwsSnsTopicParams = AwsSnsTopicParams
-  { sns_name :: T.Text
-  , sns_options :: AwsSnsTopicOptions
-  }
-
-data AwsSnsTopicOptions = AwsSnsTopicOptions
-  { sns_display_name :: T.Text
-  }
-
-instance Default AwsSnsTopicOptions where
-  def = AwsSnsTopicOptions ""
-
-instance ToResourceFieldMap AwsSnsTopicParams where
-  toResourceFieldMap params
-    =  rfmField "name" (sns_name params)
-    <> rfmOptionalDefField "display_name" "" (sns_display_name (sns_options params))
-    
-
-instance ToResourceField AwsSnsTopicParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsSnsTopic = AwsSnsTopic
   { sns_id :: TFRef (AwsId AwsSnsTopic)
   , sns_arn :: TFRef Arn
@@ -1661,6 +2130,33 @@ data AwsSnsTopic = AwsSnsTopic
 instance IsResource AwsSnsTopic where
   resourceId = sns_resource
 
+data AwsSnsTopicParams = AwsSnsTopicParams
+  { _sns_name :: T.Text
+  , _sns_display_name :: T.Text
+  }
+
+-- sns_name :: Lens' AwsSnsTopicParams T.Text
+sns_name :: Functor f => (T.Text -> f (T.Text)) -> AwsSnsTopicParams -> f AwsSnsTopicParams
+sns_name k atom = fmap (\newsns_name -> atom { _sns_name = newsns_name }) (k (_sns_name atom))
+-- sns_display_name :: Lens' AwsSnsTopicParams T.Text
+sns_display_name :: Functor f => (T.Text -> f (T.Text)) -> AwsSnsTopicParams -> f AwsSnsTopicParams
+sns_display_name k atom = fmap (\newsns_display_name -> atom { _sns_display_name = newsns_display_name }) (k (_sns_display_name atom))
+
+makeAwsSnsTopicParams :: T.Text -> AwsSnsTopicParams
+makeAwsSnsTopicParams name = AwsSnsTopicParams
+  { _sns_name = name
+  , _sns_display_name = ""
+  }
+
+instance ToResourceFieldMap AwsSnsTopicParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_sns_name params)
+    <> rfmOptionalDefField "display_name" "" (_sns_display_name params)
+    
+
+instance ToResourceField AwsSnsTopicParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsCloudwatchMetricAlarm to the resource graph.
@@ -1669,8 +2165,8 @@ instance IsResource AwsSnsTopic where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'cma_')
 
-awsCloudwatchMetricAlarm :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int -> AwsCloudwatchMetricAlarmOptions -> TF AwsCloudwatchMetricAlarm
-awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts = awsCloudwatchMetricAlarm' name0 (AwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold opts)
+awsCloudwatchMetricAlarm :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int ->(AwsCloudwatchMetricAlarmParams -> AwsCloudwatchMetricAlarmParams) -> TF AwsCloudwatchMetricAlarm
+awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold modf = awsCloudwatchMetricAlarm' name0 (modf (makeAwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold))
 
 awsCloudwatchMetricAlarm' :: NameElement -> AwsCloudwatchMetricAlarmParams -> TF AwsCloudwatchMetricAlarm
 awsCloudwatchMetricAlarm' name0 params = do
@@ -1680,53 +2176,6 @@ awsCloudwatchMetricAlarm' name0 params = do
     , cma_resource = rid
     }
 
-data AwsCloudwatchMetricAlarmParams = AwsCloudwatchMetricAlarmParams
-  { cma_alarm_name :: T.Text
-  , cma_comparison_operator :: MetricComparisonOperator
-  , cma_evaluation_periods :: Int
-  , cma_metric_name :: MetricName
-  , cma_namespace :: MetricNamespace
-  , cma_period :: Int
-  , cma_statistic :: MetricStatistic
-  , cma_threshold :: Int
-  , cma_options :: AwsCloudwatchMetricAlarmOptions
-  }
-
-data AwsCloudwatchMetricAlarmOptions = AwsCloudwatchMetricAlarmOptions
-  { cma_actions_enabled :: Bool
-  , cma_alarm_actions :: [TFRef Arn]
-  , cma_alarm_description :: T.Text
-  , cma_dimensions :: M.Map T.Text T.Text
-  , cma_insufficient_data_actions :: [TFRef Arn]
-  , cma_ok_actions :: [TFRef Arn]
-  , cma_unit :: MetricUnit
-  }
-
-instance Default AwsCloudwatchMetricAlarmOptions where
-  def = AwsCloudwatchMetricAlarmOptions True [] "" M.empty [] [] ""
-
-instance ToResourceFieldMap AwsCloudwatchMetricAlarmParams where
-  toResourceFieldMap params
-    =  rfmField "alarm_name" (cma_alarm_name params)
-    <> rfmField "comparison_operator" (cma_comparison_operator params)
-    <> rfmField "evaluation_periods" (cma_evaluation_periods params)
-    <> rfmField "metric_name" (cma_metric_name params)
-    <> rfmField "namespace" (cma_namespace params)
-    <> rfmField "period" (cma_period params)
-    <> rfmField "statistic" (cma_statistic params)
-    <> rfmField "threshold" (cma_threshold params)
-    <> rfmOptionalDefField "actions_enabled" True (cma_actions_enabled (cma_options params))
-    <> rfmOptionalDefField "alarm_actions" [] (cma_alarm_actions (cma_options params))
-    <> rfmOptionalDefField "alarm_description" "" (cma_alarm_description (cma_options params))
-    <> rfmOptionalDefField "dimensions" M.empty (cma_dimensions (cma_options params))
-    <> rfmOptionalDefField "insufficient_data_actions" [] (cma_insufficient_data_actions (cma_options params))
-    <> rfmOptionalDefField "ok_actions" [] (cma_ok_actions (cma_options params))
-    <> rfmOptionalDefField "unit" "" (cma_unit (cma_options params))
-    
-
-instance ToResourceField AwsCloudwatchMetricAlarmParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsCloudwatchMetricAlarm = AwsCloudwatchMetricAlarm
   { cma_id :: TFRef (AwsId AwsCloudwatchMetricAlarm)
   , cma_resource :: ResourceId
@@ -1734,6 +2183,111 @@ data AwsCloudwatchMetricAlarm = AwsCloudwatchMetricAlarm
 
 instance IsResource AwsCloudwatchMetricAlarm where
   resourceId = cma_resource
+
+data AwsCloudwatchMetricAlarmParams = AwsCloudwatchMetricAlarmParams
+  { _cma_alarm_name :: T.Text
+  , _cma_comparison_operator :: MetricComparisonOperator
+  , _cma_evaluation_periods :: Int
+  , _cma_metric_name :: MetricName
+  , _cma_namespace :: MetricNamespace
+  , _cma_period :: Int
+  , _cma_statistic :: MetricStatistic
+  , _cma_threshold :: Int
+  , _cma_actions_enabled :: Bool
+  , _cma_alarm_actions :: [TFRef Arn]
+  , _cma_alarm_description :: T.Text
+  , _cma_dimensions :: M.Map T.Text T.Text
+  , _cma_insufficient_data_actions :: [TFRef Arn]
+  , _cma_ok_actions :: [TFRef Arn]
+  , _cma_unit :: MetricUnit
+  }
+
+-- cma_alarm_name :: Lens' AwsCloudwatchMetricAlarmParams T.Text
+cma_alarm_name :: Functor f => (T.Text -> f (T.Text)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_alarm_name k atom = fmap (\newcma_alarm_name -> atom { _cma_alarm_name = newcma_alarm_name }) (k (_cma_alarm_name atom))
+-- cma_comparison_operator :: Lens' AwsCloudwatchMetricAlarmParams MetricComparisonOperator
+cma_comparison_operator :: Functor f => (MetricComparisonOperator -> f (MetricComparisonOperator)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_comparison_operator k atom = fmap (\newcma_comparison_operator -> atom { _cma_comparison_operator = newcma_comparison_operator }) (k (_cma_comparison_operator atom))
+-- cma_evaluation_periods :: Lens' AwsCloudwatchMetricAlarmParams Int
+cma_evaluation_periods :: Functor f => (Int -> f (Int)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_evaluation_periods k atom = fmap (\newcma_evaluation_periods -> atom { _cma_evaluation_periods = newcma_evaluation_periods }) (k (_cma_evaluation_periods atom))
+-- cma_metric_name :: Lens' AwsCloudwatchMetricAlarmParams MetricName
+cma_metric_name :: Functor f => (MetricName -> f (MetricName)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_metric_name k atom = fmap (\newcma_metric_name -> atom { _cma_metric_name = newcma_metric_name }) (k (_cma_metric_name atom))
+-- cma_namespace :: Lens' AwsCloudwatchMetricAlarmParams MetricNamespace
+cma_namespace :: Functor f => (MetricNamespace -> f (MetricNamespace)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_namespace k atom = fmap (\newcma_namespace -> atom { _cma_namespace = newcma_namespace }) (k (_cma_namespace atom))
+-- cma_period :: Lens' AwsCloudwatchMetricAlarmParams Int
+cma_period :: Functor f => (Int -> f (Int)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_period k atom = fmap (\newcma_period -> atom { _cma_period = newcma_period }) (k (_cma_period atom))
+-- cma_statistic :: Lens' AwsCloudwatchMetricAlarmParams MetricStatistic
+cma_statistic :: Functor f => (MetricStatistic -> f (MetricStatistic)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_statistic k atom = fmap (\newcma_statistic -> atom { _cma_statistic = newcma_statistic }) (k (_cma_statistic atom))
+-- cma_threshold :: Lens' AwsCloudwatchMetricAlarmParams Int
+cma_threshold :: Functor f => (Int -> f (Int)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_threshold k atom = fmap (\newcma_threshold -> atom { _cma_threshold = newcma_threshold }) (k (_cma_threshold atom))
+-- cma_actions_enabled :: Lens' AwsCloudwatchMetricAlarmParams Bool
+cma_actions_enabled :: Functor f => (Bool -> f (Bool)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_actions_enabled k atom = fmap (\newcma_actions_enabled -> atom { _cma_actions_enabled = newcma_actions_enabled }) (k (_cma_actions_enabled atom))
+-- cma_alarm_actions :: Lens' AwsCloudwatchMetricAlarmParams [TFRef Arn]
+cma_alarm_actions :: Functor f => ([TFRef Arn] -> f ([TFRef Arn])) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_alarm_actions k atom = fmap (\newcma_alarm_actions -> atom { _cma_alarm_actions = newcma_alarm_actions }) (k (_cma_alarm_actions atom))
+-- cma_alarm_description :: Lens' AwsCloudwatchMetricAlarmParams T.Text
+cma_alarm_description :: Functor f => (T.Text -> f (T.Text)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_alarm_description k atom = fmap (\newcma_alarm_description -> atom { _cma_alarm_description = newcma_alarm_description }) (k (_cma_alarm_description atom))
+-- cma_dimensions :: Lens' AwsCloudwatchMetricAlarmParams M.Map T.Text T.Text
+cma_dimensions :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_dimensions k atom = fmap (\newcma_dimensions -> atom { _cma_dimensions = newcma_dimensions }) (k (_cma_dimensions atom))
+-- cma_insufficient_data_actions :: Lens' AwsCloudwatchMetricAlarmParams [TFRef Arn]
+cma_insufficient_data_actions :: Functor f => ([TFRef Arn] -> f ([TFRef Arn])) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_insufficient_data_actions k atom = fmap (\newcma_insufficient_data_actions -> atom { _cma_insufficient_data_actions = newcma_insufficient_data_actions }) (k (_cma_insufficient_data_actions atom))
+-- cma_ok_actions :: Lens' AwsCloudwatchMetricAlarmParams [TFRef Arn]
+cma_ok_actions :: Functor f => ([TFRef Arn] -> f ([TFRef Arn])) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_ok_actions k atom = fmap (\newcma_ok_actions -> atom { _cma_ok_actions = newcma_ok_actions }) (k (_cma_ok_actions atom))
+-- cma_unit :: Lens' AwsCloudwatchMetricAlarmParams MetricUnit
+cma_unit :: Functor f => (MetricUnit -> f (MetricUnit)) -> AwsCloudwatchMetricAlarmParams -> f AwsCloudwatchMetricAlarmParams
+cma_unit k atom = fmap (\newcma_unit -> atom { _cma_unit = newcma_unit }) (k (_cma_unit atom))
+
+makeAwsCloudwatchMetricAlarmParams :: T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int -> AwsCloudwatchMetricAlarmParams
+makeAwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold = AwsCloudwatchMetricAlarmParams
+  { _cma_alarm_name = alarmName
+  , _cma_comparison_operator = comparisonOperator
+  , _cma_evaluation_periods = evaluationPeriods
+  , _cma_metric_name = metricName
+  , _cma_namespace = namespace
+  , _cma_period = period
+  , _cma_statistic = statistic
+  , _cma_threshold = threshold
+  , _cma_actions_enabled = True
+  , _cma_alarm_actions = []
+  , _cma_alarm_description = ""
+  , _cma_dimensions = M.empty
+  , _cma_insufficient_data_actions = []
+  , _cma_ok_actions = []
+  , _cma_unit = ""
+  }
+
+instance ToResourceFieldMap AwsCloudwatchMetricAlarmParams where
+  toResourceFieldMap params
+    =  rfmField "alarm_name" (_cma_alarm_name params)
+    <> rfmField "comparison_operator" (_cma_comparison_operator params)
+    <> rfmField "evaluation_periods" (_cma_evaluation_periods params)
+    <> rfmField "metric_name" (_cma_metric_name params)
+    <> rfmField "namespace" (_cma_namespace params)
+    <> rfmField "period" (_cma_period params)
+    <> rfmField "statistic" (_cma_statistic params)
+    <> rfmField "threshold" (_cma_threshold params)
+    <> rfmOptionalDefField "actions_enabled" True (_cma_actions_enabled params)
+    <> rfmOptionalDefField "alarm_actions" [] (_cma_alarm_actions params)
+    <> rfmOptionalDefField "alarm_description" "" (_cma_alarm_description params)
+    <> rfmOptionalDefField "dimensions" M.empty (_cma_dimensions params)
+    <> rfmOptionalDefField "insufficient_data_actions" [] (_cma_insufficient_data_actions params)
+    <> rfmOptionalDefField "ok_actions" [] (_cma_ok_actions params)
+    <> rfmOptionalDefField "unit" "" (_cma_unit params)
+    
+
+instance ToResourceField AwsCloudwatchMetricAlarmParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -1743,8 +2297,8 @@ instance IsResource AwsCloudwatchMetricAlarm where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'db_')
 
-awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceOptions -> TF AwsDbInstance
-awsDbInstance name0 allocatedStorage engine instanceClass username' password opts = awsDbInstance' name0 (AwsDbInstanceParams allocatedStorage engine instanceClass username' password opts)
+awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text ->(AwsDbInstanceParams -> AwsDbInstanceParams) -> TF AwsDbInstance
+awsDbInstance name0 allocatedStorage engine instanceClass username' password modf = awsDbInstance' name0 (modf (makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password))
 
 awsDbInstance' :: NameElement -> AwsDbInstanceParams -> TF AwsDbInstance
 awsDbInstance' name0 params = do
@@ -1759,51 +2313,6 @@ awsDbInstance' name0 params = do
     , db_resource = rid
     }
 
-data AwsDbInstanceParams = AwsDbInstanceParams
-  { db_allocated_storage :: Int
-  , db_engine :: DBEngine
-  , db_instance_class :: DBInstanceClass
-  , db_username' :: T.Text
-  , db_password :: T.Text
-  , db_options :: AwsDbInstanceOptions
-  }
-
-data AwsDbInstanceOptions = AwsDbInstanceOptions
-  { db_engine_version :: T.Text
-  , db_identifier :: T.Text
-  , db_name' :: T.Text
-  , db_port' :: Maybe (Int)
-  , db_publicly_accessible :: Bool
-  , db_backup_retention_period :: Int
-  , db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
-  , db_db_subnet_group_name :: Maybe (TFRef T.Text)
-  , db_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsDbInstanceOptions where
-  def = AwsDbInstanceOptions "" "" "" Nothing False 0 [] Nothing M.empty
-
-instance ToResourceFieldMap AwsDbInstanceParams where
-  toResourceFieldMap params
-    =  rfmField "allocated_storage" (db_allocated_storage params)
-    <> rfmField "engine" (db_engine params)
-    <> rfmOptionalDefField "engine_version" "" (db_engine_version (db_options params))
-    <> rfmOptionalDefField "identifier" "" (db_identifier (db_options params))
-    <> rfmField "instance_class" (db_instance_class params)
-    <> rfmOptionalDefField "name" "" (db_name' (db_options params))
-    <> rfmOptionalField "port" (db_port' (db_options params))
-    <> rfmField "username" (db_username' params)
-    <> rfmField "password" (db_password params)
-    <> rfmOptionalDefField "publicly_accessible" False (db_publicly_accessible (db_options params))
-    <> rfmOptionalDefField "backup_retention_period" 0 (db_backup_retention_period (db_options params))
-    <> rfmOptionalDefField "vpc_security_group_ids" [] (db_vpc_security_group_ids (db_options params))
-    <> rfmOptionalField "db_subnet_group_name" (db_db_subnet_group_name (db_options params))
-    <> rfmOptionalDefField "tags" M.empty (db_tags (db_options params))
-    
-
-instance ToResourceField AwsDbInstanceParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsDbInstance = AwsDbInstance
   { db_id :: TFRef (AwsId AwsDbInstance)
   , db_arn :: TFRef Arn
@@ -1817,6 +2326,105 @@ data AwsDbInstance = AwsDbInstance
 instance IsResource AwsDbInstance where
   resourceId = db_resource
 
+data AwsDbInstanceParams = AwsDbInstanceParams
+  { _db_allocated_storage :: Int
+  , _db_engine :: DBEngine
+  , _db_instance_class :: DBInstanceClass
+  , _db_username' :: T.Text
+  , _db_password :: T.Text
+  , _db_engine_version :: T.Text
+  , _db_identifier :: T.Text
+  , _db_name' :: T.Text
+  , _db_port' :: Maybe (Int)
+  , _db_publicly_accessible :: Bool
+  , _db_backup_retention_period :: Int
+  , _db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
+  , _db_db_subnet_group_name :: Maybe (TFRef T.Text)
+  , _db_tags :: M.Map T.Text T.Text
+  }
+
+-- db_allocated_storage :: Lens' AwsDbInstanceParams Int
+db_allocated_storage :: Functor f => (Int -> f (Int)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_allocated_storage k atom = fmap (\newdb_allocated_storage -> atom { _db_allocated_storage = newdb_allocated_storage }) (k (_db_allocated_storage atom))
+-- db_engine :: Lens' AwsDbInstanceParams DBEngine
+db_engine :: Functor f => (DBEngine -> f (DBEngine)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_engine k atom = fmap (\newdb_engine -> atom { _db_engine = newdb_engine }) (k (_db_engine atom))
+-- db_engine_version :: Lens' AwsDbInstanceParams T.Text
+db_engine_version :: Functor f => (T.Text -> f (T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_engine_version k atom = fmap (\newdb_engine_version -> atom { _db_engine_version = newdb_engine_version }) (k (_db_engine_version atom))
+-- db_identifier :: Lens' AwsDbInstanceParams T.Text
+db_identifier :: Functor f => (T.Text -> f (T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_identifier k atom = fmap (\newdb_identifier -> atom { _db_identifier = newdb_identifier }) (k (_db_identifier atom))
+-- db_instance_class :: Lens' AwsDbInstanceParams DBInstanceClass
+db_instance_class :: Functor f => (DBInstanceClass -> f (DBInstanceClass)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_instance_class k atom = fmap (\newdb_instance_class -> atom { _db_instance_class = newdb_instance_class }) (k (_db_instance_class atom))
+-- db_name' :: Lens' AwsDbInstanceParams T.Text
+db_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_name' k atom = fmap (\newdb_name' -> atom { _db_name' = newdb_name' }) (k (_db_name' atom))
+-- db_port' :: Lens' AwsDbInstanceParams Maybe (Int)
+db_port' :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_port' k atom = fmap (\newdb_port' -> atom { _db_port' = newdb_port' }) (k (_db_port' atom))
+-- db_username' :: Lens' AwsDbInstanceParams T.Text
+db_username' :: Functor f => (T.Text -> f (T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_username' k atom = fmap (\newdb_username' -> atom { _db_username' = newdb_username' }) (k (_db_username' atom))
+-- db_password :: Lens' AwsDbInstanceParams T.Text
+db_password :: Functor f => (T.Text -> f (T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_password k atom = fmap (\newdb_password -> atom { _db_password = newdb_password }) (k (_db_password atom))
+-- db_publicly_accessible :: Lens' AwsDbInstanceParams Bool
+db_publicly_accessible :: Functor f => (Bool -> f (Bool)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_publicly_accessible k atom = fmap (\newdb_publicly_accessible -> atom { _db_publicly_accessible = newdb_publicly_accessible }) (k (_db_publicly_accessible atom))
+-- db_backup_retention_period :: Lens' AwsDbInstanceParams Int
+db_backup_retention_period :: Functor f => (Int -> f (Int)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_backup_retention_period k atom = fmap (\newdb_backup_retention_period -> atom { _db_backup_retention_period = newdb_backup_retention_period }) (k (_db_backup_retention_period atom))
+-- db_vpc_security_group_ids :: Lens' AwsDbInstanceParams [TFRef (AwsId AwsSecurityGroup)]
+db_vpc_security_group_ids :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_vpc_security_group_ids k atom = fmap (\newdb_vpc_security_group_ids -> atom { _db_vpc_security_group_ids = newdb_vpc_security_group_ids }) (k (_db_vpc_security_group_ids atom))
+-- db_db_subnet_group_name :: Lens' AwsDbInstanceParams Maybe (TFRef T.Text)
+db_db_subnet_group_name :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_db_subnet_group_name k atom = fmap (\newdb_db_subnet_group_name -> atom { _db_db_subnet_group_name = newdb_db_subnet_group_name }) (k (_db_db_subnet_group_name atom))
+-- db_tags :: Lens' AwsDbInstanceParams M.Map T.Text T.Text
+db_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_tags k atom = fmap (\newdb_tags -> atom { _db_tags = newdb_tags }) (k (_db_tags atom))
+
+makeAwsDbInstanceParams :: Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceParams
+makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password = AwsDbInstanceParams
+  { _db_allocated_storage = allocatedStorage
+  , _db_engine = engine
+  , _db_instance_class = instanceClass
+  , _db_username' = username'
+  , _db_password = password
+  , _db_engine_version = ""
+  , _db_identifier = ""
+  , _db_name' = ""
+  , _db_port' = Nothing
+  , _db_publicly_accessible = False
+  , _db_backup_retention_period = 0
+  , _db_vpc_security_group_ids = []
+  , _db_db_subnet_group_name = Nothing
+  , _db_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsDbInstanceParams where
+  toResourceFieldMap params
+    =  rfmField "allocated_storage" (_db_allocated_storage params)
+    <> rfmField "engine" (_db_engine params)
+    <> rfmOptionalDefField "engine_version" "" (_db_engine_version params)
+    <> rfmOptionalDefField "identifier" "" (_db_identifier params)
+    <> rfmField "instance_class" (_db_instance_class params)
+    <> rfmOptionalDefField "name" "" (_db_name' params)
+    <> rfmOptionalField "port" (_db_port' params)
+    <> rfmField "username" (_db_username' params)
+    <> rfmField "password" (_db_password params)
+    <> rfmOptionalDefField "publicly_accessible" False (_db_publicly_accessible params)
+    <> rfmOptionalDefField "backup_retention_period" 0 (_db_backup_retention_period params)
+    <> rfmOptionalDefField "vpc_security_group_ids" [] (_db_vpc_security_group_ids params)
+    <> rfmOptionalField "db_subnet_group_name" (_db_db_subnet_group_name params)
+    <> rfmOptionalDefField "tags" M.empty (_db_tags params)
+    
+
+instance ToResourceField AwsDbInstanceParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsDbSubnetGroup to the resource graph.
@@ -1825,8 +2433,8 @@ instance IsResource AwsDbInstance where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'dsg_')
 
-awsDbSubnetGroup :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] -> AwsDbSubnetGroupOptions -> TF AwsDbSubnetGroup
-awsDbSubnetGroup name0 name' subnetIds opts = awsDbSubnetGroup' name0 (AwsDbSubnetGroupParams name' subnetIds opts)
+awsDbSubnetGroup :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] ->(AwsDbSubnetGroupParams -> AwsDbSubnetGroupParams) -> TF AwsDbSubnetGroup
+awsDbSubnetGroup name0 name' subnetIds modf = awsDbSubnetGroup' name0 (modf (makeAwsDbSubnetGroupParams name' subnetIds))
 
 awsDbSubnetGroup' :: NameElement -> AwsDbSubnetGroupParams -> TF AwsDbSubnetGroup
 awsDbSubnetGroup' name0 params = do
@@ -1838,31 +2446,6 @@ awsDbSubnetGroup' name0 params = do
     , dsg_resource = rid
     }
 
-data AwsDbSubnetGroupParams = AwsDbSubnetGroupParams
-  { dsg_name' :: T.Text
-  , dsg_subnet_ids :: [TFRef (AwsId AwsSubnet)]
-  , dsg_options :: AwsDbSubnetGroupOptions
-  }
-
-data AwsDbSubnetGroupOptions = AwsDbSubnetGroupOptions
-  { dsg_description :: T.Text
-  , dsg_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsDbSubnetGroupOptions where
-  def = AwsDbSubnetGroupOptions "" M.empty
-
-instance ToResourceFieldMap AwsDbSubnetGroupParams where
-  toResourceFieldMap params
-    =  rfmField "name" (dsg_name' params)
-    <> rfmOptionalDefField "description" "" (dsg_description (dsg_options params))
-    <> rfmField "subnet_ids" (dsg_subnet_ids params)
-    <> rfmOptionalDefField "tags" M.empty (dsg_tags (dsg_options params))
-    
-
-instance ToResourceField AwsDbSubnetGroupParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsDbSubnetGroup = AwsDbSubnetGroup
   { dsg_id :: TFRef (AwsId AwsDbSubnetGroup)
   , dsg_name :: TFRef T.Text
@@ -1873,6 +2456,45 @@ data AwsDbSubnetGroup = AwsDbSubnetGroup
 instance IsResource AwsDbSubnetGroup where
   resourceId = dsg_resource
 
+data AwsDbSubnetGroupParams = AwsDbSubnetGroupParams
+  { _dsg_name' :: T.Text
+  , _dsg_subnet_ids :: [TFRef (AwsId AwsSubnet)]
+  , _dsg_description :: T.Text
+  , _dsg_tags :: M.Map T.Text T.Text
+  }
+
+-- dsg_name' :: Lens' AwsDbSubnetGroupParams T.Text
+dsg_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsDbSubnetGroupParams -> f AwsDbSubnetGroupParams
+dsg_name' k atom = fmap (\newdsg_name' -> atom { _dsg_name' = newdsg_name' }) (k (_dsg_name' atom))
+-- dsg_description :: Lens' AwsDbSubnetGroupParams T.Text
+dsg_description :: Functor f => (T.Text -> f (T.Text)) -> AwsDbSubnetGroupParams -> f AwsDbSubnetGroupParams
+dsg_description k atom = fmap (\newdsg_description -> atom { _dsg_description = newdsg_description }) (k (_dsg_description atom))
+-- dsg_subnet_ids :: Lens' AwsDbSubnetGroupParams [TFRef (AwsId AwsSubnet)]
+dsg_subnet_ids :: Functor f => ([TFRef (AwsId AwsSubnet)] -> f ([TFRef (AwsId AwsSubnet)])) -> AwsDbSubnetGroupParams -> f AwsDbSubnetGroupParams
+dsg_subnet_ids k atom = fmap (\newdsg_subnet_ids -> atom { _dsg_subnet_ids = newdsg_subnet_ids }) (k (_dsg_subnet_ids atom))
+-- dsg_tags :: Lens' AwsDbSubnetGroupParams M.Map T.Text T.Text
+dsg_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsDbSubnetGroupParams -> f AwsDbSubnetGroupParams
+dsg_tags k atom = fmap (\newdsg_tags -> atom { _dsg_tags = newdsg_tags }) (k (_dsg_tags atom))
+
+makeAwsDbSubnetGroupParams :: T.Text -> [TFRef (AwsId AwsSubnet)] -> AwsDbSubnetGroupParams
+makeAwsDbSubnetGroupParams name' subnetIds = AwsDbSubnetGroupParams
+  { _dsg_name' = name'
+  , _dsg_subnet_ids = subnetIds
+  , _dsg_description = ""
+  , _dsg_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsDbSubnetGroupParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_dsg_name' params)
+    <> rfmOptionalDefField "description" "" (_dsg_description params)
+    <> rfmField "subnet_ids" (_dsg_subnet_ids params)
+    <> rfmOptionalDefField "tags" M.empty (_dsg_tags params)
+    
+
+instance ToResourceField AwsDbSubnetGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsRoute53Zone to the resource graph.
@@ -1881,8 +2503,8 @@ instance IsResource AwsDbSubnetGroup where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'r53z_')
 
-awsRoute53Zone :: NameElement -> T.Text -> AwsRoute53ZoneOptions -> TF AwsRoute53Zone
-awsRoute53Zone name0 name opts = awsRoute53Zone' name0 (AwsRoute53ZoneParams name opts)
+awsRoute53Zone :: NameElement -> T.Text ->(AwsRoute53ZoneParams -> AwsRoute53ZoneParams) -> TF AwsRoute53Zone
+awsRoute53Zone name0 name modf = awsRoute53Zone' name0 (modf (makeAwsRoute53ZoneParams name))
 
 awsRoute53Zone' :: NameElement -> AwsRoute53ZoneParams -> TF AwsRoute53Zone
 awsRoute53Zone' name0 params = do
@@ -1892,35 +2514,6 @@ awsRoute53Zone' name0 params = do
     , r53z_resource = rid
     }
 
-data AwsRoute53ZoneParams = AwsRoute53ZoneParams
-  { r53z_name :: T.Text
-  , r53z_options :: AwsRoute53ZoneOptions
-  }
-
-data AwsRoute53ZoneOptions = AwsRoute53ZoneOptions
-  { r53z_comment :: T.Text
-  , r53z_vpc_id :: Maybe (TFRef (AwsId AwsVpc))
-  , r53z_vpc_region :: Maybe (AwsRegion)
-  , r53z_force_destroy :: Bool
-  , r53z_tags :: M.Map T.Text T.Text
-  }
-
-instance Default AwsRoute53ZoneOptions where
-  def = AwsRoute53ZoneOptions "Managed by Terraform" Nothing Nothing False M.empty
-
-instance ToResourceFieldMap AwsRoute53ZoneParams where
-  toResourceFieldMap params
-    =  rfmField "name" (r53z_name params)
-    <> rfmOptionalDefField "comment" "Managed by Terraform" (r53z_comment (r53z_options params))
-    <> rfmOptionalField "vpc_id" (r53z_vpc_id (r53z_options params))
-    <> rfmOptionalField "vpc_region" (r53z_vpc_region (r53z_options params))
-    <> rfmOptionalDefField "force_destroy" False (r53z_force_destroy (r53z_options params))
-    <> rfmOptionalDefField "tags" M.empty (r53z_tags (r53z_options params))
-    
-
-instance ToResourceField AwsRoute53ZoneParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsRoute53Zone = AwsRoute53Zone
   { r53z_zone_id :: TFRef HostedZoneId
   , r53z_resource :: ResourceId
@@ -1929,28 +2522,88 @@ data AwsRoute53Zone = AwsRoute53Zone
 instance IsResource AwsRoute53Zone where
   resourceId = r53z_resource
 
+data AwsRoute53ZoneParams = AwsRoute53ZoneParams
+  { _r53z_name :: T.Text
+  , _r53z_comment :: T.Text
+  , _r53z_vpc_id :: Maybe (TFRef (AwsId AwsVpc))
+  , _r53z_vpc_region :: Maybe (AwsRegion)
+  , _r53z_force_destroy :: Bool
+  , _r53z_tags :: M.Map T.Text T.Text
+  }
+
+-- r53z_name :: Lens' AwsRoute53ZoneParams T.Text
+r53z_name :: Functor f => (T.Text -> f (T.Text)) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_name k atom = fmap (\newr53z_name -> atom { _r53z_name = newr53z_name }) (k (_r53z_name atom))
+-- r53z_comment :: Lens' AwsRoute53ZoneParams T.Text
+r53z_comment :: Functor f => (T.Text -> f (T.Text)) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_comment k atom = fmap (\newr53z_comment -> atom { _r53z_comment = newr53z_comment }) (k (_r53z_comment atom))
+-- r53z_vpc_id :: Lens' AwsRoute53ZoneParams Maybe (TFRef (AwsId AwsVpc))
+r53z_vpc_id :: Functor f => (Maybe (TFRef (AwsId AwsVpc)) -> f (Maybe (TFRef (AwsId AwsVpc)))) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_vpc_id k atom = fmap (\newr53z_vpc_id -> atom { _r53z_vpc_id = newr53z_vpc_id }) (k (_r53z_vpc_id atom))
+-- r53z_vpc_region :: Lens' AwsRoute53ZoneParams Maybe (AwsRegion)
+r53z_vpc_region :: Functor f => (Maybe (AwsRegion) -> f (Maybe (AwsRegion))) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_vpc_region k atom = fmap (\newr53z_vpc_region -> atom { _r53z_vpc_region = newr53z_vpc_region }) (k (_r53z_vpc_region atom))
+-- r53z_force_destroy :: Lens' AwsRoute53ZoneParams Bool
+r53z_force_destroy :: Functor f => (Bool -> f (Bool)) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_force_destroy k atom = fmap (\newr53z_force_destroy -> atom { _r53z_force_destroy = newr53z_force_destroy }) (k (_r53z_force_destroy atom))
+-- r53z_tags :: Lens' AwsRoute53ZoneParams M.Map T.Text T.Text
+r53z_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsRoute53ZoneParams -> f AwsRoute53ZoneParams
+r53z_tags k atom = fmap (\newr53z_tags -> atom { _r53z_tags = newr53z_tags }) (k (_r53z_tags atom))
+
+makeAwsRoute53ZoneParams :: T.Text -> AwsRoute53ZoneParams
+makeAwsRoute53ZoneParams name = AwsRoute53ZoneParams
+  { _r53z_name = name
+  , _r53z_comment = "Managed by Terraform"
+  , _r53z_vpc_id = Nothing
+  , _r53z_vpc_region = Nothing
+  , _r53z_force_destroy = False
+  , _r53z_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsRoute53ZoneParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_r53z_name params)
+    <> rfmOptionalDefField "comment" "Managed by Terraform" (_r53z_comment params)
+    <> rfmOptionalField "vpc_id" (_r53z_vpc_id params)
+    <> rfmOptionalField "vpc_region" (_r53z_vpc_region params)
+    <> rfmOptionalDefField "force_destroy" False (_r53z_force_destroy params)
+    <> rfmOptionalDefField "tags" M.empty (_r53z_tags params)
+    
+
+instance ToResourceField AwsRoute53ZoneParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 data Route53AliasParams = Route53AliasParams
-  { r53a_zone_id :: TFRef HostedZoneId
-  , r53a_name :: TFRef T.Text
-  , r53a_evaluate_target_health :: Bool
-  , r53a_options :: Route53AliasOptions
+  { _r53a_zone_id :: TFRef HostedZoneId
+  , _r53a_name :: TFRef T.Text
+  , _r53a_evaluate_target_health :: Bool
   }
   deriving (Eq)
 
-data Route53AliasOptions = Route53AliasOptions
-  { }
-  deriving (Eq)
+-- r53a_zone_id :: Lens' Route53AliasParams TFRef HostedZoneId
+r53a_zone_id :: Functor f => (TFRef HostedZoneId -> f (TFRef HostedZoneId)) -> Route53AliasParams -> f Route53AliasParams
+r53a_zone_id k atom = fmap (\newr53a_zone_id -> atom { _r53a_zone_id = newr53a_zone_id }) (k (_r53a_zone_id atom))
+-- r53a_name :: Lens' Route53AliasParams TFRef T.Text
+r53a_name :: Functor f => (TFRef T.Text -> f (TFRef T.Text)) -> Route53AliasParams -> f Route53AliasParams
+r53a_name k atom = fmap (\newr53a_name -> atom { _r53a_name = newr53a_name }) (k (_r53a_name atom))
+-- r53a_evaluate_target_health :: Lens' Route53AliasParams Bool
+r53a_evaluate_target_health :: Functor f => (Bool -> f (Bool)) -> Route53AliasParams -> f Route53AliasParams
+r53a_evaluate_target_health k atom = fmap (\newr53a_evaluate_target_health -> atom { _r53a_evaluate_target_health = newr53a_evaluate_target_health }) (k (_r53a_evaluate_target_health atom))
 
-instance Default Route53AliasOptions where
-  def = Route53AliasOptions 
+makeRoute53AliasParams :: TFRef HostedZoneId -> TFRef T.Text -> Bool -> Route53AliasParams
+makeRoute53AliasParams zoneId name evaluateTargetHealth = Route53AliasParams
+  { _r53a_zone_id = zoneId
+  , _r53a_name = name
+  , _r53a_evaluate_target_health = evaluateTargetHealth
+  }
 
 instance ToResourceFieldMap Route53AliasParams where
   toResourceFieldMap params
-    =  rfmField "zone_id" (r53a_zone_id params)
-    <> rfmField "name" (r53a_name params)
-    <> rfmField "evaluate_target_health" (r53a_evaluate_target_health params)
+    =  rfmField "zone_id" (_r53a_zone_id params)
+    <> rfmField "name" (_r53a_name params)
+    <> rfmField "evaluate_target_health" (_r53a_evaluate_target_health params)
     
 
 instance ToResourceField Route53AliasParams where
@@ -1964,8 +2617,8 @@ instance ToResourceField Route53AliasParams where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'r53r_')
 
-awsRoute53Record :: NameElement -> TFRef HostedZoneId -> T.Text -> Route53RecordType -> AwsRoute53RecordOptions -> TF AwsRoute53Record
-awsRoute53Record name0 zoneId name type_ opts = awsRoute53Record' name0 (AwsRoute53RecordParams zoneId name type_ opts)
+awsRoute53Record :: NameElement -> TFRef HostedZoneId -> T.Text -> Route53RecordType ->(AwsRoute53RecordParams -> AwsRoute53RecordParams) -> TF AwsRoute53Record
+awsRoute53Record name0 zoneId name type_ modf = awsRoute53Record' name0 (modf (makeAwsRoute53RecordParams zoneId name type_))
 
 awsRoute53Record' :: NameElement -> AwsRoute53RecordParams -> TF AwsRoute53Record
 awsRoute53Record' name0 params = do
@@ -1974,41 +2627,63 @@ awsRoute53Record' name0 params = do
     { r53r_resource = rid
     }
 
-data AwsRoute53RecordParams = AwsRoute53RecordParams
-  { r53r_zone_id :: TFRef HostedZoneId
-  , r53r_name :: T.Text
-  , r53r_type :: Route53RecordType
-  , r53r_options :: AwsRoute53RecordOptions
-  }
-
-data AwsRoute53RecordOptions = AwsRoute53RecordOptions
-  { r53r_ttl :: Maybe (Int)
-  , r53r_records :: [TFRef IpAddress]
-  , r53r_alias :: Maybe (Route53AliasParams)
-  }
-
-instance Default AwsRoute53RecordOptions where
-  def = AwsRoute53RecordOptions Nothing [] Nothing
-
-instance ToResourceFieldMap AwsRoute53RecordParams where
-  toResourceFieldMap params
-    =  rfmField "zone_id" (r53r_zone_id params)
-    <> rfmField "name" (r53r_name params)
-    <> rfmField "type" (r53r_type params)
-    <> rfmOptionalField "ttl" (r53r_ttl (r53r_options params))
-    <> rfmOptionalDefField "records" [] (r53r_records (r53r_options params))
-    <> rfmOptionalField "alias" (r53r_alias (r53r_options params))
-    
-
-instance ToResourceField AwsRoute53RecordParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsRoute53Record = AwsRoute53Record
   { r53r_resource :: ResourceId
   }
 
 instance IsResource AwsRoute53Record where
   resourceId = r53r_resource
+
+data AwsRoute53RecordParams = AwsRoute53RecordParams
+  { _r53r_zone_id :: TFRef HostedZoneId
+  , _r53r_name :: T.Text
+  , _r53r_type :: Route53RecordType
+  , _r53r_ttl :: Maybe (Int)
+  , _r53r_records :: [TFRef IpAddress]
+  , _r53r_alias :: Maybe (Route53AliasParams)
+  }
+
+-- r53r_zone_id :: Lens' AwsRoute53RecordParams TFRef HostedZoneId
+r53r_zone_id :: Functor f => (TFRef HostedZoneId -> f (TFRef HostedZoneId)) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_zone_id k atom = fmap (\newr53r_zone_id -> atom { _r53r_zone_id = newr53r_zone_id }) (k (_r53r_zone_id atom))
+-- r53r_name :: Lens' AwsRoute53RecordParams T.Text
+r53r_name :: Functor f => (T.Text -> f (T.Text)) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_name k atom = fmap (\newr53r_name -> atom { _r53r_name = newr53r_name }) (k (_r53r_name atom))
+-- r53r_type :: Lens' AwsRoute53RecordParams Route53RecordType
+r53r_type :: Functor f => (Route53RecordType -> f (Route53RecordType)) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_type k atom = fmap (\newr53r_type -> atom { _r53r_type = newr53r_type }) (k (_r53r_type atom))
+-- r53r_ttl :: Lens' AwsRoute53RecordParams Maybe (Int)
+r53r_ttl :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_ttl k atom = fmap (\newr53r_ttl -> atom { _r53r_ttl = newr53r_ttl }) (k (_r53r_ttl atom))
+-- r53r_records :: Lens' AwsRoute53RecordParams [TFRef IpAddress]
+r53r_records :: Functor f => ([TFRef IpAddress] -> f ([TFRef IpAddress])) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_records k atom = fmap (\newr53r_records -> atom { _r53r_records = newr53r_records }) (k (_r53r_records atom))
+-- r53r_alias :: Lens' AwsRoute53RecordParams Maybe (Route53AliasParams)
+r53r_alias :: Functor f => (Maybe (Route53AliasParams) -> f (Maybe (Route53AliasParams))) -> AwsRoute53RecordParams -> f AwsRoute53RecordParams
+r53r_alias k atom = fmap (\newr53r_alias -> atom { _r53r_alias = newr53r_alias }) (k (_r53r_alias atom))
+
+makeAwsRoute53RecordParams :: TFRef HostedZoneId -> T.Text -> Route53RecordType -> AwsRoute53RecordParams
+makeAwsRoute53RecordParams zoneId name type_ = AwsRoute53RecordParams
+  { _r53r_zone_id = zoneId
+  , _r53r_name = name
+  , _r53r_type = type_
+  , _r53r_ttl = Nothing
+  , _r53r_records = []
+  , _r53r_alias = Nothing
+  }
+
+instance ToResourceFieldMap AwsRoute53RecordParams where
+  toResourceFieldMap params
+    =  rfmField "zone_id" (_r53r_zone_id params)
+    <> rfmField "name" (_r53r_name params)
+    <> rfmField "type" (_r53r_type params)
+    <> rfmOptionalField "ttl" (_r53r_ttl params)
+    <> rfmOptionalDefField "records" [] (_r53r_records params)
+    <> rfmOptionalField "alias" (_r53r_alias params)
+    
+
+instance ToResourceField AwsRoute53RecordParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -2018,8 +2693,8 @@ instance IsResource AwsRoute53Record where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'sqs_')
 
-awsSqsQueue :: NameElement -> T.Text -> AwsSqsQueueOptions -> TF AwsSqsQueue
-awsSqsQueue name0 name opts = awsSqsQueue' name0 (AwsSqsQueueParams name opts)
+awsSqsQueue :: NameElement -> T.Text ->(AwsSqsQueueParams -> AwsSqsQueueParams) -> TF AwsSqsQueue
+awsSqsQueue name0 name modf = awsSqsQueue' name0 (modf (makeAwsSqsQueueParams name))
 
 awsSqsQueue' :: NameElement -> AwsSqsQueueParams -> TF AwsSqsQueue
 awsSqsQueue' name0 params = do
@@ -2030,43 +2705,6 @@ awsSqsQueue' name0 params = do
     , sqs_resource = rid
     }
 
-data AwsSqsQueueParams = AwsSqsQueueParams
-  { sqs_name :: T.Text
-  , sqs_options :: AwsSqsQueueOptions
-  }
-
-data AwsSqsQueueOptions = AwsSqsQueueOptions
-  { sqs_visibility_timeout_seconds :: Int
-  , sqs_message_retention_seconds :: Int
-  , sqs_max_message_size :: Int
-  , sqs_delay_seconds :: Int
-  , sqs_receive_wait_time_seconds :: Int
-  , sqs_policy :: Maybe (T.Text)
-  , sqs_redrive_policy :: Maybe (T.Text)
-  , sqs_fifo_queue :: Bool
-  , sqs_content_based_deduplication :: Bool
-  }
-
-instance Default AwsSqsQueueOptions where
-  def = AwsSqsQueueOptions 30 345600 262144 0 0 Nothing Nothing False False
-
-instance ToResourceFieldMap AwsSqsQueueParams where
-  toResourceFieldMap params
-    =  rfmField "name" (sqs_name params)
-    <> rfmOptionalDefField "visibility_timeout_seconds" 30 (sqs_visibility_timeout_seconds (sqs_options params))
-    <> rfmOptionalDefField "message_retention_seconds" 345600 (sqs_message_retention_seconds (sqs_options params))
-    <> rfmOptionalDefField "max_message_size" 262144 (sqs_max_message_size (sqs_options params))
-    <> rfmOptionalDefField "delay_seconds" 0 (sqs_delay_seconds (sqs_options params))
-    <> rfmOptionalDefField "receive_wait_time_seconds" 0 (sqs_receive_wait_time_seconds (sqs_options params))
-    <> rfmOptionalField "policy" (sqs_policy (sqs_options params))
-    <> rfmOptionalField "redrive_policy" (sqs_redrive_policy (sqs_options params))
-    <> rfmOptionalDefField "fifo_queue" False (sqs_fifo_queue (sqs_options params))
-    <> rfmOptionalDefField "content_based_deduplication" False (sqs_content_based_deduplication (sqs_options params))
-    
-
-instance ToResourceField AwsSqsQueueParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsSqsQueue = AwsSqsQueue
   { sqs_id :: TFRef (AwsId AwsSqsQueue)
   , sqs_arn :: TFRef Arn
@@ -2076,6 +2714,81 @@ data AwsSqsQueue = AwsSqsQueue
 instance IsResource AwsSqsQueue where
   resourceId = sqs_resource
 
+data AwsSqsQueueParams = AwsSqsQueueParams
+  { _sqs_name :: T.Text
+  , _sqs_visibility_timeout_seconds :: Int
+  , _sqs_message_retention_seconds :: Int
+  , _sqs_max_message_size :: Int
+  , _sqs_delay_seconds :: Int
+  , _sqs_receive_wait_time_seconds :: Int
+  , _sqs_policy :: Maybe (T.Text)
+  , _sqs_redrive_policy :: Maybe (T.Text)
+  , _sqs_fifo_queue :: Bool
+  , _sqs_content_based_deduplication :: Bool
+  }
+
+-- sqs_name :: Lens' AwsSqsQueueParams T.Text
+sqs_name :: Functor f => (T.Text -> f (T.Text)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_name k atom = fmap (\newsqs_name -> atom { _sqs_name = newsqs_name }) (k (_sqs_name atom))
+-- sqs_visibility_timeout_seconds :: Lens' AwsSqsQueueParams Int
+sqs_visibility_timeout_seconds :: Functor f => (Int -> f (Int)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_visibility_timeout_seconds k atom = fmap (\newsqs_visibility_timeout_seconds -> atom { _sqs_visibility_timeout_seconds = newsqs_visibility_timeout_seconds }) (k (_sqs_visibility_timeout_seconds atom))
+-- sqs_message_retention_seconds :: Lens' AwsSqsQueueParams Int
+sqs_message_retention_seconds :: Functor f => (Int -> f (Int)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_message_retention_seconds k atom = fmap (\newsqs_message_retention_seconds -> atom { _sqs_message_retention_seconds = newsqs_message_retention_seconds }) (k (_sqs_message_retention_seconds atom))
+-- sqs_max_message_size :: Lens' AwsSqsQueueParams Int
+sqs_max_message_size :: Functor f => (Int -> f (Int)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_max_message_size k atom = fmap (\newsqs_max_message_size -> atom { _sqs_max_message_size = newsqs_max_message_size }) (k (_sqs_max_message_size atom))
+-- sqs_delay_seconds :: Lens' AwsSqsQueueParams Int
+sqs_delay_seconds :: Functor f => (Int -> f (Int)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_delay_seconds k atom = fmap (\newsqs_delay_seconds -> atom { _sqs_delay_seconds = newsqs_delay_seconds }) (k (_sqs_delay_seconds atom))
+-- sqs_receive_wait_time_seconds :: Lens' AwsSqsQueueParams Int
+sqs_receive_wait_time_seconds :: Functor f => (Int -> f (Int)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_receive_wait_time_seconds k atom = fmap (\newsqs_receive_wait_time_seconds -> atom { _sqs_receive_wait_time_seconds = newsqs_receive_wait_time_seconds }) (k (_sqs_receive_wait_time_seconds atom))
+-- sqs_policy :: Lens' AwsSqsQueueParams Maybe (T.Text)
+sqs_policy :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_policy k atom = fmap (\newsqs_policy -> atom { _sqs_policy = newsqs_policy }) (k (_sqs_policy atom))
+-- sqs_redrive_policy :: Lens' AwsSqsQueueParams Maybe (T.Text)
+sqs_redrive_policy :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_redrive_policy k atom = fmap (\newsqs_redrive_policy -> atom { _sqs_redrive_policy = newsqs_redrive_policy }) (k (_sqs_redrive_policy atom))
+-- sqs_fifo_queue :: Lens' AwsSqsQueueParams Bool
+sqs_fifo_queue :: Functor f => (Bool -> f (Bool)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_fifo_queue k atom = fmap (\newsqs_fifo_queue -> atom { _sqs_fifo_queue = newsqs_fifo_queue }) (k (_sqs_fifo_queue atom))
+-- sqs_content_based_deduplication :: Lens' AwsSqsQueueParams Bool
+sqs_content_based_deduplication :: Functor f => (Bool -> f (Bool)) -> AwsSqsQueueParams -> f AwsSqsQueueParams
+sqs_content_based_deduplication k atom = fmap (\newsqs_content_based_deduplication -> atom { _sqs_content_based_deduplication = newsqs_content_based_deduplication }) (k (_sqs_content_based_deduplication atom))
+
+makeAwsSqsQueueParams :: T.Text -> AwsSqsQueueParams
+makeAwsSqsQueueParams name = AwsSqsQueueParams
+  { _sqs_name = name
+  , _sqs_visibility_timeout_seconds = 30
+  , _sqs_message_retention_seconds = 345600
+  , _sqs_max_message_size = 262144
+  , _sqs_delay_seconds = 0
+  , _sqs_receive_wait_time_seconds = 0
+  , _sqs_policy = Nothing
+  , _sqs_redrive_policy = Nothing
+  , _sqs_fifo_queue = False
+  , _sqs_content_based_deduplication = False
+  }
+
+instance ToResourceFieldMap AwsSqsQueueParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_sqs_name params)
+    <> rfmOptionalDefField "visibility_timeout_seconds" 30 (_sqs_visibility_timeout_seconds params)
+    <> rfmOptionalDefField "message_retention_seconds" 345600 (_sqs_message_retention_seconds params)
+    <> rfmOptionalDefField "max_message_size" 262144 (_sqs_max_message_size params)
+    <> rfmOptionalDefField "delay_seconds" 0 (_sqs_delay_seconds params)
+    <> rfmOptionalDefField "receive_wait_time_seconds" 0 (_sqs_receive_wait_time_seconds params)
+    <> rfmOptionalField "policy" (_sqs_policy params)
+    <> rfmOptionalField "redrive_policy" (_sqs_redrive_policy params)
+    <> rfmOptionalDefField "fifo_queue" False (_sqs_fifo_queue params)
+    <> rfmOptionalDefField "content_based_deduplication" False (_sqs_content_based_deduplication params)
+    
+
+instance ToResourceField AwsSqsQueueParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsSqsQueuePolicy to the resource graph.
@@ -2084,8 +2797,8 @@ instance IsResource AwsSqsQueue where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'sqsp_')
 
-awsSqsQueuePolicy :: NameElement -> T.Text -> T.Text -> AwsSqsQueuePolicyOptions -> TF AwsSqsQueuePolicy
-awsSqsQueuePolicy name0 queueUrl policy opts = awsSqsQueuePolicy' name0 (AwsSqsQueuePolicyParams queueUrl policy opts)
+awsSqsQueuePolicy :: NameElement -> T.Text -> T.Text ->(AwsSqsQueuePolicyParams -> AwsSqsQueuePolicyParams) -> TF AwsSqsQueuePolicy
+awsSqsQueuePolicy name0 queueUrl policy modf = awsSqsQueuePolicy' name0 (modf (makeAwsSqsQueuePolicyParams queueUrl policy))
 
 awsSqsQueuePolicy' :: NameElement -> AwsSqsQueuePolicyParams -> TF AwsSqsQueuePolicy
 awsSqsQueuePolicy' name0 params = do
@@ -2094,33 +2807,39 @@ awsSqsQueuePolicy' name0 params = do
     { sqsp_resource = rid
     }
 
-data AwsSqsQueuePolicyParams = AwsSqsQueuePolicyParams
-  { sqsp_queue_url :: T.Text
-  , sqsp_policy :: T.Text
-  , sqsp_options :: AwsSqsQueuePolicyOptions
-  }
-
-data AwsSqsQueuePolicyOptions = AwsSqsQueuePolicyOptions
-  { }
-
-instance Default AwsSqsQueuePolicyOptions where
-  def = AwsSqsQueuePolicyOptions 
-
-instance ToResourceFieldMap AwsSqsQueuePolicyParams where
-  toResourceFieldMap params
-    =  rfmField "queue_url" (sqsp_queue_url params)
-    <> rfmField "policy" (sqsp_policy params)
-    
-
-instance ToResourceField AwsSqsQueuePolicyParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsSqsQueuePolicy = AwsSqsQueuePolicy
   { sqsp_resource :: ResourceId
   }
 
 instance IsResource AwsSqsQueuePolicy where
   resourceId = sqsp_resource
+
+data AwsSqsQueuePolicyParams = AwsSqsQueuePolicyParams
+  { _sqsp_queue_url :: T.Text
+  , _sqsp_policy :: T.Text
+  }
+
+-- sqsp_queue_url :: Lens' AwsSqsQueuePolicyParams T.Text
+sqsp_queue_url :: Functor f => (T.Text -> f (T.Text)) -> AwsSqsQueuePolicyParams -> f AwsSqsQueuePolicyParams
+sqsp_queue_url k atom = fmap (\newsqsp_queue_url -> atom { _sqsp_queue_url = newsqsp_queue_url }) (k (_sqsp_queue_url atom))
+-- sqsp_policy :: Lens' AwsSqsQueuePolicyParams T.Text
+sqsp_policy :: Functor f => (T.Text -> f (T.Text)) -> AwsSqsQueuePolicyParams -> f AwsSqsQueuePolicyParams
+sqsp_policy k atom = fmap (\newsqsp_policy -> atom { _sqsp_policy = newsqsp_policy }) (k (_sqsp_policy atom))
+
+makeAwsSqsQueuePolicyParams :: T.Text -> T.Text -> AwsSqsQueuePolicyParams
+makeAwsSqsQueuePolicyParams queueUrl policy = AwsSqsQueuePolicyParams
+  { _sqsp_queue_url = queueUrl
+  , _sqsp_policy = policy
+  }
+
+instance ToResourceFieldMap AwsSqsQueuePolicyParams where
+  toResourceFieldMap params
+    =  rfmField "queue_url" (_sqsp_queue_url params)
+    <> rfmField "policy" (_sqsp_policy params)
+    
+
+instance ToResourceField AwsSqsQueuePolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
 
@@ -2130,8 +2849,8 @@ instance IsResource AwsSqsQueuePolicy where
 -- for details.
 -- (In this binding attribute and argument names all have the prefix 'ecr_')
 
-awsEcrRepository :: NameElement -> T.Text -> AwsEcrRepositoryOptions -> TF AwsEcrRepository
-awsEcrRepository name0 name' opts = awsEcrRepository' name0 (AwsEcrRepositoryParams name' opts)
+awsEcrRepository :: NameElement -> T.Text ->(AwsEcrRepositoryParams -> AwsEcrRepositoryParams) -> TF AwsEcrRepository
+awsEcrRepository name0 name' modf = awsEcrRepository' name0 (modf (makeAwsEcrRepositoryParams name'))
 
 awsEcrRepository' :: NameElement -> AwsEcrRepositoryParams -> TF AwsEcrRepository
 awsEcrRepository' name0 params = do
@@ -2144,25 +2863,6 @@ awsEcrRepository' name0 params = do
     , ecr_resource = rid
     }
 
-data AwsEcrRepositoryParams = AwsEcrRepositoryParams
-  { ecr_name' :: T.Text
-  , ecr_options :: AwsEcrRepositoryOptions
-  }
-
-data AwsEcrRepositoryOptions = AwsEcrRepositoryOptions
-  { }
-
-instance Default AwsEcrRepositoryOptions where
-  def = AwsEcrRepositoryOptions 
-
-instance ToResourceFieldMap AwsEcrRepositoryParams where
-  toResourceFieldMap params
-    =  rfmField "name" (ecr_name' params)
-    
-
-instance ToResourceField AwsEcrRepositoryParams where
-  toResourceField = RF_Map . toResourceFieldMap 
-
 data AwsEcrRepository = AwsEcrRepository
   { ecr_arn :: TFRef Arn
   , ecr_name :: TFRef T.Text
@@ -2173,3 +2873,24 @@ data AwsEcrRepository = AwsEcrRepository
 
 instance IsResource AwsEcrRepository where
   resourceId = ecr_resource
+
+data AwsEcrRepositoryParams = AwsEcrRepositoryParams
+  { _ecr_name' :: T.Text
+  }
+
+-- ecr_name' :: Lens' AwsEcrRepositoryParams T.Text
+ecr_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsEcrRepositoryParams -> f AwsEcrRepositoryParams
+ecr_name' k atom = fmap (\newecr_name' -> atom { _ecr_name' = newecr_name' }) (k (_ecr_name' atom))
+
+makeAwsEcrRepositoryParams :: T.Text -> AwsEcrRepositoryParams
+makeAwsEcrRepositoryParams name' = AwsEcrRepositoryParams
+  { _ecr_name' = name'
+  }
+
+instance ToResourceFieldMap AwsEcrRepositoryParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_ecr_name' params)
+    
+
+instance ToResourceField AwsEcrRepositoryParams where
+  toResourceField = RF_Map . toResourceFieldMap 
