@@ -41,8 +41,8 @@ awsHeader = clines
     , "-- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>"
     , "-- for details."
     , ""
-    , "aws' :: AwsParams -> TF ()"
-    , "aws' params ="
+    , "newAws :: AwsParams -> TF ()"
+    , "newAws params ="
     , "  mkProvider \"aws\" $ catMaybes"
     , "    [ Just (\"region\", toResourceField (aws_region params))"
     , "    , let v = aws_access_key params in if v == \"\" then Nothing else (Just (\"access_key\", toResourceField v))"
@@ -646,15 +646,28 @@ resourceCode tftypename fieldprefix docurl args attrs
            , htypename tftypename
            ]
       <> ctemplate
-           "$1 name0 $2 modf = $1' name0 (modf (make$3Params $2))"
+           "$1 name0 $2 modf = new$3 name0 (modf (make$3Params $2))"
+           [ hfnname tftypename
+           , T.intercalate " " [hfnname fname | (fname,_,Required) <- args]
+           , htypename tftypename
+           ]
+      <> cline     ""
+      <> ctemplate
+           "$1' :: NameElement -> $2 TF $3"
+           [ hfnname tftypename
+           , T.intercalate " " [hftype ftype <> " ->" | (_,ftype,Required) <- args]
+           , htypename tftypename
+           ]
+      <> ctemplate
+           "$1' name0 $2 = new$3 name0 (make$3Params $2)"
            [ hfnname tftypename
            , T.intercalate " " [hfnname fname | (fname,_,Required) <- args]
            , htypename tftypename
            ]
 
     function'
-      =  ctemplate "$1' :: NameElement -> $2Params -> TF $2" [hfnname tftypename, htypename tftypename]
-      <> ctemplate "$1' name0 params = do" [hfnname tftypename]
+      =  ctemplate "new$1 :: NameElement -> $1Params -> TF $1" [htypename tftypename]
+      <> ctemplate "new$1 name0 params = do" [htypename tftypename]
       <> CIndent
         (  ctemplate "rid <- mkResource \"$1\" name0 (toResourceFieldMap params)" [tftypename]
         <> ctemplate "return $1" [htypename tftypename]

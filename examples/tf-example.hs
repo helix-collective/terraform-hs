@@ -4,8 +4,8 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Language.Terraform.Util.Text as T
 
+import Control.Lens
 import Control.Monad(void)
-import Data.Default
 import Data.Traversable(for)
 import Data.Monoid
 import Language.Terraform.Core
@@ -46,32 +46,32 @@ data NetworkDetails = NetworkDetails {
 networking :: TF NetworkDetails
 networking = do
 
-  vpc <- awsVpc "vpc" cidrBlock def
-  ig <- awsInternetGateway "gw" (vpc_id vpc) def
-  rtexternal <- awsRouteTable "rtexternal" (vpc_id vpc) def
-  void $ awsRoute "r" (rt_id rtexternal) "0.0.0.0/0" def
-    { r_gateway_id=Just (ig_id ig)
-    }
+  vpc <- awsVpc' "vpc" cidrBlock
+  ig <- awsInternetGateway' "gw" (vpc_id vpc)
+  rtexternal <- awsRouteTable' "rtexternal" (vpc_id vpc)
+  void $ awsRoute "r" (rt_id rtexternal) "0.0.0.0/0"
+    ( set r_gateway_id (Just (ig_id ig))
+    )
 
   -- Generate resources for each availability zone
   azs <- for azparams $ \(azname, availabilityZone,internalCidrBlock,externalCidrBlock) -> do
     withNameScope azname $ do
       -- External subnet
-      snexternal <- awsSubnet "snexternal" (vpc_id vpc) externalCidrBlock def
-      eip <- awsEip "ngeip" def
-        { eip_vpc = True
-        }
-      ng <- awsNatGateway "ng" (eip_id eip) (sn_id snexternal) def
+      snexternal <- awsSubnet' "snexternal" (vpc_id vpc) externalCidrBlock
+      eip <- awsEip "ngeip"
+        ( set eip_vpc True
+        )
+      ng <- awsNatGateway' "ng" (eip_id eip) (sn_id snexternal)
       dependsOn ng ig
-      void $ awsRouteTableAssociation "raexternal" (sn_id snexternal) (rt_id rtexternal) def
+      void $ awsRouteTableAssociation' "raexternal" (sn_id snexternal) (rt_id rtexternal)
 
       -- Internal subnet
-      rtinternal <- awsRouteTable "rtinternal" (vpc_id vpc) def
-      void $ awsRoute "r1" (rt_id rtinternal) "0.0.0.0/0" def
-        { r_nat_gateway_id=Just (ng_id ng)
-        }
-      sninternal <- awsSubnet "sninternal" (vpc_id vpc) internalCidrBlock def
-      awsRouteTableAssociation "rtainternal" (sn_id sninternal)  (rt_id rtinternal) def
+      rtinternal <- awsRouteTable' "rtinternal" (vpc_id vpc)
+      void $ awsRoute "r1" (rt_id rtinternal) "0.0.0.0/0"
+        ( set r_nat_gateway_id (Just (ng_id ng))
+        )
+      sninternal <- awsSubnet' "sninternal" (vpc_id vpc) internalCidrBlock
+      awsRouteTableAssociation' "rtainternal" (sn_id sninternal)  (rt_id rtinternal)
       return (AzDetails azname snexternal sninternal)
   return (NetworkDetails vpc azs)
 
@@ -80,13 +80,13 @@ networking = do
   
 s3 :: TF AwsS3Bucket
 s3 = do
-  deployBucket <- awsS3Bucket "deploy" (s3BucketPrefix <> "shared-deploy") def 
-  awsS3BucketObject "tfconfig" (s3_id deployBucket) "shared/config/tf-variables.sh" def
-    { s3o_content = Just $ T.unlines
-      [ "# Shared infrastructure details"
-      , T.template "TF_OUTPUT_s3_deploy_bucket = \"$1\"" [tfRefText (s3_id deployBucket)]
-      ]
-    }
+  deployBucket <- awsS3Bucket' "deploy" (s3BucketPrefix <> "shared-deploy")
+  awsS3BucketObject "tfconfig" (s3_id deployBucket) "shared/config/tf-variables.sh"
+    ( set s3o_content (Just $ T.unlines
+        [ "# Shared infrastructure details"
+        , T.template "TF_OUTPUT_s3_deploy_bucket = \"$1\"" [tfRefText (s3_id deployBucket)]
+        ])
+    )
   return deployBucket
 
 
@@ -103,7 +103,7 @@ data SharedInfrastructure = SharedInfrastructure {
 namedSnsTopic :: T.Text -> TF AwsSnsTopic
 namedSnsTopic n = do
   sn <- scopedName n
-  awsSnsTopic n sn def
+  awsSnsTopic' n sn
 
 shared :: TF SharedInfrastructure
 shared = do
@@ -130,59 +130,46 @@ demoappTags = M.fromList
 
 ingressOnPort :: Int -> IngressRuleParams
 ingressOnPort port = IngressRuleParams
-  { ir_from_port = port
-  , ir_to_port = port
-  , ir_protocol = "tcp"
-  , ir_options = def
-    { ir_cidr_blocks = ["0.0.0.0/0"]
-    }
+  { _ir_from_port = port
+  , _ir_to_port = port
+  , _ir_protocol = "tcp"
+  , _ir_cidr_blocks = ["0.0.0.0/0"]
   }
 
 egressAll :: EgressRuleParams
 egressAll = EgressRuleParams
-  { er_from_port = 0
-  , er_to_port = 0
-  , er_protocol = "-1"
-  , er_options = def
-    { er_cidr_blocks = ["0.0.0.0/0"]
-    }
+  { _er_from_port = 0
+  , _er_to_port = 0
+  , _er_protocol = "-1"
+  , _er_cidr_blocks = ["0.0.0.0/0"]
   }
 
 mkPostgres :: NetworkDetails -> AwsDbSubnetGroup -> DBInstanceClass -> TF AwsDbInstance
 mkPostgres nd subnetGroup instanceClass = do
-  db <- awsDbInstance' "db" AwsDbInstanceParams
-    { db_allocated_storage = 5
-    , db_engine = "postgres"
-    , db_instance_class = instanceClass
-    , db_username = "postgres"
-    , db_password = "password"
-    , db_options = def
-        { db_engine_version = "9.4.7"
-        , db_publicly_accessible = True
-        , db_backup_retention_period = 3
-        , db_db_subnet_group_name = Just (dsg_name subnetGroup)
-        }
-    }
+  db <- awsDbInstance "db" 5 "postgres" instanceClass "postgres" "password"
+    ( set db_engine_version "9.4.7"
+    . set db_publicly_accessible True
+    . set db_backup_retention_period 3
+    . set db_db_subnet_group_name (Just (dsg_name subnetGroup))
+    )
   output "dbaddress" (tfRefText (db_address db))
   return db
   
 mkAppServer :: NetworkDetails -> AwsSecurityGroup -> AwsIamInstanceProfile -> InstanceType  -> TF AwsInstance
 mkAppServer nd securityGroup iamInstanceProfile instanceType = do
-  ec2 <- awsInstance "appserver" "ami-623c0d01" instanceType def
-        { i_tags = demoappTags
-        , i_subnet_id = Just (sn_id (az_external_subnet (head (nd_azs nd))))
-        , i_vpc_security_group_ids = [sg_id securityGroup]
-        , i_iam_instance_profile = Just (iamip_id iamInstanceProfile)
-        , i_root_block_device = Just $ RootBlockDeviceParams
-          { rbd_options = def
-            { rbd_volume_size = Just 20
-            }
-          }
-        }
-  eip <- awsEip "appserverip" def
-        { eip_instance=Just (i_id ec2)
-        , eip_vpc = True
-        }
+  ec2 <- awsInstance "appserver" "ami-623c0d01" instanceType
+        ( set i_tags demoappTags
+        . set i_subnet_id (Just (sn_id (az_external_subnet (head (nd_azs nd)))))
+        . set i_vpc_security_group_ids [sg_id securityGroup]
+        . set i_iam_instance_profile (Just (iamip_id iamInstanceProfile))
+        . set i_root_block_device (Just $ makeRootBlockDeviceParams &
+            ( set rbd_volume_size (Just 20)
+            ))
+        )
+  eip <- awsEip "appserverip"
+        ( set eip_instance (Just (i_id ec2))
+        . set eip_vpc True
+        )
   output "appserverip" (tfRefText (eip_public_ip eip))
   return ec2
 
@@ -237,74 +224,54 @@ s3ReadonlyPolicy bucket = T.intercalate "\n"
   , "}"
   ]
 
-highDiskAlert :: AwsSnsTopic -> AwsInstance -> TF AwsCloudwatchMetricAlarm
+highDiskAlert:: AwsSnsTopic -> AwsInstance -> TF AwsCloudwatchMetricAlarm
 highDiskAlert topic ec2Instance = do
   sn <- scopedName "highdisk"
-  awsCloudwatchMetricAlarm' "highdisk" AwsCloudwatchMetricAlarmParams
-    { cma_alarm_name = sn
-    , cma_comparison_operator = "GreaterThanThreshold"
-    , cma_evaluation_periods = 1
-    , cma_metric_name = "DiskSpaceUtilization"
-    , cma_namespace = "System/Linux"
-    , cma_period = 300
-    , cma_statistic = "Average"
-    , cma_threshold = 90
-    , cma_options = def
-      { cma_dimensions = M.fromList
-        [ ("InstanceId", tfRefText (i_id ec2Instance) )
-        , ("Filesystem", "/dev/xvda1")
-        , ("MountPath", "/")
-        ]
-      , cma_alarm_description = "Sustained high disk usage for application server"
-      , cma_alarm_actions = [sns_arn topic]
-      }
-    }
+  awsCloudwatchMetricAlarm "highdisk" sn "GreaterThanThreshold" 1 "DiskSpaceUtilization" "System/Linux" 300 "Average" 90
+    ( set cma_dimensions (M.fromList
+      [ ("InstanceId", tfRefText (i_id ec2Instance) )
+      , ("Filesystem", "/dev/xvda1")
+      , ("MountPath", "/")
+      ])
+    . set cma_alarm_description "Sustained high disk usage for application server"
+    . set cma_alarm_actions [sns_arn topic]
+    )
 
 highCpuAlert :: AwsSnsTopic -> AwsInstance -> TF AwsCloudwatchMetricAlarm
 highCpuAlert topic ec2Instance = do
   sn <- scopedName "highcpu"
-  awsCloudwatchMetricAlarm' "highcpu" AwsCloudwatchMetricAlarmParams
-    { cma_alarm_name = sn
-    , cma_comparison_operator = "GreaterThanThreshold"
-    , cma_evaluation_periods = 4
-    , cma_metric_name = "DiskSpaceUtilization"
-    , cma_namespace = "AWS/EC2"
-    , cma_period = 300
-    , cma_statistic = "Average"
-    , cma_threshold = 90
-    , cma_options = def
-      { cma_dimensions = M.fromList
-        [ ("InstanceId", tfRefText (i_id ec2Instance) )
-        ]
-      , cma_alarm_description = "Sustained high cpu usage for application server"
-      , cma_alarm_actions = [sns_arn topic]
-      }
-    }
+  awsCloudwatchMetricAlarm "highcpu" sn "GreaterThanThreshold" 4 "CPUUtilization" "AWS/EC2" 300 "Average" 90
+    ( set cma_dimensions (M.fromList
+      [ ("InstanceId", tfRefText (i_id ec2Instance) )
+      ])
+    . set cma_alarm_description "Sustained high cpu usage for application server"
+    . set cma_alarm_actions [sns_arn topic]
+    )
 
 demoapp :: SharedInfrastructure -> TF ()
 demoapp sharedInfrastructure = do
   let networkDetails = si_networkDetails sharedInfrastructure
-  sg <- awsSecurityGroup "sgappserver" def
-        { sg_tags = demoappTags
-        , sg_vpc_id = Just  (vpc_id (nd_vpc networkDetails))
-        , sg_ingress =
+  sg <- awsSecurityGroup "sgappserver"
+        ( set sg_tags demoappTags
+        . set sg_vpc_id (Just  (vpc_id (nd_vpc networkDetails)))
+        . set sg_ingress
           [ ingressOnPort 22
           , ingressOnPort 80
           , ingressOnPort 443
           ]
-        , sg_egress =
+        . set sg_egress
           [ egressAll
           ]
-        }
+        )
 
-  iamr <- awsIamRole "appserver" iamPolicy def
-  iamip <- awsIamInstanceProfile "appserver" def
-    { iamip_roles=[iamr_name iamr]
-    }
+  iamr <- awsIamRole' "appserver" iamPolicy
+  iamip <- awsIamInstanceProfile "appserver"
+    ( set iamip_roles [iamr_name iamr]
+    )
 
   let namedPolicy name0 policy = do
         name <- scopedName name0
-        awsIamRolePolicy name0 name policy (iamr_id iamr) def
+        awsIamRolePolicy' name0 name policy (iamr_id iamr)
 
   void $ namedPolicy "publishmetrics"
     publishMetricsPolicy
@@ -313,8 +280,8 @@ demoapp sharedInfrastructure = do
   
   dbsg <- do
     sname <- scopedName "dsg"
-    awsDbSubnetGroup "dsg" sname
-      [sn_id (az_external_subnet az) | az <- nd_azs networkDetails] def
+    awsDbSubnetGroup' "dsg" sname
+      [sn_id (az_external_subnet az) | az <- nd_azs networkDetails]
 
   withNameScope "prod" $ do
     ec2 <- mkAppServer networkDetails sg iamip "t2.medium"
@@ -334,11 +301,9 @@ demoapp sharedInfrastructure = do
 
 main = generateFiles "/tmp" $ do
   sharedInfrastructure <- withNameScope "shared" $ do
-    aws AwsParams
-      { aws_region = "ap-southeast-2"
-      , aws_options = def
-      }
+    newAws (makeAwsParams "ap-southeast-2")
     shared
 
   withNameScope "demoapp" $ do
     demoapp sharedInfrastructure
+

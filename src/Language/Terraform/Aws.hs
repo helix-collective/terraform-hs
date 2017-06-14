@@ -46,8 +46,8 @@ type Route53RecordType = T.Text
 -- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>
 -- for details.
 
-aws' :: AwsParams -> TF ()
-aws' params =
+newAws :: AwsParams -> TF ()
+newAws params =
   mkProvider "aws" $ catMaybes
     [ Just ("region", toResourceField (aws_region params))
     , let v = aws_access_key params in if v == "" then Nothing else (Just ("access_key", toResourceField v))
@@ -72,10 +72,13 @@ makeAwsParams region = AwsParams region "" ""
 -- (In this binding attribute and argument names all have the prefix 'vpc_')
 
 awsVpc :: NameElement -> CidrBlock ->(AwsVpcParams -> AwsVpcParams) -> TF AwsVpc
-awsVpc name0 cidrBlock modf = awsVpc' name0 (modf (makeAwsVpcParams cidrBlock))
+awsVpc name0 cidrBlock modf = newAwsVpc name0 (modf (makeAwsVpcParams cidrBlock))
 
-awsVpc' :: NameElement -> AwsVpcParams -> TF AwsVpc
-awsVpc' name0 params = do
+awsVpc' :: NameElement -> CidrBlock -> TF AwsVpc
+awsVpc' name0 cidrBlock = newAwsVpc name0 (makeAwsVpcParams cidrBlock)
+
+newAwsVpc :: NameElement -> AwsVpcParams -> TF AwsVpc
+newAwsVpc name0 params = do
   rid <- mkResource "aws_vpc" name0 (toResourceFieldMap params)
   return AwsVpc
     { vpc_id = resourceAttr rid "id"
@@ -150,10 +153,13 @@ instance ToResourceField AwsVpcParams where
 -- (In this binding attribute and argument names all have the prefix 'ng_')
 
 awsNatGateway :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) ->(AwsNatGatewayParams -> AwsNatGatewayParams) -> TF AwsNatGateway
-awsNatGateway name0 allocationId subnetId modf = awsNatGateway' name0 (modf (makeAwsNatGatewayParams allocationId subnetId))
+awsNatGateway name0 allocationId subnetId modf = newAwsNatGateway name0 (modf (makeAwsNatGatewayParams allocationId subnetId))
 
-awsNatGateway' :: NameElement -> AwsNatGatewayParams -> TF AwsNatGateway
-awsNatGateway' name0 params = do
+awsNatGateway' :: NameElement -> TFRef (AwsId AwsEip) -> TFRef (AwsId AwsSubnet) -> TF AwsNatGateway
+awsNatGateway' name0 allocationId subnetId = newAwsNatGateway name0 (makeAwsNatGatewayParams allocationId subnetId)
+
+newAwsNatGateway :: NameElement -> AwsNatGatewayParams -> TF AwsNatGateway
+newAwsNatGateway name0 params = do
   rid <- mkResource "aws_nat_gateway" name0 (toResourceFieldMap params)
   return AwsNatGateway
     { ng_id = resourceAttr rid "id"
@@ -204,10 +210,13 @@ instance ToResourceField AwsNatGatewayParams where
 -- (In this binding attribute and argument names all have the prefix 'ig_')
 
 awsInternetGateway :: NameElement -> TFRef (AwsId AwsVpc) ->(AwsInternetGatewayParams -> AwsInternetGatewayParams) -> TF AwsInternetGateway
-awsInternetGateway name0 vpcId modf = awsInternetGateway' name0 (modf (makeAwsInternetGatewayParams vpcId))
+awsInternetGateway name0 vpcId modf = newAwsInternetGateway name0 (modf (makeAwsInternetGatewayParams vpcId))
 
-awsInternetGateway' :: NameElement -> AwsInternetGatewayParams -> TF AwsInternetGateway
-awsInternetGateway' name0 params = do
+awsInternetGateway' :: NameElement -> TFRef (AwsId AwsVpc) -> TF AwsInternetGateway
+awsInternetGateway' name0 vpcId = newAwsInternetGateway name0 (makeAwsInternetGatewayParams vpcId)
+
+newAwsInternetGateway :: NameElement -> AwsInternetGatewayParams -> TF AwsInternetGateway
+newAwsInternetGateway name0 params = do
   rid <- mkResource "aws_internet_gateway" name0 (toResourceFieldMap params)
   return AwsInternetGateway
     { ig_id = resourceAttr rid "id"
@@ -258,10 +267,13 @@ instance ToResourceField AwsInternetGatewayParams where
 -- (In this binding attribute and argument names all have the prefix 'sn_')
 
 awsSubnet :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock ->(AwsSubnetParams -> AwsSubnetParams) -> TF AwsSubnet
-awsSubnet name0 vpcId cidrBlock modf = awsSubnet' name0 (modf (makeAwsSubnetParams vpcId cidrBlock))
+awsSubnet name0 vpcId cidrBlock modf = newAwsSubnet name0 (modf (makeAwsSubnetParams vpcId cidrBlock))
 
-awsSubnet' :: NameElement -> AwsSubnetParams -> TF AwsSubnet
-awsSubnet' name0 params = do
+awsSubnet' :: NameElement -> TFRef (AwsId AwsVpc) -> CidrBlock -> TF AwsSubnet
+awsSubnet' name0 vpcId cidrBlock = newAwsSubnet name0 (makeAwsSubnetParams vpcId cidrBlock)
+
+newAwsSubnet :: NameElement -> AwsSubnetParams -> TF AwsSubnet
+newAwsSubnet name0 params = do
   rid <- mkResource "aws_subnet" name0 (toResourceFieldMap params)
   return AwsSubnet
     { sn_id = resourceAttr rid "id"
@@ -330,10 +342,13 @@ instance ToResourceField AwsSubnetParams where
 -- (In this binding attribute and argument names all have the prefix 'rt_')
 
 awsRouteTable :: NameElement -> TFRef (AwsId AwsVpc) ->(AwsRouteTableParams -> AwsRouteTableParams) -> TF AwsRouteTable
-awsRouteTable name0 vpcId modf = awsRouteTable' name0 (modf (makeAwsRouteTableParams vpcId))
+awsRouteTable name0 vpcId modf = newAwsRouteTable name0 (modf (makeAwsRouteTableParams vpcId))
 
-awsRouteTable' :: NameElement -> AwsRouteTableParams -> TF AwsRouteTable
-awsRouteTable' name0 params = do
+awsRouteTable' :: NameElement -> TFRef (AwsId AwsVpc) -> TF AwsRouteTable
+awsRouteTable' name0 vpcId = newAwsRouteTable name0 (makeAwsRouteTableParams vpcId)
+
+newAwsRouteTable :: NameElement -> AwsRouteTableParams -> TF AwsRouteTable
+newAwsRouteTable name0 params = do
   rid <- mkResource "aws_route_table" name0 (toResourceFieldMap params)
   return AwsRouteTable
     { rt_id = resourceAttr rid "id"
@@ -384,10 +399,13 @@ instance ToResourceField AwsRouteTableParams where
 -- (In this binding attribute and argument names all have the prefix 'r_')
 
 awsRoute :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock ->(AwsRouteParams -> AwsRouteParams) -> TF AwsRoute
-awsRoute name0 routeTableId destinationCidrBlock modf = awsRoute' name0 (modf (makeAwsRouteParams routeTableId destinationCidrBlock))
+awsRoute name0 routeTableId destinationCidrBlock modf = newAwsRoute name0 (modf (makeAwsRouteParams routeTableId destinationCidrBlock))
 
-awsRoute' :: NameElement -> AwsRouteParams -> TF AwsRoute
-awsRoute' name0 params = do
+awsRoute' :: NameElement -> TFRef (AwsId AwsRouteTable) -> CidrBlock -> TF AwsRoute
+awsRoute' name0 routeTableId destinationCidrBlock = newAwsRoute name0 (makeAwsRouteParams routeTableId destinationCidrBlock)
+
+newAwsRoute :: NameElement -> AwsRouteParams -> TF AwsRoute
+newAwsRoute name0 params = do
   rid <- mkResource "aws_route" name0 (toResourceFieldMap params)
   return AwsRoute
     { r_resource = rid
@@ -448,10 +466,13 @@ instance ToResourceField AwsRouteParams where
 -- (In this binding attribute and argument names all have the prefix 'rta_')
 
 awsRouteTableAssociation :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) ->(AwsRouteTableAssociationParams -> AwsRouteTableAssociationParams) -> TF AwsRouteTableAssociation
-awsRouteTableAssociation name0 subnetId routeTableId modf = awsRouteTableAssociation' name0 (modf (makeAwsRouteTableAssociationParams subnetId routeTableId))
+awsRouteTableAssociation name0 subnetId routeTableId modf = newAwsRouteTableAssociation name0 (modf (makeAwsRouteTableAssociationParams subnetId routeTableId))
 
-awsRouteTableAssociation' :: NameElement -> AwsRouteTableAssociationParams -> TF AwsRouteTableAssociation
-awsRouteTableAssociation' name0 params = do
+awsRouteTableAssociation' :: NameElement -> TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsRouteTable) -> TF AwsRouteTableAssociation
+awsRouteTableAssociation' name0 subnetId routeTableId = newAwsRouteTableAssociation name0 (makeAwsRouteTableAssociationParams subnetId routeTableId)
+
+newAwsRouteTableAssociation :: NameElement -> AwsRouteTableAssociationParams -> TF AwsRouteTableAssociation
+newAwsRouteTableAssociation name0 params = do
   rid <- mkResource "aws_route_table_association" name0 (toResourceFieldMap params)
   return AwsRouteTableAssociation
     { rta_id = resourceAttr rid "id"
@@ -586,10 +607,13 @@ instance ToResourceField EgressRuleParams where
 -- (In this binding attribute and argument names all have the prefix 'sg_')
 
 awsSecurityGroup :: NameElement -> (AwsSecurityGroupParams -> AwsSecurityGroupParams) -> TF AwsSecurityGroup
-awsSecurityGroup name0  modf = awsSecurityGroup' name0 (modf (makeAwsSecurityGroupParams ))
+awsSecurityGroup name0  modf = newAwsSecurityGroup name0 (modf (makeAwsSecurityGroupParams ))
 
-awsSecurityGroup' :: NameElement -> AwsSecurityGroupParams -> TF AwsSecurityGroup
-awsSecurityGroup' name0 params = do
+awsSecurityGroup' :: NameElement ->  TF AwsSecurityGroup
+awsSecurityGroup' name0  = newAwsSecurityGroup name0 (makeAwsSecurityGroupParams )
+
+newAwsSecurityGroup :: NameElement -> AwsSecurityGroupParams -> TF AwsSecurityGroup
+newAwsSecurityGroup name0 params = do
   rid <- mkResource "aws_security_group" name0 (toResourceFieldMap params)
   return AwsSecurityGroup
     { sg_id = resourceAttr rid "id"
@@ -708,10 +732,13 @@ instance ToResourceField RootBlockDeviceParams where
 -- (In this binding attribute and argument names all have the prefix 'i_')
 
 awsInstance :: NameElement -> Ami -> InstanceType ->(AwsInstanceParams -> AwsInstanceParams) -> TF AwsInstance
-awsInstance name0 ami instanceType modf = awsInstance' name0 (modf (makeAwsInstanceParams ami instanceType))
+awsInstance name0 ami instanceType modf = newAwsInstance name0 (modf (makeAwsInstanceParams ami instanceType))
 
-awsInstance' :: NameElement -> AwsInstanceParams -> TF AwsInstance
-awsInstance' name0 params = do
+awsInstance' :: NameElement -> Ami -> InstanceType -> TF AwsInstance
+awsInstance' name0 ami instanceType = newAwsInstance name0 (makeAwsInstanceParams ami instanceType)
+
+newAwsInstance :: NameElement -> AwsInstanceParams -> TF AwsInstance
+newAwsInstance name0 params = do
   rid <- mkResource "aws_instance" name0 (toResourceFieldMap params)
   return AwsInstance
     { i_id = resourceAttr rid "id"
@@ -832,10 +859,13 @@ instance ToResourceField AwsInstanceParams where
 -- (In this binding attribute and argument names all have the prefix 'lc_')
 
 awsLaunchConfiguration :: NameElement -> Ami -> InstanceType ->(AwsLaunchConfigurationParams -> AwsLaunchConfigurationParams) -> TF AwsLaunchConfiguration
-awsLaunchConfiguration name0 imageId instanceType modf = awsLaunchConfiguration' name0 (modf (makeAwsLaunchConfigurationParams imageId instanceType))
+awsLaunchConfiguration name0 imageId instanceType modf = newAwsLaunchConfiguration name0 (modf (makeAwsLaunchConfigurationParams imageId instanceType))
 
-awsLaunchConfiguration' :: NameElement -> AwsLaunchConfigurationParams -> TF AwsLaunchConfiguration
-awsLaunchConfiguration' name0 params = do
+awsLaunchConfiguration' :: NameElement -> Ami -> InstanceType -> TF AwsLaunchConfiguration
+awsLaunchConfiguration' name0 imageId instanceType = newAwsLaunchConfiguration name0 (makeAwsLaunchConfigurationParams imageId instanceType)
+
+newAwsLaunchConfiguration :: NameElement -> AwsLaunchConfigurationParams -> TF AwsLaunchConfiguration
+newAwsLaunchConfiguration name0 params = do
   rid <- mkResource "aws_launch_configuration" name0 (toResourceFieldMap params)
   return AwsLaunchConfiguration
     { lc_id = resourceAttr rid "id"
@@ -948,10 +978,13 @@ instance ToResourceField AwsLaunchConfigurationParams where
 -- (In this binding attribute and argument names all have the prefix 'ag_')
 
 awsAutoscalingGroup :: NameElement -> Int -> Int -> TFRef T.Text ->(AwsAutoscalingGroupParams -> AwsAutoscalingGroupParams) -> TF AwsAutoscalingGroup
-awsAutoscalingGroup name0 maxSize minSize launchConfiguration modf = awsAutoscalingGroup' name0 (modf (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration))
+awsAutoscalingGroup name0 maxSize minSize launchConfiguration modf = newAwsAutoscalingGroup name0 (modf (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration))
 
-awsAutoscalingGroup' :: NameElement -> AwsAutoscalingGroupParams -> TF AwsAutoscalingGroup
-awsAutoscalingGroup' name0 params = do
+awsAutoscalingGroup' :: NameElement -> Int -> Int -> TFRef T.Text -> TF AwsAutoscalingGroup
+awsAutoscalingGroup' name0 maxSize minSize launchConfiguration = newAwsAutoscalingGroup name0 (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration)
+
+newAwsAutoscalingGroup :: NameElement -> AwsAutoscalingGroupParams -> TF AwsAutoscalingGroup
+newAwsAutoscalingGroup name0 params = do
   rid <- mkResource "aws_autoscaling_group" name0 (toResourceFieldMap params)
   return AwsAutoscalingGroup
     { ag_id = resourceAttr rid "id"
@@ -1078,10 +1111,13 @@ instance ToResourceField AsgTagParams where
 -- (In this binding attribute and argument names all have the prefix 'eip_')
 
 awsEip :: NameElement -> (AwsEipParams -> AwsEipParams) -> TF AwsEip
-awsEip name0  modf = awsEip' name0 (modf (makeAwsEipParams ))
+awsEip name0  modf = newAwsEip name0 (modf (makeAwsEipParams ))
 
-awsEip' :: NameElement -> AwsEipParams -> TF AwsEip
-awsEip' name0 params = do
+awsEip' :: NameElement ->  TF AwsEip
+awsEip' name0  = newAwsEip name0 (makeAwsEipParams )
+
+newAwsEip :: NameElement -> AwsEipParams -> TF AwsEip
+newAwsEip name0 params = do
   rid <- mkResource "aws_eip" name0 (toResourceFieldMap params)
   return AwsEip
     { eip_id = resourceAttr rid "id"
@@ -1274,10 +1310,13 @@ instance ToResourceField HealthCheckParams where
 -- (In this binding attribute and argument names all have the prefix 'elb_')
 
 awsElb :: NameElement -> [ListenerParams] ->(AwsElbParams -> AwsElbParams) -> TF AwsElb
-awsElb name0 listener modf = awsElb' name0 (modf (makeAwsElbParams listener))
+awsElb name0 listener modf = newAwsElb name0 (modf (makeAwsElbParams listener))
 
-awsElb' :: NameElement -> AwsElbParams -> TF AwsElb
-awsElb' name0 params = do
+awsElb' :: NameElement -> [ListenerParams] -> TF AwsElb
+awsElb' name0 listener = newAwsElb name0 (makeAwsElbParams listener)
+
+newAwsElb :: NameElement -> AwsElbParams -> TF AwsElb
+newAwsElb name0 params = do
   rid <- mkResource "aws_elb" name0 (toResourceFieldMap params)
   return AwsElb
     { elb_id = resourceAttr rid "id"
@@ -1478,10 +1517,13 @@ instance ToResourceField LifecycleRuleParams where
 -- (In this binding attribute and argument names all have the prefix 'elba_')
 
 awsElbAttachment :: NameElement -> T.Text -> T.Text ->(AwsElbAttachmentParams -> AwsElbAttachmentParams) -> TF AwsElbAttachment
-awsElbAttachment name0 elb instance_ modf = awsElbAttachment' name0 (modf (makeAwsElbAttachmentParams elb instance_))
+awsElbAttachment name0 elb instance_ modf = newAwsElbAttachment name0 (modf (makeAwsElbAttachmentParams elb instance_))
 
-awsElbAttachment' :: NameElement -> AwsElbAttachmentParams -> TF AwsElbAttachment
-awsElbAttachment' name0 params = do
+awsElbAttachment' :: NameElement -> T.Text -> T.Text -> TF AwsElbAttachment
+awsElbAttachment' name0 elb instance_ = newAwsElbAttachment name0 (makeAwsElbAttachmentParams elb instance_)
+
+newAwsElbAttachment :: NameElement -> AwsElbAttachmentParams -> TF AwsElbAttachment
+newAwsElbAttachment name0 params = do
   rid <- mkResource "aws_elb_attachment" name0 (toResourceFieldMap params)
   return AwsElbAttachment
     { elba_resource = rid
@@ -1530,10 +1572,13 @@ instance ToResourceField AwsElbAttachmentParams where
 -- (In this binding attribute and argument names all have the prefix 'asa_')
 
 awsAutoscalingAttachment :: NameElement -> T.Text ->(AwsAutoscalingAttachmentParams -> AwsAutoscalingAttachmentParams) -> TF AwsAutoscalingAttachment
-awsAutoscalingAttachment name0 autoscalingGroupName modf = awsAutoscalingAttachment' name0 (modf (makeAwsAutoscalingAttachmentParams autoscalingGroupName))
+awsAutoscalingAttachment name0 autoscalingGroupName modf = newAwsAutoscalingAttachment name0 (modf (makeAwsAutoscalingAttachmentParams autoscalingGroupName))
 
-awsAutoscalingAttachment' :: NameElement -> AwsAutoscalingAttachmentParams -> TF AwsAutoscalingAttachment
-awsAutoscalingAttachment' name0 params = do
+awsAutoscalingAttachment' :: NameElement -> T.Text -> TF AwsAutoscalingAttachment
+awsAutoscalingAttachment' name0 autoscalingGroupName = newAwsAutoscalingAttachment name0 (makeAwsAutoscalingAttachmentParams autoscalingGroupName)
+
+newAwsAutoscalingAttachment :: NameElement -> AwsAutoscalingAttachmentParams -> TF AwsAutoscalingAttachment
+newAwsAutoscalingAttachment name0 params = do
   rid <- mkResource "aws_autoscaling_attachment" name0 (toResourceFieldMap params)
   return AwsAutoscalingAttachment
     { asa_resource = rid
@@ -1588,10 +1633,13 @@ instance ToResourceField AwsAutoscalingAttachmentParams where
 -- (In this binding attribute and argument names all have the prefix 's3_')
 
 awsS3Bucket :: NameElement -> T.Text ->(AwsS3BucketParams -> AwsS3BucketParams) -> TF AwsS3Bucket
-awsS3Bucket name0 bucket modf = awsS3Bucket' name0 (modf (makeAwsS3BucketParams bucket))
+awsS3Bucket name0 bucket modf = newAwsS3Bucket name0 (modf (makeAwsS3BucketParams bucket))
 
-awsS3Bucket' :: NameElement -> AwsS3BucketParams -> TF AwsS3Bucket
-awsS3Bucket' name0 params = do
+awsS3Bucket' :: NameElement -> T.Text -> TF AwsS3Bucket
+awsS3Bucket' name0 bucket = newAwsS3Bucket name0 (makeAwsS3BucketParams bucket)
+
+newAwsS3Bucket :: NameElement -> AwsS3BucketParams -> TF AwsS3Bucket
+newAwsS3Bucket name0 params = do
   rid <- mkResource "aws_s3_bucket" name0 (toResourceFieldMap params)
   return AwsS3Bucket
     { s3_id = resourceAttr rid "id"
@@ -1660,10 +1708,13 @@ instance ToResourceField AwsS3BucketParams where
 -- (In this binding attribute and argument names all have the prefix 's3o_')
 
 awsS3BucketObject :: NameElement -> TFRef S3BucketName -> S3Key ->(AwsS3BucketObjectParams -> AwsS3BucketObjectParams) -> TF AwsS3BucketObject
-awsS3BucketObject name0 bucket key modf = awsS3BucketObject' name0 (modf (makeAwsS3BucketObjectParams bucket key))
+awsS3BucketObject name0 bucket key modf = newAwsS3BucketObject name0 (modf (makeAwsS3BucketObjectParams bucket key))
 
-awsS3BucketObject' :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
-awsS3BucketObject' name0 params = do
+awsS3BucketObject' :: NameElement -> TFRef S3BucketName -> S3Key -> TF AwsS3BucketObject
+awsS3BucketObject' name0 bucket key = newAwsS3BucketObject name0 (makeAwsS3BucketObjectParams bucket key)
+
+newAwsS3BucketObject :: NameElement -> AwsS3BucketObjectParams -> TF AwsS3BucketObject
+newAwsS3BucketObject name0 params = do
   rid <- mkResource "aws_s3_bucket_object" name0 (toResourceFieldMap params)
   return AwsS3BucketObject
     { s3o_id = resourceAttr rid "id"
@@ -1730,10 +1781,13 @@ instance ToResourceField AwsS3BucketObjectParams where
 -- (In this binding attribute and argument names all have the prefix 'iamu_')
 
 awsIamUser :: NameElement -> T.Text ->(AwsIamUserParams -> AwsIamUserParams) -> TF AwsIamUser
-awsIamUser name0 name' modf = awsIamUser' name0 (modf (makeAwsIamUserParams name'))
+awsIamUser name0 name' modf = newAwsIamUser name0 (modf (makeAwsIamUserParams name'))
 
-awsIamUser' :: NameElement -> AwsIamUserParams -> TF AwsIamUser
-awsIamUser' name0 params = do
+awsIamUser' :: NameElement -> T.Text -> TF AwsIamUser
+awsIamUser' name0 name' = newAwsIamUser name0 (makeAwsIamUserParams name')
+
+newAwsIamUser :: NameElement -> AwsIamUserParams -> TF AwsIamUser
+newAwsIamUser name0 params = do
   rid <- mkResource "aws_iam_user" name0 (toResourceFieldMap params)
   return AwsIamUser
     { iamu_arn = resourceAttr rid "arn"
@@ -1794,10 +1848,13 @@ instance ToResourceField AwsIamUserParams where
 -- (In this binding attribute and argument names all have the prefix 'iamup_')
 
 awsIamUserPolicy :: NameElement -> T.Text -> T.Text -> TFRef T.Text ->(AwsIamUserPolicyParams -> AwsIamUserPolicyParams) -> TF AwsIamUserPolicy
-awsIamUserPolicy name0 name policy user modf = awsIamUserPolicy' name0 (modf (makeAwsIamUserPolicyParams name policy user))
+awsIamUserPolicy name0 name policy user modf = newAwsIamUserPolicy name0 (modf (makeAwsIamUserPolicyParams name policy user))
 
-awsIamUserPolicy' :: NameElement -> AwsIamUserPolicyParams -> TF AwsIamUserPolicy
-awsIamUserPolicy' name0 params = do
+awsIamUserPolicy' :: NameElement -> T.Text -> T.Text -> TFRef T.Text -> TF AwsIamUserPolicy
+awsIamUserPolicy' name0 name policy user = newAwsIamUserPolicy name0 (makeAwsIamUserPolicyParams name policy user)
+
+newAwsIamUserPolicy :: NameElement -> AwsIamUserPolicyParams -> TF AwsIamUserPolicy
+newAwsIamUserPolicy name0 params = do
   rid <- mkResource "aws_iam_user_policy" name0 (toResourceFieldMap params)
   return AwsIamUserPolicy
     { iamup_resource = rid
@@ -1852,10 +1909,13 @@ instance ToResourceField AwsIamUserPolicyParams where
 -- (In this binding attribute and argument names all have the prefix 'iamupa_')
 
 awsIamUserPolicyAttachment :: NameElement -> TFRef T.Text -> T.Text ->(AwsIamUserPolicyAttachmentParams -> AwsIamUserPolicyAttachmentParams) -> TF AwsIamUserPolicyAttachment
-awsIamUserPolicyAttachment name0 user policyArn modf = awsIamUserPolicyAttachment' name0 (modf (makeAwsIamUserPolicyAttachmentParams user policyArn))
+awsIamUserPolicyAttachment name0 user policyArn modf = newAwsIamUserPolicyAttachment name0 (modf (makeAwsIamUserPolicyAttachmentParams user policyArn))
 
-awsIamUserPolicyAttachment' :: NameElement -> AwsIamUserPolicyAttachmentParams -> TF AwsIamUserPolicyAttachment
-awsIamUserPolicyAttachment' name0 params = do
+awsIamUserPolicyAttachment' :: NameElement -> TFRef T.Text -> T.Text -> TF AwsIamUserPolicyAttachment
+awsIamUserPolicyAttachment' name0 user policyArn = newAwsIamUserPolicyAttachment name0 (makeAwsIamUserPolicyAttachmentParams user policyArn)
+
+newAwsIamUserPolicyAttachment :: NameElement -> AwsIamUserPolicyAttachmentParams -> TF AwsIamUserPolicyAttachment
+newAwsIamUserPolicyAttachment name0 params = do
   rid <- mkResource "aws_iam_user_policy_attachment" name0 (toResourceFieldMap params)
   return AwsIamUserPolicyAttachment
     { iamupa_resource = rid
@@ -1904,10 +1964,13 @@ instance ToResourceField AwsIamUserPolicyAttachmentParams where
 -- (In this binding attribute and argument names all have the prefix 'iamr_')
 
 awsIamRole :: NameElement -> T.Text ->(AwsIamRoleParams -> AwsIamRoleParams) -> TF AwsIamRole
-awsIamRole name0 assumeRolePolicy modf = awsIamRole' name0 (modf (makeAwsIamRoleParams assumeRolePolicy))
+awsIamRole name0 assumeRolePolicy modf = newAwsIamRole name0 (modf (makeAwsIamRoleParams assumeRolePolicy))
 
-awsIamRole' :: NameElement -> AwsIamRoleParams -> TF AwsIamRole
-awsIamRole' name0 params = do
+awsIamRole' :: NameElement -> T.Text -> TF AwsIamRole
+awsIamRole' name0 assumeRolePolicy = newAwsIamRole name0 (makeAwsIamRoleParams assumeRolePolicy)
+
+newAwsIamRole :: NameElement -> AwsIamRoleParams -> TF AwsIamRole
+newAwsIamRole name0 params = do
   rid <- mkResource "aws_iam_role" name0 (toResourceFieldMap params)
   return AwsIamRole
     { iamr_id = resourceAttr rid "id"
@@ -1978,10 +2041,13 @@ instance ToResourceField AwsIamRoleParams where
 -- (In this binding attribute and argument names all have the prefix 'iamip_')
 
 awsIamInstanceProfile :: NameElement -> (AwsIamInstanceProfileParams -> AwsIamInstanceProfileParams) -> TF AwsIamInstanceProfile
-awsIamInstanceProfile name0  modf = awsIamInstanceProfile' name0 (modf (makeAwsIamInstanceProfileParams ))
+awsIamInstanceProfile name0  modf = newAwsIamInstanceProfile name0 (modf (makeAwsIamInstanceProfileParams ))
 
-awsIamInstanceProfile' :: NameElement -> AwsIamInstanceProfileParams -> TF AwsIamInstanceProfile
-awsIamInstanceProfile' name0 params = do
+awsIamInstanceProfile' :: NameElement ->  TF AwsIamInstanceProfile
+awsIamInstanceProfile' name0  = newAwsIamInstanceProfile name0 (makeAwsIamInstanceProfileParams )
+
+newAwsIamInstanceProfile :: NameElement -> AwsIamInstanceProfileParams -> TF AwsIamInstanceProfile
+newAwsIamInstanceProfile name0 params = do
   rid <- mkResource "aws_iam_instance_profile" name0 (toResourceFieldMap params)
   return AwsIamInstanceProfile
     { iamip_id = resourceAttr rid "id"
@@ -2050,10 +2116,13 @@ instance ToResourceField AwsIamInstanceProfileParams where
 -- (In this binding attribute and argument names all have the prefix 'iamrp_')
 
 awsIamRolePolicy :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) ->(AwsIamRolePolicyParams -> AwsIamRolePolicyParams) -> TF AwsIamRolePolicy
-awsIamRolePolicy name0 name policy role modf = awsIamRolePolicy' name0 (modf (makeAwsIamRolePolicyParams name policy role))
+awsIamRolePolicy name0 name policy role modf = newAwsIamRolePolicy name0 (modf (makeAwsIamRolePolicyParams name policy role))
 
-awsIamRolePolicy' :: NameElement -> AwsIamRolePolicyParams -> TF AwsIamRolePolicy
-awsIamRolePolicy' name0 params = do
+awsIamRolePolicy' :: NameElement -> T.Text -> T.Text -> TFRef (AwsId AwsIamRole) -> TF AwsIamRolePolicy
+awsIamRolePolicy' name0 name policy role = newAwsIamRolePolicy name0 (makeAwsIamRolePolicyParams name policy role)
+
+newAwsIamRolePolicy :: NameElement -> AwsIamRolePolicyParams -> TF AwsIamRolePolicy
+newAwsIamRolePolicy name0 params = do
   rid <- mkResource "aws_iam_role_policy" name0 (toResourceFieldMap params)
   return AwsIamRolePolicy
     { iamrp_id = resourceAttr rid "id"
@@ -2110,10 +2179,13 @@ instance ToResourceField AwsIamRolePolicyParams where
 -- (In this binding attribute and argument names all have the prefix 'sns_')
 
 awsSnsTopic :: NameElement -> T.Text ->(AwsSnsTopicParams -> AwsSnsTopicParams) -> TF AwsSnsTopic
-awsSnsTopic name0 name modf = awsSnsTopic' name0 (modf (makeAwsSnsTopicParams name))
+awsSnsTopic name0 name modf = newAwsSnsTopic name0 (modf (makeAwsSnsTopicParams name))
 
-awsSnsTopic' :: NameElement -> AwsSnsTopicParams -> TF AwsSnsTopic
-awsSnsTopic' name0 params = do
+awsSnsTopic' :: NameElement -> T.Text -> TF AwsSnsTopic
+awsSnsTopic' name0 name = newAwsSnsTopic name0 (makeAwsSnsTopicParams name)
+
+newAwsSnsTopic :: NameElement -> AwsSnsTopicParams -> TF AwsSnsTopic
+newAwsSnsTopic name0 params = do
   rid <- mkResource "aws_sns_topic" name0 (toResourceFieldMap params)
   return AwsSnsTopic
     { sns_id = resourceAttr rid "id"
@@ -2166,10 +2238,13 @@ instance ToResourceField AwsSnsTopicParams where
 -- (In this binding attribute and argument names all have the prefix 'cma_')
 
 awsCloudwatchMetricAlarm :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int ->(AwsCloudwatchMetricAlarmParams -> AwsCloudwatchMetricAlarmParams) -> TF AwsCloudwatchMetricAlarm
-awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold modf = awsCloudwatchMetricAlarm' name0 (modf (makeAwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold))
+awsCloudwatchMetricAlarm name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold modf = newAwsCloudwatchMetricAlarm name0 (modf (makeAwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold))
 
-awsCloudwatchMetricAlarm' :: NameElement -> AwsCloudwatchMetricAlarmParams -> TF AwsCloudwatchMetricAlarm
-awsCloudwatchMetricAlarm' name0 params = do
+awsCloudwatchMetricAlarm' :: NameElement -> T.Text -> MetricComparisonOperator -> Int -> MetricName -> MetricNamespace -> Int -> MetricStatistic -> Int -> TF AwsCloudwatchMetricAlarm
+awsCloudwatchMetricAlarm' name0 alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold = newAwsCloudwatchMetricAlarm name0 (makeAwsCloudwatchMetricAlarmParams alarmName comparisonOperator evaluationPeriods metricName namespace period statistic threshold)
+
+newAwsCloudwatchMetricAlarm :: NameElement -> AwsCloudwatchMetricAlarmParams -> TF AwsCloudwatchMetricAlarm
+newAwsCloudwatchMetricAlarm name0 params = do
   rid <- mkResource "aws_cloudwatch_metric_alarm" name0 (toResourceFieldMap params)
   return AwsCloudwatchMetricAlarm
     { cma_id = resourceAttr rid "id"
@@ -2298,10 +2373,13 @@ instance ToResourceField AwsCloudwatchMetricAlarmParams where
 -- (In this binding attribute and argument names all have the prefix 'db_')
 
 awsDbInstance :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text ->(AwsDbInstanceParams -> AwsDbInstanceParams) -> TF AwsDbInstance
-awsDbInstance name0 allocatedStorage engine instanceClass username' password modf = awsDbInstance' name0 (modf (makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password))
+awsDbInstance name0 allocatedStorage engine instanceClass username' password modf = newAwsDbInstance name0 (modf (makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password))
 
-awsDbInstance' :: NameElement -> AwsDbInstanceParams -> TF AwsDbInstance
-awsDbInstance' name0 params = do
+awsDbInstance' :: NameElement -> Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> TF AwsDbInstance
+awsDbInstance' name0 allocatedStorage engine instanceClass username' password = newAwsDbInstance name0 (makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password)
+
+newAwsDbInstance :: NameElement -> AwsDbInstanceParams -> TF AwsDbInstance
+newAwsDbInstance name0 params = do
   rid <- mkResource "aws_db_instance" name0 (toResourceFieldMap params)
   return AwsDbInstance
     { db_id = resourceAttr rid "id"
@@ -2434,10 +2512,13 @@ instance ToResourceField AwsDbInstanceParams where
 -- (In this binding attribute and argument names all have the prefix 'dsg_')
 
 awsDbSubnetGroup :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] ->(AwsDbSubnetGroupParams -> AwsDbSubnetGroupParams) -> TF AwsDbSubnetGroup
-awsDbSubnetGroup name0 name' subnetIds modf = awsDbSubnetGroup' name0 (modf (makeAwsDbSubnetGroupParams name' subnetIds))
+awsDbSubnetGroup name0 name' subnetIds modf = newAwsDbSubnetGroup name0 (modf (makeAwsDbSubnetGroupParams name' subnetIds))
 
-awsDbSubnetGroup' :: NameElement -> AwsDbSubnetGroupParams -> TF AwsDbSubnetGroup
-awsDbSubnetGroup' name0 params = do
+awsDbSubnetGroup' :: NameElement -> T.Text -> [TFRef (AwsId AwsSubnet)] -> TF AwsDbSubnetGroup
+awsDbSubnetGroup' name0 name' subnetIds = newAwsDbSubnetGroup name0 (makeAwsDbSubnetGroupParams name' subnetIds)
+
+newAwsDbSubnetGroup :: NameElement -> AwsDbSubnetGroupParams -> TF AwsDbSubnetGroup
+newAwsDbSubnetGroup name0 params = do
   rid <- mkResource "aws_db_subnet_group" name0 (toResourceFieldMap params)
   return AwsDbSubnetGroup
     { dsg_id = resourceAttr rid "id"
@@ -2504,10 +2585,13 @@ instance ToResourceField AwsDbSubnetGroupParams where
 -- (In this binding attribute and argument names all have the prefix 'r53z_')
 
 awsRoute53Zone :: NameElement -> T.Text ->(AwsRoute53ZoneParams -> AwsRoute53ZoneParams) -> TF AwsRoute53Zone
-awsRoute53Zone name0 name modf = awsRoute53Zone' name0 (modf (makeAwsRoute53ZoneParams name))
+awsRoute53Zone name0 name modf = newAwsRoute53Zone name0 (modf (makeAwsRoute53ZoneParams name))
 
-awsRoute53Zone' :: NameElement -> AwsRoute53ZoneParams -> TF AwsRoute53Zone
-awsRoute53Zone' name0 params = do
+awsRoute53Zone' :: NameElement -> T.Text -> TF AwsRoute53Zone
+awsRoute53Zone' name0 name = newAwsRoute53Zone name0 (makeAwsRoute53ZoneParams name)
+
+newAwsRoute53Zone :: NameElement -> AwsRoute53ZoneParams -> TF AwsRoute53Zone
+newAwsRoute53Zone name0 params = do
   rid <- mkResource "aws_route53_zone" name0 (toResourceFieldMap params)
   return AwsRoute53Zone
     { r53z_zone_id = resourceAttr rid "zone_id"
@@ -2618,10 +2702,13 @@ instance ToResourceField Route53AliasParams where
 -- (In this binding attribute and argument names all have the prefix 'r53r_')
 
 awsRoute53Record :: NameElement -> TFRef HostedZoneId -> T.Text -> Route53RecordType ->(AwsRoute53RecordParams -> AwsRoute53RecordParams) -> TF AwsRoute53Record
-awsRoute53Record name0 zoneId name type_ modf = awsRoute53Record' name0 (modf (makeAwsRoute53RecordParams zoneId name type_))
+awsRoute53Record name0 zoneId name type_ modf = newAwsRoute53Record name0 (modf (makeAwsRoute53RecordParams zoneId name type_))
 
-awsRoute53Record' :: NameElement -> AwsRoute53RecordParams -> TF AwsRoute53Record
-awsRoute53Record' name0 params = do
+awsRoute53Record' :: NameElement -> TFRef HostedZoneId -> T.Text -> Route53RecordType -> TF AwsRoute53Record
+awsRoute53Record' name0 zoneId name type_ = newAwsRoute53Record name0 (makeAwsRoute53RecordParams zoneId name type_)
+
+newAwsRoute53Record :: NameElement -> AwsRoute53RecordParams -> TF AwsRoute53Record
+newAwsRoute53Record name0 params = do
   rid <- mkResource "aws_route53_record" name0 (toResourceFieldMap params)
   return AwsRoute53Record
     { r53r_resource = rid
@@ -2694,10 +2781,13 @@ instance ToResourceField AwsRoute53RecordParams where
 -- (In this binding attribute and argument names all have the prefix 'sqs_')
 
 awsSqsQueue :: NameElement -> T.Text ->(AwsSqsQueueParams -> AwsSqsQueueParams) -> TF AwsSqsQueue
-awsSqsQueue name0 name modf = awsSqsQueue' name0 (modf (makeAwsSqsQueueParams name))
+awsSqsQueue name0 name modf = newAwsSqsQueue name0 (modf (makeAwsSqsQueueParams name))
 
-awsSqsQueue' :: NameElement -> AwsSqsQueueParams -> TF AwsSqsQueue
-awsSqsQueue' name0 params = do
+awsSqsQueue' :: NameElement -> T.Text -> TF AwsSqsQueue
+awsSqsQueue' name0 name = newAwsSqsQueue name0 (makeAwsSqsQueueParams name)
+
+newAwsSqsQueue :: NameElement -> AwsSqsQueueParams -> TF AwsSqsQueue
+newAwsSqsQueue name0 params = do
   rid <- mkResource "aws_sqs_queue" name0 (toResourceFieldMap params)
   return AwsSqsQueue
     { sqs_id = resourceAttr rid "id"
@@ -2798,10 +2888,13 @@ instance ToResourceField AwsSqsQueueParams where
 -- (In this binding attribute and argument names all have the prefix 'sqsp_')
 
 awsSqsQueuePolicy :: NameElement -> T.Text -> T.Text ->(AwsSqsQueuePolicyParams -> AwsSqsQueuePolicyParams) -> TF AwsSqsQueuePolicy
-awsSqsQueuePolicy name0 queueUrl policy modf = awsSqsQueuePolicy' name0 (modf (makeAwsSqsQueuePolicyParams queueUrl policy))
+awsSqsQueuePolicy name0 queueUrl policy modf = newAwsSqsQueuePolicy name0 (modf (makeAwsSqsQueuePolicyParams queueUrl policy))
 
-awsSqsQueuePolicy' :: NameElement -> AwsSqsQueuePolicyParams -> TF AwsSqsQueuePolicy
-awsSqsQueuePolicy' name0 params = do
+awsSqsQueuePolicy' :: NameElement -> T.Text -> T.Text -> TF AwsSqsQueuePolicy
+awsSqsQueuePolicy' name0 queueUrl policy = newAwsSqsQueuePolicy name0 (makeAwsSqsQueuePolicyParams queueUrl policy)
+
+newAwsSqsQueuePolicy :: NameElement -> AwsSqsQueuePolicyParams -> TF AwsSqsQueuePolicy
+newAwsSqsQueuePolicy name0 params = do
   rid <- mkResource "aws_sqs_queue_policy" name0 (toResourceFieldMap params)
   return AwsSqsQueuePolicy
     { sqsp_resource = rid
@@ -2850,10 +2943,13 @@ instance ToResourceField AwsSqsQueuePolicyParams where
 -- (In this binding attribute and argument names all have the prefix 'ecr_')
 
 awsEcrRepository :: NameElement -> T.Text ->(AwsEcrRepositoryParams -> AwsEcrRepositoryParams) -> TF AwsEcrRepository
-awsEcrRepository name0 name' modf = awsEcrRepository' name0 (modf (makeAwsEcrRepositoryParams name'))
+awsEcrRepository name0 name' modf = newAwsEcrRepository name0 (modf (makeAwsEcrRepositoryParams name'))
 
-awsEcrRepository' :: NameElement -> AwsEcrRepositoryParams -> TF AwsEcrRepository
-awsEcrRepository' name0 params = do
+awsEcrRepository' :: NameElement -> T.Text -> TF AwsEcrRepository
+awsEcrRepository' name0 name' = newAwsEcrRepository name0 (makeAwsEcrRepositoryParams name')
+
+newAwsEcrRepository :: NameElement -> AwsEcrRepositoryParams -> TF AwsEcrRepository
+newAwsEcrRepository name0 params = do
   rid <- mkResource "aws_ecr_repository" name0 (toResourceFieldMap params)
   return AwsEcrRepository
     { ecr_arn = resourceAttr rid "arn"
