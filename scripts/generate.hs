@@ -11,7 +11,7 @@ import Data.List(intercalate,intersperse)
 import System.FilePath((</>))
 import Data.Monoid
 
-awsHeader :: Code 
+awsHeader :: Code
 awsHeader = clines
     [ "type AwsRegion = T.Text"
     , "data AwsId a = AwsId"
@@ -58,7 +58,7 @@ awsHeader = clines
     , "makeAwsParams :: AwsRegion -> AwsParams"
     , "makeAwsParams region = AwsParams region \"\" \"\""
     ]
-    
+
 awsResources :: [Code]
 awsResources =
   [resourceCode  "aws_vpc" "vpc"
@@ -99,7 +99,7 @@ awsResources =
     ]
     [ ("id", AwsIdRef "aws_subnet")
     ]
-      
+
   , resourceCode  "aws_route_table" "rt"
     "https://www.terraform.io/docs/providers/aws/r/route_table.html"
     [ ("vpc_id", AwsIdRef "aws_vpc", Required)
@@ -214,13 +214,13 @@ awsResources =
     , ("arn", TFRef "Arn")
     , ("name", TFRef "T.Text")
     ]
-    
+
   , fieldsCode "AsgTag" "asg" True
     [ ("key", NamedType "T.Text", Required)
     , ("value", NamedType "T.Text", Required)
     , ("propagate_at_launch", NamedType "Bool", Required)
     ]
-    
+
   , resourceCode  "aws_eip" "eip"
     "https://www.terraform.io/docs/providers/aws/r/eip.html"
     [ ("vpc", NamedType "Bool", OptionalWithDefault "False")
@@ -253,7 +253,7 @@ awsResources =
     , ("interval", NamedType "Int", Required)
     , ("timeout", NamedType "Int", Required)
     ]
-    
+
   , resourceCode "aws_elb" "elb"
     "https://www.terraform.io/docs/providers/aws/r/elb.html"
     [ ("name'", NamedType "T.Text", Optional)
@@ -305,7 +305,15 @@ awsResources =
     ]
     [
     ]
-    
+
+  , fieldsCode "CorsRule" "cors" True
+    [ ("allowed_headers", FTList (NamedType "T.Text"), OptionalWithDefault "[]")
+    , ("allowed_methods", FTList (NamedType "T.Text"), Required)
+    , ("allowed_origins", FTList (NamedType "T.Text"), Required)
+    , ("expose_headers", FTList (NamedType "T.Text"), OptionalWithDefault "[]")
+    , ("max_age_seconds", NamedType "Int", Optional)
+    ]
+
   , resourceCode "aws_s3_bucket" "s3"
     "https://www.terraform.io/docs/providers/aws/r/s3_bucket.html"
     [ ("bucket", NamedType "T.Text", Required)
@@ -313,6 +321,7 @@ awsResources =
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     , ("versioning", NamedType "BucketVersioningParams", Optional)
     , ("lifecycle_rule", NamedType "LifecycleRuleParams", Optional)
+    , ("cors_rule", NamedType "CorsRuleParams", Optional)
     ]
     [ ("id", TFRef "S3BucketName")
     ]
@@ -339,7 +348,7 @@ awsResources =
     , ("name", TFRef "T.Text")
     , ("unique_id", TFRef "T.Text")
     ]
-    
+
   , resourceCode "aws_iam_user_policy" "iamup"
     "https://www.terraform.io/docs/providers/aws/r/iam_user_policy.html"
     [ ("name", NamedType "T.Text", Required)
@@ -368,7 +377,7 @@ awsResources =
     , ("create_date", TFRef "T.Text")
     , ("unique_id", TFRef "T.Text")
     ]
-    
+
   , resourceCode "aws_iam_instance_profile" "iamip"
     "https://www.terraform.io/docs/providers/aws/r/iam_instance_profile.html"
     [ ("name", NamedType "T.Text", OptionalWithDefault "\"\"")
@@ -445,7 +454,7 @@ awsResources =
     , ("port", TFRef "T.Text")
     , ("username", TFRef "T.Text")
     ]
-    
+
   , resourceCode "aws_db_subnet_group" "dsg"
     "https://www.terraform.io/docs/providers/aws/r/db_subnet_group.html"
     [ ("name'", NamedType "T.Text", Required)
@@ -504,7 +513,7 @@ awsResources =
     [ ("id", AwsIdRef "aws_sqs_queue")
     , ("arn", TFRef "Arn")
     ]
-    
+
   , resourceCode "aws_sqs_queue_policy" "sqsp"
     "https://www.terraform.io/docs/providers/aws/r/sqs_queue_policy.html"
     [ ("queue_url", NamedType "T.Text", Required)
@@ -528,7 +537,7 @@ data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList Fiel
 data FieldMode = Required | Optional | OptionalWithDefault T.Text | ExpandedList
 
 data Code = CEmpty
-          | CLine T.Text      
+          | CLine T.Text
           | CAppend Code Code
           | CIndent Code
 
@@ -627,7 +636,7 @@ fieldsCode htypename fieldprefix deriveInstances args
     dequote = T.takeWhile (/= '\'')
 
     hname n = fieldprefix <> "_" <> n
-    
+
 resourceCode :: T.Text -> T.Text -> T.Text -> [(T.Text, FieldType, FieldMode)] -> [(T.Text, FieldType)] -> Code
 resourceCode tftypename fieldprefix docurl args attrs
   =  mconcat (intersperse cblank [function,function',value,isResourceInstance,argsTypes])
@@ -756,7 +765,7 @@ generateModule outdir moduleName header resources = T.writeFile filepath (T.inte
 generate :: FilePath -> IO ()
 generate outdir = do
   generateModule outdir "Aws" awsHeader awsResources
-  
+
 
 main :: IO ()
 main = generate "src/Language/Terraform"

@@ -1626,6 +1626,54 @@ instance ToResourceField AwsAutoscalingAttachmentParams where
 
 ----------------------------------------------------------------------
 
+data CorsRuleParams = CorsRuleParams
+  { _cors_allowed_methods :: [T.Text]
+  , _cors_allowed_origins :: [T.Text]
+  , _cors_allowed_headers :: [T.Text]
+  , _cors_expose_headers :: [T.Text]
+  , _cors_max_age_seconds :: Maybe (Int)
+  }
+  deriving (Eq)
+
+-- cors_allowed_headers :: Lens' CorsRuleParams [T.Text]
+cors_allowed_headers :: Functor f => ([T.Text] -> f ([T.Text])) -> CorsRuleParams -> f CorsRuleParams
+cors_allowed_headers k atom = fmap (\newcors_allowed_headers -> atom { _cors_allowed_headers = newcors_allowed_headers }) (k (_cors_allowed_headers atom))
+-- cors_allowed_methods :: Lens' CorsRuleParams [T.Text]
+cors_allowed_methods :: Functor f => ([T.Text] -> f ([T.Text])) -> CorsRuleParams -> f CorsRuleParams
+cors_allowed_methods k atom = fmap (\newcors_allowed_methods -> atom { _cors_allowed_methods = newcors_allowed_methods }) (k (_cors_allowed_methods atom))
+-- cors_allowed_origins :: Lens' CorsRuleParams [T.Text]
+cors_allowed_origins :: Functor f => ([T.Text] -> f ([T.Text])) -> CorsRuleParams -> f CorsRuleParams
+cors_allowed_origins k atom = fmap (\newcors_allowed_origins -> atom { _cors_allowed_origins = newcors_allowed_origins }) (k (_cors_allowed_origins atom))
+-- cors_expose_headers :: Lens' CorsRuleParams [T.Text]
+cors_expose_headers :: Functor f => ([T.Text] -> f ([T.Text])) -> CorsRuleParams -> f CorsRuleParams
+cors_expose_headers k atom = fmap (\newcors_expose_headers -> atom { _cors_expose_headers = newcors_expose_headers }) (k (_cors_expose_headers atom))
+-- cors_max_age_seconds :: Lens' CorsRuleParams Maybe (Int)
+cors_max_age_seconds :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> CorsRuleParams -> f CorsRuleParams
+cors_max_age_seconds k atom = fmap (\newcors_max_age_seconds -> atom { _cors_max_age_seconds = newcors_max_age_seconds }) (k (_cors_max_age_seconds atom))
+
+makeCorsRuleParams :: [T.Text] -> [T.Text] -> CorsRuleParams
+makeCorsRuleParams allowedMethods allowedOrigins = CorsRuleParams
+  { _cors_allowed_methods = allowedMethods
+  , _cors_allowed_origins = allowedOrigins
+  , _cors_allowed_headers = []
+  , _cors_expose_headers = []
+  , _cors_max_age_seconds = Nothing
+  }
+
+instance ToResourceFieldMap CorsRuleParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "allowed_headers" [] (_cors_allowed_headers params)
+    <> rfmField "allowed_methods" (_cors_allowed_methods params)
+    <> rfmField "allowed_origins" (_cors_allowed_origins params)
+    <> rfmOptionalDefField "expose_headers" [] (_cors_expose_headers params)
+    <> rfmOptionalField "max_age_seconds" (_cors_max_age_seconds params)
+    
+
+instance ToResourceField CorsRuleParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
 -- | Add a resource of type AwsS3Bucket to the resource graph.
 --
 -- See the terraform <https://www.terraform.io/docs/providers/aws/r/s3_bucket.html aws_s3_bucket> documentation
@@ -1660,6 +1708,7 @@ data AwsS3BucketParams = AwsS3BucketParams
   , _s3_tags :: M.Map T.Text T.Text
   , _s3_versioning :: Maybe (BucketVersioningParams)
   , _s3_lifecycle_rule :: Maybe (LifecycleRuleParams)
+  , _s3_cors_rule :: Maybe (CorsRuleParams)
   }
 
 -- s3_bucket :: Lens' AwsS3BucketParams T.Text
@@ -1677,6 +1726,9 @@ s3_versioning k atom = fmap (\news3_versioning -> atom { _s3_versioning = news3_
 -- s3_lifecycle_rule :: Lens' AwsS3BucketParams Maybe (LifecycleRuleParams)
 s3_lifecycle_rule :: Functor f => (Maybe (LifecycleRuleParams) -> f (Maybe (LifecycleRuleParams))) -> AwsS3BucketParams -> f AwsS3BucketParams
 s3_lifecycle_rule k atom = fmap (\news3_lifecycle_rule -> atom { _s3_lifecycle_rule = news3_lifecycle_rule }) (k (_s3_lifecycle_rule atom))
+-- s3_cors_rule :: Lens' AwsS3BucketParams Maybe (CorsRuleParams)
+s3_cors_rule :: Functor f => (Maybe (CorsRuleParams) -> f (Maybe (CorsRuleParams))) -> AwsS3BucketParams -> f AwsS3BucketParams
+s3_cors_rule k atom = fmap (\news3_cors_rule -> atom { _s3_cors_rule = news3_cors_rule }) (k (_s3_cors_rule atom))
 
 makeAwsS3BucketParams :: T.Text -> AwsS3BucketParams
 makeAwsS3BucketParams bucket = AwsS3BucketParams
@@ -1685,6 +1737,7 @@ makeAwsS3BucketParams bucket = AwsS3BucketParams
   , _s3_tags = M.empty
   , _s3_versioning = Nothing
   , _s3_lifecycle_rule = Nothing
+  , _s3_cors_rule = Nothing
   }
 
 instance ToResourceFieldMap AwsS3BucketParams where
@@ -1694,6 +1747,7 @@ instance ToResourceFieldMap AwsS3BucketParams where
     <> rfmOptionalDefField "tags" M.empty (_s3_tags params)
     <> rfmOptionalField "versioning" (_s3_versioning params)
     <> rfmOptionalField "lifecycle_rule" (_s3_lifecycle_rule params)
+    <> rfmOptionalField "cors_rule" (_s3_cors_rule params)
     
 
 instance ToResourceField AwsS3BucketParams where
