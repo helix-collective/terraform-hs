@@ -2473,6 +2473,8 @@ data AwsDbInstanceParams = AwsDbInstanceParams
   , _db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
   , _db_db_subnet_group_name :: Maybe (TFRef T.Text)
   , _db_tags :: M.Map T.Text T.Text
+  , _db_skip_final_snapshot :: Bool
+  , _db_final_snapshot_identifier :: Maybe (T.Text)
   }
 
 -- db_allocated_storage :: Lens' AwsDbInstanceParams Int
@@ -2517,6 +2519,12 @@ db_db_subnet_group_name k atom = fmap (\newdb_db_subnet_group_name -> atom { _db
 -- db_tags :: Lens' AwsDbInstanceParams M.Map T.Text T.Text
 db_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
 db_tags k atom = fmap (\newdb_tags -> atom { _db_tags = newdb_tags }) (k (_db_tags atom))
+-- db_skip_final_snapshot :: Lens' AwsDbInstanceParams Bool
+db_skip_final_snapshot :: Functor f => (Bool -> f (Bool)) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_skip_final_snapshot k atom = fmap (\newdb_skip_final_snapshot -> atom { _db_skip_final_snapshot = newdb_skip_final_snapshot }) (k (_db_skip_final_snapshot atom))
+-- db_final_snapshot_identifier :: Lens' AwsDbInstanceParams Maybe (T.Text)
+db_final_snapshot_identifier :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_final_snapshot_identifier k atom = fmap (\newdb_final_snapshot_identifier -> atom { _db_final_snapshot_identifier = newdb_final_snapshot_identifier }) (k (_db_final_snapshot_identifier atom))
 
 makeAwsDbInstanceParams :: Int -> DBEngine -> DBInstanceClass -> T.Text -> T.Text -> AwsDbInstanceParams
 makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password = AwsDbInstanceParams
@@ -2534,6 +2542,8 @@ makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password
   , _db_vpc_security_group_ids = []
   , _db_db_subnet_group_name = Nothing
   , _db_tags = M.empty
+  , _db_skip_final_snapshot = False
+  , _db_final_snapshot_identifier = Nothing
   }
 
 instance ToResourceFieldMap AwsDbInstanceParams where
@@ -2552,6 +2562,8 @@ instance ToResourceFieldMap AwsDbInstanceParams where
     <> rfmOptionalDefField "vpc_security_group_ids" [] (_db_vpc_security_group_ids params)
     <> rfmOptionalField "db_subnet_group_name" (_db_db_subnet_group_name params)
     <> rfmOptionalDefField "tags" M.empty (_db_tags params)
+    <> rfmOptionalDefField "skip_final_snapshot" False (_db_skip_final_snapshot params)
+    <> rfmOptionalField "final_snapshot_identifier" (_db_final_snapshot_identifier params)
     
 
 instance ToResourceField AwsDbInstanceParams where

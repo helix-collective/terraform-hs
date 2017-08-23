@@ -446,6 +446,8 @@ awsResources =
     , ("vpc_security_group_ids", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
     , ("db_subnet_group_name", TFRef "T.Text", Optional)
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    , ("skip_final_snapshot", NamedType "Bool", OptionalWithDefault "False")
+    , ("final_snapshot_identifier", NamedType "T.Text", Optional)
     ]
     [ ("id", AwsIdRef "aws_db_instance")
     , ("arn", TFRef "Arn")
