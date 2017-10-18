@@ -3056,3 +3056,78 @@ instance ToResourceFieldMap AwsEcrRepositoryParams where
 
 instance ToResourceField AwsEcrRepositoryParams where
   toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsCloudwatchLogGroup to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/cloudwatch_log_group.html aws_cloudwatch_log_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'cwlg_')
+
+awsCloudwatchLogGroup :: NameElement -> T.Text ->(AwsCloudwatchLogGroupParams -> AwsCloudwatchLogGroupParams) -> TF AwsCloudwatchLogGroup
+awsCloudwatchLogGroup name0 name' modf = newAwsCloudwatchLogGroup name0 (modf (makeAwsCloudwatchLogGroupParams name'))
+
+awsCloudwatchLogGroup' :: NameElement -> T.Text -> TF AwsCloudwatchLogGroup
+awsCloudwatchLogGroup' name0 name' = newAwsCloudwatchLogGroup name0 (makeAwsCloudwatchLogGroupParams name')
+
+newAwsCloudwatchLogGroup :: NameElement -> AwsCloudwatchLogGroupParams -> TF AwsCloudwatchLogGroup
+newAwsCloudwatchLogGroup name0 params = do
+  rid <- mkResource "aws_cloudwatch_log_group" name0 (toResourceFieldMap params)
+  return AwsCloudwatchLogGroup
+    { cwlg_arn = resourceAttr rid "arn"
+    , cwlg_resource = rid
+    }
+
+data AwsCloudwatchLogGroup = AwsCloudwatchLogGroup
+  { cwlg_arn :: TFRef Arn
+  , cwlg_resource :: ResourceId
+  }
+
+instance IsResource AwsCloudwatchLogGroup where
+  resourceId = cwlg_resource
+
+data AwsCloudwatchLogGroupParams = AwsCloudwatchLogGroupParams
+  { _cwlg_name' :: T.Text
+  , _cwlg_name_prefix' :: Maybe (T.Text)
+  , _cwlg_retention_in_days' :: Maybe (T.Text)
+  , _cwlg_kms_key_id :: Maybe (T.Text)
+  , _cwlg_tags :: M.Map T.Text T.Text
+  }
+
+-- cwlg_name' :: Lens' AwsCloudwatchLogGroupParams T.Text
+cwlg_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsCloudwatchLogGroupParams -> f AwsCloudwatchLogGroupParams
+cwlg_name' k atom = fmap (\newcwlg_name' -> atom { _cwlg_name' = newcwlg_name' }) (k (_cwlg_name' atom))
+-- cwlg_name_prefix' :: Lens' AwsCloudwatchLogGroupParams Maybe (T.Text)
+cwlg_name_prefix' :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsCloudwatchLogGroupParams -> f AwsCloudwatchLogGroupParams
+cwlg_name_prefix' k atom = fmap (\newcwlg_name_prefix' -> atom { _cwlg_name_prefix' = newcwlg_name_prefix' }) (k (_cwlg_name_prefix' atom))
+-- cwlg_retention_in_days' :: Lens' AwsCloudwatchLogGroupParams Maybe (T.Text)
+cwlg_retention_in_days' :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsCloudwatchLogGroupParams -> f AwsCloudwatchLogGroupParams
+cwlg_retention_in_days' k atom = fmap (\newcwlg_retention_in_days' -> atom { _cwlg_retention_in_days' = newcwlg_retention_in_days' }) (k (_cwlg_retention_in_days' atom))
+-- cwlg_kms_key_id :: Lens' AwsCloudwatchLogGroupParams Maybe (T.Text)
+cwlg_kms_key_id :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsCloudwatchLogGroupParams -> f AwsCloudwatchLogGroupParams
+cwlg_kms_key_id k atom = fmap (\newcwlg_kms_key_id -> atom { _cwlg_kms_key_id = newcwlg_kms_key_id }) (k (_cwlg_kms_key_id atom))
+-- cwlg_tags :: Lens' AwsCloudwatchLogGroupParams M.Map T.Text T.Text
+cwlg_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsCloudwatchLogGroupParams -> f AwsCloudwatchLogGroupParams
+cwlg_tags k atom = fmap (\newcwlg_tags -> atom { _cwlg_tags = newcwlg_tags }) (k (_cwlg_tags atom))
+
+makeAwsCloudwatchLogGroupParams :: T.Text -> AwsCloudwatchLogGroupParams
+makeAwsCloudwatchLogGroupParams name' = AwsCloudwatchLogGroupParams
+  { _cwlg_name' = name'
+  , _cwlg_name_prefix' = Nothing
+  , _cwlg_retention_in_days' = Nothing
+  , _cwlg_kms_key_id = Nothing
+  , _cwlg_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsCloudwatchLogGroupParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_cwlg_name' params)
+    <> rfmOptionalField "name_prefix" (_cwlg_name_prefix' params)
+    <> rfmOptionalField "retention_in_days" (_cwlg_retention_in_days' params)
+    <> rfmOptionalField "kms_key_id" (_cwlg_kms_key_id params)
+    <> rfmOptionalDefField "tags" M.empty (_cwlg_tags params)
+    
+
+instance ToResourceField AwsCloudwatchLogGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 

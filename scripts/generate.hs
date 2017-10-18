@@ -533,6 +533,17 @@ awsResources =
     , ("registry_id", TFRef "T.Text")
     , ("repository_url", TFRef "T.Text")
     ]
+
+  , resourceCode "aws_cloudwatch_log_group" "cwlg"
+    "https://www.terraform.io/docs/providers/aws/r/cloudwatch_log_group.html"
+    [ ("name'", NamedType "T.Text", Required)
+    , ("name_prefix'", NamedType "T.Text", Optional)
+    , ("retention_in_days'", NamedType "T.Text", Optional)
+    , ("kms_key_id", NamedType "T.Text", Optional)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("arn", TFRef "Arn")
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
