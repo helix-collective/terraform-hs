@@ -3131,3 +3131,220 @@ instance ToResourceFieldMap AwsCloudwatchLogGroupParams where
 
 instance ToResourceField AwsCloudwatchLogGroupParams where
   toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data EbsOptionsParams = EbsOptionsParams
+  { _edeo_ebs_enabled :: Bool
+  , _edeo_volume_type :: Maybe (T.Text)
+  , _edeo_volume_size :: Maybe (Int)
+  , _edeo_iops :: Maybe (Int)
+  }
+  deriving (Eq)
+
+-- edeo_ebs_enabled :: Lens' EbsOptionsParams Bool
+edeo_ebs_enabled :: Functor f => (Bool -> f (Bool)) -> EbsOptionsParams -> f EbsOptionsParams
+edeo_ebs_enabled k atom = fmap (\newedeo_ebs_enabled -> atom { _edeo_ebs_enabled = newedeo_ebs_enabled }) (k (_edeo_ebs_enabled atom))
+-- edeo_volume_type :: Lens' EbsOptionsParams Maybe (T.Text)
+edeo_volume_type :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> EbsOptionsParams -> f EbsOptionsParams
+edeo_volume_type k atom = fmap (\newedeo_volume_type -> atom { _edeo_volume_type = newedeo_volume_type }) (k (_edeo_volume_type atom))
+-- edeo_volume_size :: Lens' EbsOptionsParams Maybe (Int)
+edeo_volume_size :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> EbsOptionsParams -> f EbsOptionsParams
+edeo_volume_size k atom = fmap (\newedeo_volume_size -> atom { _edeo_volume_size = newedeo_volume_size }) (k (_edeo_volume_size atom))
+-- edeo_iops :: Lens' EbsOptionsParams Maybe (Int)
+edeo_iops :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> EbsOptionsParams -> f EbsOptionsParams
+edeo_iops k atom = fmap (\newedeo_iops -> atom { _edeo_iops = newedeo_iops }) (k (_edeo_iops atom))
+
+makeEbsOptionsParams :: Bool -> EbsOptionsParams
+makeEbsOptionsParams ebsEnabled = EbsOptionsParams
+  { _edeo_ebs_enabled = ebsEnabled
+  , _edeo_volume_type = Nothing
+  , _edeo_volume_size = Nothing
+  , _edeo_iops = Nothing
+  }
+
+instance ToResourceFieldMap EbsOptionsParams where
+  toResourceFieldMap params
+    =  rfmField "ebs_enabled" (_edeo_ebs_enabled params)
+    <> rfmOptionalField "volume_type" (_edeo_volume_type params)
+    <> rfmOptionalField "volume_size" (_edeo_volume_size params)
+    <> rfmOptionalField "iops" (_edeo_iops params)
+    
+
+instance ToResourceField EbsOptionsParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data ClusterConfigParams = ClusterConfigParams
+  { _edcc_instance_type :: Maybe (InstanceType)
+  , _edcc_instance_count :: Maybe (Int)
+  , _edcc_dedicated_master_enabled :: Maybe (Bool)
+  , _edcc_dedicated_master_type :: Maybe (InstanceType)
+  , _edcc_dedicated_master_count :: Maybe (Int)
+  , _edcc_zone_awareness_enabled :: Maybe (Bool)
+  }
+  deriving (Eq)
+
+-- edcc_instance_type :: Lens' ClusterConfigParams Maybe (InstanceType)
+edcc_instance_type :: Functor f => (Maybe (InstanceType) -> f (Maybe (InstanceType))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_instance_type k atom = fmap (\newedcc_instance_type -> atom { _edcc_instance_type = newedcc_instance_type }) (k (_edcc_instance_type atom))
+-- edcc_instance_count :: Lens' ClusterConfigParams Maybe (Int)
+edcc_instance_count :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_instance_count k atom = fmap (\newedcc_instance_count -> atom { _edcc_instance_count = newedcc_instance_count }) (k (_edcc_instance_count atom))
+-- edcc_dedicated_master_enabled :: Lens' ClusterConfigParams Maybe (Bool)
+edcc_dedicated_master_enabled :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_dedicated_master_enabled k atom = fmap (\newedcc_dedicated_master_enabled -> atom { _edcc_dedicated_master_enabled = newedcc_dedicated_master_enabled }) (k (_edcc_dedicated_master_enabled atom))
+-- edcc_dedicated_master_type :: Lens' ClusterConfigParams Maybe (InstanceType)
+edcc_dedicated_master_type :: Functor f => (Maybe (InstanceType) -> f (Maybe (InstanceType))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_dedicated_master_type k atom = fmap (\newedcc_dedicated_master_type -> atom { _edcc_dedicated_master_type = newedcc_dedicated_master_type }) (k (_edcc_dedicated_master_type atom))
+-- edcc_dedicated_master_count :: Lens' ClusterConfigParams Maybe (Int)
+edcc_dedicated_master_count :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_dedicated_master_count k atom = fmap (\newedcc_dedicated_master_count -> atom { _edcc_dedicated_master_count = newedcc_dedicated_master_count }) (k (_edcc_dedicated_master_count atom))
+-- edcc_zone_awareness_enabled :: Lens' ClusterConfigParams Maybe (Bool)
+edcc_zone_awareness_enabled :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> ClusterConfigParams -> f ClusterConfigParams
+edcc_zone_awareness_enabled k atom = fmap (\newedcc_zone_awareness_enabled -> atom { _edcc_zone_awareness_enabled = newedcc_zone_awareness_enabled }) (k (_edcc_zone_awareness_enabled atom))
+
+makeClusterConfigParams ::  ClusterConfigParams
+makeClusterConfigParams  = ClusterConfigParams
+  { _edcc_instance_type = Nothing
+  , _edcc_instance_count = Nothing
+  , _edcc_dedicated_master_enabled = Nothing
+  , _edcc_dedicated_master_type = Nothing
+  , _edcc_dedicated_master_count = Nothing
+  , _edcc_zone_awareness_enabled = Nothing
+  }
+
+instance ToResourceFieldMap ClusterConfigParams where
+  toResourceFieldMap params
+    =  rfmOptionalField "instance_type" (_edcc_instance_type params)
+    <> rfmOptionalField "instance_count" (_edcc_instance_count params)
+    <> rfmOptionalField "dedicated_master_enabled" (_edcc_dedicated_master_enabled params)
+    <> rfmOptionalField "dedicated_master_type" (_edcc_dedicated_master_type params)
+    <> rfmOptionalField "dedicated_master_count" (_edcc_dedicated_master_count params)
+    <> rfmOptionalField "zone_awareness_enabled" (_edcc_zone_awareness_enabled params)
+    
+
+instance ToResourceField ClusterConfigParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data SnapshotOptionsParams = SnapshotOptionsParams
+  { _edso_automated_snapshot_start_hour :: Int
+  }
+  deriving (Eq)
+
+-- edso_automated_snapshot_start_hour :: Lens' SnapshotOptionsParams Int
+edso_automated_snapshot_start_hour :: Functor f => (Int -> f (Int)) -> SnapshotOptionsParams -> f SnapshotOptionsParams
+edso_automated_snapshot_start_hour k atom = fmap (\newedso_automated_snapshot_start_hour -> atom { _edso_automated_snapshot_start_hour = newedso_automated_snapshot_start_hour }) (k (_edso_automated_snapshot_start_hour atom))
+
+makeSnapshotOptionsParams :: Int -> SnapshotOptionsParams
+makeSnapshotOptionsParams automatedSnapshotStartHour = SnapshotOptionsParams
+  { _edso_automated_snapshot_start_hour = automatedSnapshotStartHour
+  }
+
+instance ToResourceFieldMap SnapshotOptionsParams where
+  toResourceFieldMap params
+    =  rfmField "automated_snapshot_start_hour" (_edso_automated_snapshot_start_hour params)
+    
+
+instance ToResourceField SnapshotOptionsParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsElasticsearchDomain to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/elasticsearch_domain.html aws_elasticsearch_domain> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ed_')
+
+awsElasticsearchDomain :: NameElement -> T.Text ->(AwsElasticsearchDomainParams -> AwsElasticsearchDomainParams) -> TF AwsElasticsearchDomain
+awsElasticsearchDomain name0 domainName' modf = newAwsElasticsearchDomain name0 (modf (makeAwsElasticsearchDomainParams domainName'))
+
+awsElasticsearchDomain' :: NameElement -> T.Text -> TF AwsElasticsearchDomain
+awsElasticsearchDomain' name0 domainName' = newAwsElasticsearchDomain name0 (makeAwsElasticsearchDomainParams domainName')
+
+newAwsElasticsearchDomain :: NameElement -> AwsElasticsearchDomainParams -> TF AwsElasticsearchDomain
+newAwsElasticsearchDomain name0 params = do
+  rid <- mkResource "aws_elasticsearch_domain" name0 (toResourceFieldMap params)
+  return AwsElasticsearchDomain
+    { ed_arn = resourceAttr rid "arn"
+    , ed_domain_id = resourceAttr rid "domain_id"
+    , ed_endpoint = resourceAttr rid "endpoint"
+    , ed_resource = rid
+    }
+
+data AwsElasticsearchDomain = AwsElasticsearchDomain
+  { ed_arn :: TFRef Arn
+  , ed_domain_id :: TFRef T.Text
+  , ed_endpoint :: TFRef T.Text
+  , ed_resource :: ResourceId
+  }
+
+instance IsResource AwsElasticsearchDomain where
+  resourceId = ed_resource
+
+data AwsElasticsearchDomainParams = AwsElasticsearchDomainParams
+  { _ed_domain_name' :: T.Text
+  , _ed_access_policies :: Maybe (T.Text)
+  , _ed_advanced_options :: M.Map T.Text T.Text
+  , _ed_ebs_options :: Maybe (EbsOptionsParams)
+  , _ed_cluster_config :: Maybe (ClusterConfigParams)
+  , _ed_snapshot_options :: Maybe (SnapshotOptionsParams)
+  , _ed_elasticsearch_version :: T.Text
+  , _ed_tags :: M.Map T.Text T.Text
+  }
+
+-- ed_domain_name' :: Lens' AwsElasticsearchDomainParams T.Text
+ed_domain_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_domain_name' k atom = fmap (\newed_domain_name' -> atom { _ed_domain_name' = newed_domain_name' }) (k (_ed_domain_name' atom))
+-- ed_access_policies :: Lens' AwsElasticsearchDomainParams Maybe (T.Text)
+ed_access_policies :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_access_policies k atom = fmap (\newed_access_policies -> atom { _ed_access_policies = newed_access_policies }) (k (_ed_access_policies atom))
+-- ed_advanced_options :: Lens' AwsElasticsearchDomainParams M.Map T.Text T.Text
+ed_advanced_options :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_advanced_options k atom = fmap (\newed_advanced_options -> atom { _ed_advanced_options = newed_advanced_options }) (k (_ed_advanced_options atom))
+-- ed_ebs_options :: Lens' AwsElasticsearchDomainParams Maybe (EbsOptionsParams)
+ed_ebs_options :: Functor f => (Maybe (EbsOptionsParams) -> f (Maybe (EbsOptionsParams))) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_ebs_options k atom = fmap (\newed_ebs_options -> atom { _ed_ebs_options = newed_ebs_options }) (k (_ed_ebs_options atom))
+-- ed_cluster_config :: Lens' AwsElasticsearchDomainParams Maybe (ClusterConfigParams)
+ed_cluster_config :: Functor f => (Maybe (ClusterConfigParams) -> f (Maybe (ClusterConfigParams))) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_cluster_config k atom = fmap (\newed_cluster_config -> atom { _ed_cluster_config = newed_cluster_config }) (k (_ed_cluster_config atom))
+-- ed_snapshot_options :: Lens' AwsElasticsearchDomainParams Maybe (SnapshotOptionsParams)
+ed_snapshot_options :: Functor f => (Maybe (SnapshotOptionsParams) -> f (Maybe (SnapshotOptionsParams))) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_snapshot_options k atom = fmap (\newed_snapshot_options -> atom { _ed_snapshot_options = newed_snapshot_options }) (k (_ed_snapshot_options atom))
+-- ed_elasticsearch_version :: Lens' AwsElasticsearchDomainParams T.Text
+ed_elasticsearch_version :: Functor f => (T.Text -> f (T.Text)) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_elasticsearch_version k atom = fmap (\newed_elasticsearch_version -> atom { _ed_elasticsearch_version = newed_elasticsearch_version }) (k (_ed_elasticsearch_version atom))
+-- ed_tags :: Lens' AwsElasticsearchDomainParams M.Map T.Text T.Text
+ed_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsElasticsearchDomainParams -> f AwsElasticsearchDomainParams
+ed_tags k atom = fmap (\newed_tags -> atom { _ed_tags = newed_tags }) (k (_ed_tags atom))
+
+makeAwsElasticsearchDomainParams :: T.Text -> AwsElasticsearchDomainParams
+makeAwsElasticsearchDomainParams domainName' = AwsElasticsearchDomainParams
+  { _ed_domain_name' = domainName'
+  , _ed_access_policies = Nothing
+  , _ed_advanced_options = M.empty
+  , _ed_ebs_options = Nothing
+  , _ed_cluster_config = Nothing
+  , _ed_snapshot_options = Nothing
+  , _ed_elasticsearch_version = "1.5"
+  , _ed_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsElasticsearchDomainParams where
+  toResourceFieldMap params
+    =  rfmField "domain_name" (_ed_domain_name' params)
+    <> rfmOptionalField "access_policies" (_ed_access_policies params)
+    <> rfmOptionalDefField "advanced_options" M.empty (_ed_advanced_options params)
+    <> rfmOptionalField "ebs_options" (_ed_ebs_options params)
+    <> rfmOptionalField "cluster_config" (_ed_cluster_config params)
+    <> rfmOptionalField "snapshot_options" (_ed_snapshot_options params)
+    <> rfmOptionalDefField "elasticsearch_version" "1.5" (_ed_elasticsearch_version params)
+    <> rfmOptionalDefField "tags" M.empty (_ed_tags params)
+    
+
+instance ToResourceField AwsElasticsearchDomainParams where
+  toResourceField = RF_Map . toResourceFieldMap 

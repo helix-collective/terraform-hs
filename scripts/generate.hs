@@ -544,6 +544,42 @@ awsResources =
     ]
     [ ("arn", TFRef "Arn")
     ]
+
+  , fieldsCode "EbsOptions" "edeo" True
+    [ ("ebs_enabled", NamedType "Bool", Required)
+    , ("volume_type", NamedType "T.Text", Optional)
+    , ("volume_size", NamedType "Int", Optional)
+    , ("iops", NamedType "Int", Optional)
+    ]
+
+  , fieldsCode "ClusterConfig" "edcc" True
+    [ ("instance_type", NamedType "InstanceType", Optional)
+    , ("instance_count", NamedType "Int", Optional)
+    , ("dedicated_master_enabled", NamedType "Bool", Optional)
+    , ("dedicated_master_type", NamedType "InstanceType", Optional)
+    , ("dedicated_master_count", NamedType "Int", Optional)
+    , ("zone_awareness_enabled", NamedType "Bool", Optional)
+    ]
+
+  , fieldsCode "SnapshotOptions" "edso" True
+    [ ("automated_snapshot_start_hour", NamedType "Int", Required)
+    ]
+
+  , resourceCode "aws_elasticsearch_domain" "ed"
+    "https://www.terraform.io/docs/providers/aws/r/elasticsearch_domain.html"
+    [ ("domain_name'", NamedType "T.Text", Required)
+    , ("access_policies", NamedType "T.Text", Optional)
+    , ("advanced_options", NamedType "M.Map T.Text T.Text", OptionalWithDefault "M.empty")
+    , ("ebs_options", NamedType "EbsOptionsParams", Optional)
+    , ("cluster_config", NamedType "ClusterConfigParams", Optional)
+    , ("snapshot_options", NamedType "SnapshotOptionsParams", Optional)
+    , ("elasticsearch_version", NamedType "T.Text" ,OptionalWithDefault "\"1.5\"")
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("arn", TFRef "Arn")
+    , ("domain_id", TFRef "T.Text")
+    , ("endpoint", TFRef "T.Text")
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
