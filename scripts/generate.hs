@@ -384,6 +384,7 @@ awsResources =
     , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("path", NamedType "T.Text", OptionalWithDefault "\"/\"")
     , ("roles", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
+    , ("role", TFRef "T.Text", Optional)
     ]
     [ ("id", AwsIdRef "aws_iam_instance_profile")
     , ("arn", TFRef "Arn")

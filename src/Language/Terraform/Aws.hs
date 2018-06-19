@@ -2127,6 +2127,7 @@ data AwsIamInstanceProfileParams = AwsIamInstanceProfileParams
   , _iamip_name_prefix :: T.Text
   , _iamip_path :: T.Text
   , _iamip_roles :: [TFRef T.Text]
+  , _iamip_role :: Maybe (TFRef T.Text)
   }
 
 -- iamip_name :: Lens' AwsIamInstanceProfileParams T.Text
@@ -2141,6 +2142,9 @@ iamip_path k atom = fmap (\newiamip_path -> atom { _iamip_path = newiamip_path }
 -- iamip_roles :: Lens' AwsIamInstanceProfileParams [TFRef T.Text]
 iamip_roles :: Functor f => ([TFRef T.Text] -> f ([TFRef T.Text])) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
 iamip_roles k atom = fmap (\newiamip_roles -> atom { _iamip_roles = newiamip_roles }) (k (_iamip_roles atom))
+-- iamip_role :: Lens' AwsIamInstanceProfileParams Maybe (TFRef T.Text)
+iamip_role :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsIamInstanceProfileParams -> f AwsIamInstanceProfileParams
+iamip_role k atom = fmap (\newiamip_role -> atom { _iamip_role = newiamip_role }) (k (_iamip_role atom))
 
 makeAwsIamInstanceProfileParams ::  AwsIamInstanceProfileParams
 makeAwsIamInstanceProfileParams  = AwsIamInstanceProfileParams
@@ -2148,6 +2152,7 @@ makeAwsIamInstanceProfileParams  = AwsIamInstanceProfileParams
   , _iamip_name_prefix = ""
   , _iamip_path = "/"
   , _iamip_roles = []
+  , _iamip_role = Nothing
   }
 
 instance ToResourceFieldMap AwsIamInstanceProfileParams where
@@ -2156,6 +2161,7 @@ instance ToResourceFieldMap AwsIamInstanceProfileParams where
     <> rfmOptionalDefField "name_prefix" "" (_iamip_name_prefix params)
     <> rfmOptionalDefField "path" "/" (_iamip_path params)
     <> rfmOptionalDefField "roles" [] (_iamip_roles params)
+    <> rfmOptionalField "role" (_iamip_role params)
     
 
 instance ToResourceField AwsIamInstanceProfileParams where
