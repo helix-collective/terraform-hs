@@ -41,6 +41,14 @@ type DBInstanceClass = T.Text
 type HostedZoneId = T.Text
 type Route53RecordType = T.Text
 
+-- A typed ARN
+newtype AwsArn t = AwsArn {
+  tArn :: Arn
+} deriving (Eq);
+
+instance ToResourceField (AwsArn t) where
+  toResourceField (AwsArn t) = toResourceField t
+
 -- | Add an aws provider to the resource graph.
 --
 -- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>
@@ -1594,7 +1602,7 @@ instance IsResource AwsAutoscalingAttachment where
 data AwsAutoscalingAttachmentParams = AwsAutoscalingAttachmentParams
   { _asa_autoscaling_group_name :: T.Text
   , _asa_elb :: Maybe (T.Text)
-  , _asa_alb_target_group_arn :: Maybe (T.Text)
+  , _asa_alb_target_group_arn :: Maybe (AwsArn AwsLbTargetGroup)
   }
 
 -- asa_autoscaling_group_name :: Lens' AwsAutoscalingAttachmentParams T.Text
@@ -1603,8 +1611,8 @@ asa_autoscaling_group_name k atom = fmap (\newasa_autoscaling_group_name -> atom
 -- asa_elb :: Lens' AwsAutoscalingAttachmentParams Maybe (T.Text)
 asa_elb :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
 asa_elb k atom = fmap (\newasa_elb -> atom { _asa_elb = newasa_elb }) (k (_asa_elb atom))
--- asa_alb_target_group_arn :: Lens' AwsAutoscalingAttachmentParams Maybe (T.Text)
-asa_alb_target_group_arn :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
+-- asa_alb_target_group_arn :: Lens' AwsAutoscalingAttachmentParams Maybe (AwsArn AwsLbTargetGroup)
+asa_alb_target_group_arn :: Functor f => (Maybe (AwsArn AwsLbTargetGroup) -> f (Maybe (AwsArn AwsLbTargetGroup))) -> AwsAutoscalingAttachmentParams -> f AwsAutoscalingAttachmentParams
 asa_alb_target_group_arn k atom = fmap (\newasa_alb_target_group_arn -> atom { _asa_alb_target_group_arn = newasa_alb_target_group_arn }) (k (_asa_alb_target_group_arn atom))
 
 makeAwsAutoscalingAttachmentParams :: T.Text -> AwsAutoscalingAttachmentParams
@@ -3353,4 +3361,615 @@ instance ToResourceFieldMap AwsElasticsearchDomainParams where
     
 
 instance ToResourceField AwsElasticsearchDomainParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLb to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/lb.html aws_lb> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lb_')
+
+awsLb :: NameElement -> (AwsLbParams -> AwsLbParams) -> TF AwsLb
+awsLb name0  modf = newAwsLb name0 (modf (makeAwsLbParams ))
+
+awsLb' :: NameElement ->  TF AwsLb
+awsLb' name0  = newAwsLb name0 (makeAwsLbParams )
+
+newAwsLb :: NameElement -> AwsLbParams -> TF AwsLb
+newAwsLb name0 params = do
+  rid <- mkResource "aws_lb" name0 (toResourceFieldMap params)
+  return AwsLb
+    { lb_id = resourceAttr rid "id"
+    , lb_arn = resourceAttr rid "arn"
+    , lb_dns_name = resourceAttr rid "dns_name"
+    , lb_canonical_hosted_zone_id = resourceAttr rid "canonical_hosted_zone_id"
+    , lb_zone_id = resourceAttr rid "zone_id"
+    , lb_resource = rid
+    }
+
+data AwsLb = AwsLb
+  { lb_id :: TFRef (AwsId AwsLb)
+  , lb_arn :: TFRef (AwsArn AwsLb)
+  , lb_dns_name :: TFRef T.Text
+  , lb_canonical_hosted_zone_id :: TFRef T.Text
+  , lb_zone_id :: TFRef T.Text
+  , lb_resource :: ResourceId
+  }
+
+instance IsResource AwsLb where
+  resourceId = lb_resource
+
+data AwsLbParams = AwsLbParams
+  { _lb_name :: Maybe (T.Text)
+  , _lb_name_prefix :: Maybe (T.Text)
+  , _lb_internal :: Bool
+  , _lb_load_balancer_type :: LoadBalancerType
+  , _lb_security_groups :: [TFRef (AwsId AwsSecurityGroup)]
+  , _lb_access_logs :: Maybe (AccessLogsParams)
+  , _lb_subnets :: [TFRef (AwsId AwsSubnet)]
+  , _lb_subnet_mapping :: Maybe (SubnetMappingParams)
+  , _lb_idle_timeout :: Int
+  , _lb_enable_deletion_protection :: Bool
+  , _lb_enable_cross_zone_load_balancing :: Bool
+  , _lb_enable_http2 :: Bool
+  , _lb_ip_address_type :: Maybe (T.Text)
+  , _lb_tags :: M.Map T.Text T.Text
+  }
+
+-- lb_name :: Lens' AwsLbParams Maybe (T.Text)
+lb_name :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbParams -> f AwsLbParams
+lb_name k atom = fmap (\newlb_name -> atom { _lb_name = newlb_name }) (k (_lb_name atom))
+-- lb_name_prefix :: Lens' AwsLbParams Maybe (T.Text)
+lb_name_prefix :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbParams -> f AwsLbParams
+lb_name_prefix k atom = fmap (\newlb_name_prefix -> atom { _lb_name_prefix = newlb_name_prefix }) (k (_lb_name_prefix atom))
+-- lb_internal :: Lens' AwsLbParams Bool
+lb_internal :: Functor f => (Bool -> f (Bool)) -> AwsLbParams -> f AwsLbParams
+lb_internal k atom = fmap (\newlb_internal -> atom { _lb_internal = newlb_internal }) (k (_lb_internal atom))
+-- lb_load_balancer_type :: Lens' AwsLbParams LoadBalancerType
+lb_load_balancer_type :: Functor f => (LoadBalancerType -> f (LoadBalancerType)) -> AwsLbParams -> f AwsLbParams
+lb_load_balancer_type k atom = fmap (\newlb_load_balancer_type -> atom { _lb_load_balancer_type = newlb_load_balancer_type }) (k (_lb_load_balancer_type atom))
+-- lb_security_groups :: Lens' AwsLbParams [TFRef (AwsId AwsSecurityGroup)]
+lb_security_groups :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsLbParams -> f AwsLbParams
+lb_security_groups k atom = fmap (\newlb_security_groups -> atom { _lb_security_groups = newlb_security_groups }) (k (_lb_security_groups atom))
+-- lb_access_logs :: Lens' AwsLbParams Maybe (AccessLogsParams)
+lb_access_logs :: Functor f => (Maybe (AccessLogsParams) -> f (Maybe (AccessLogsParams))) -> AwsLbParams -> f AwsLbParams
+lb_access_logs k atom = fmap (\newlb_access_logs -> atom { _lb_access_logs = newlb_access_logs }) (k (_lb_access_logs atom))
+-- lb_subnets :: Lens' AwsLbParams [TFRef (AwsId AwsSubnet)]
+lb_subnets :: Functor f => ([TFRef (AwsId AwsSubnet)] -> f ([TFRef (AwsId AwsSubnet)])) -> AwsLbParams -> f AwsLbParams
+lb_subnets k atom = fmap (\newlb_subnets -> atom { _lb_subnets = newlb_subnets }) (k (_lb_subnets atom))
+-- lb_subnet_mapping :: Lens' AwsLbParams Maybe (SubnetMappingParams)
+lb_subnet_mapping :: Functor f => (Maybe (SubnetMappingParams) -> f (Maybe (SubnetMappingParams))) -> AwsLbParams -> f AwsLbParams
+lb_subnet_mapping k atom = fmap (\newlb_subnet_mapping -> atom { _lb_subnet_mapping = newlb_subnet_mapping }) (k (_lb_subnet_mapping atom))
+-- lb_idle_timeout :: Lens' AwsLbParams Int
+lb_idle_timeout :: Functor f => (Int -> f (Int)) -> AwsLbParams -> f AwsLbParams
+lb_idle_timeout k atom = fmap (\newlb_idle_timeout -> atom { _lb_idle_timeout = newlb_idle_timeout }) (k (_lb_idle_timeout atom))
+-- lb_enable_deletion_protection :: Lens' AwsLbParams Bool
+lb_enable_deletion_protection :: Functor f => (Bool -> f (Bool)) -> AwsLbParams -> f AwsLbParams
+lb_enable_deletion_protection k atom = fmap (\newlb_enable_deletion_protection -> atom { _lb_enable_deletion_protection = newlb_enable_deletion_protection }) (k (_lb_enable_deletion_protection atom))
+-- lb_enable_cross_zone_load_balancing :: Lens' AwsLbParams Bool
+lb_enable_cross_zone_load_balancing :: Functor f => (Bool -> f (Bool)) -> AwsLbParams -> f AwsLbParams
+lb_enable_cross_zone_load_balancing k atom = fmap (\newlb_enable_cross_zone_load_balancing -> atom { _lb_enable_cross_zone_load_balancing = newlb_enable_cross_zone_load_balancing }) (k (_lb_enable_cross_zone_load_balancing atom))
+-- lb_enable_http2 :: Lens' AwsLbParams Bool
+lb_enable_http2 :: Functor f => (Bool -> f (Bool)) -> AwsLbParams -> f AwsLbParams
+lb_enable_http2 k atom = fmap (\newlb_enable_http2 -> atom { _lb_enable_http2 = newlb_enable_http2 }) (k (_lb_enable_http2 atom))
+-- lb_ip_address_type :: Lens' AwsLbParams Maybe (T.Text)
+lb_ip_address_type :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbParams -> f AwsLbParams
+lb_ip_address_type k atom = fmap (\newlb_ip_address_type -> atom { _lb_ip_address_type = newlb_ip_address_type }) (k (_lb_ip_address_type atom))
+-- lb_tags :: Lens' AwsLbParams M.Map T.Text T.Text
+lb_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsLbParams -> f AwsLbParams
+lb_tags k atom = fmap (\newlb_tags -> atom { _lb_tags = newlb_tags }) (k (_lb_tags atom))
+
+makeAwsLbParams ::  AwsLbParams
+makeAwsLbParams  = AwsLbParams
+  { _lb_name = Nothing
+  , _lb_name_prefix = Nothing
+  , _lb_internal = False
+  , _lb_load_balancer_type = LB_application
+  , _lb_security_groups = []
+  , _lb_access_logs = Nothing
+  , _lb_subnets = []
+  , _lb_subnet_mapping = Nothing
+  , _lb_idle_timeout = 60
+  , _lb_enable_deletion_protection = False
+  , _lb_enable_cross_zone_load_balancing = False
+  , _lb_enable_http2 = True
+  , _lb_ip_address_type = Nothing
+  , _lb_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsLbParams where
+  toResourceFieldMap params
+    =  rfmOptionalField "name" (_lb_name params)
+    <> rfmOptionalField "name_prefix" (_lb_name_prefix params)
+    <> rfmOptionalDefField "internal" False (_lb_internal params)
+    <> rfmOptionalDefField "load_balancer_type" LB_application (_lb_load_balancer_type params)
+    <> rfmOptionalDefField "security_groups" [] (_lb_security_groups params)
+    <> rfmOptionalField "access_logs" (_lb_access_logs params)
+    <> rfmOptionalDefField "subnets" [] (_lb_subnets params)
+    <> rfmOptionalField "subnet_mapping" (_lb_subnet_mapping params)
+    <> rfmOptionalDefField "idle_timeout" 60 (_lb_idle_timeout params)
+    <> rfmOptionalDefField "enable_deletion_protection" False (_lb_enable_deletion_protection params)
+    <> rfmOptionalDefField "enable_cross_zone_load_balancing" False (_lb_enable_cross_zone_load_balancing params)
+    <> rfmOptionalDefField "enable_http2" True (_lb_enable_http2 params)
+    <> rfmOptionalField "ip_address_type" (_lb_ip_address_type params)
+    <> rfmOptionalDefField "tags" M.empty (_lb_tags params)
+    
+
+instance ToResourceField AwsLbParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data SubnetMappingParams = SubnetMappingParams
+  { _sn_subnet_id :: TFRef (AwsId AwsSubnet)
+  , _sn_allocation_id :: TFRef (AwsId AwsEip)
+  }
+  deriving (Eq)
+
+-- sn_subnet_id :: Lens' SubnetMappingParams TFRef (AwsId AwsSubnet)
+sn_subnet_id :: Functor f => (TFRef (AwsId AwsSubnet) -> f (TFRef (AwsId AwsSubnet))) -> SubnetMappingParams -> f SubnetMappingParams
+sn_subnet_id k atom = fmap (\newsn_subnet_id -> atom { _sn_subnet_id = newsn_subnet_id }) (k (_sn_subnet_id atom))
+-- sn_allocation_id :: Lens' SubnetMappingParams TFRef (AwsId AwsEip)
+sn_allocation_id :: Functor f => (TFRef (AwsId AwsEip) -> f (TFRef (AwsId AwsEip))) -> SubnetMappingParams -> f SubnetMappingParams
+sn_allocation_id k atom = fmap (\newsn_allocation_id -> atom { _sn_allocation_id = newsn_allocation_id }) (k (_sn_allocation_id atom))
+
+makeSubnetMappingParams :: TFRef (AwsId AwsSubnet) -> TFRef (AwsId AwsEip) -> SubnetMappingParams
+makeSubnetMappingParams subnetId allocationId = SubnetMappingParams
+  { _sn_subnet_id = subnetId
+  , _sn_allocation_id = allocationId
+  }
+
+instance ToResourceFieldMap SubnetMappingParams where
+  toResourceFieldMap params
+    =  rfmField "subnet_id" (_sn_subnet_id params)
+    <> rfmField "allocation_id" (_sn_allocation_id params)
+    
+
+instance ToResourceField SubnetMappingParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLbListener to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/lb_listener.html aws_lb_listener> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lbl_')
+
+awsLbListener :: NameElement -> AwsArn AwsLb -> Int -> ListenerActionParams ->(AwsLbListenerParams -> AwsLbListenerParams) -> TF AwsLbListener
+awsLbListener name0 loadBalancerArn port' defaultAction modf = newAwsLbListener name0 (modf (makeAwsLbListenerParams loadBalancerArn port' defaultAction))
+
+awsLbListener' :: NameElement -> AwsArn AwsLb -> Int -> ListenerActionParams -> TF AwsLbListener
+awsLbListener' name0 loadBalancerArn port' defaultAction = newAwsLbListener name0 (makeAwsLbListenerParams loadBalancerArn port' defaultAction)
+
+newAwsLbListener :: NameElement -> AwsLbListenerParams -> TF AwsLbListener
+newAwsLbListener name0 params = do
+  rid <- mkResource "aws_lb_listener" name0 (toResourceFieldMap params)
+  return AwsLbListener
+    { lbl_id = resourceAttr rid "id"
+    , lbl_arn = resourceAttr rid "arn"
+    , lbl_resource = rid
+    }
+
+data AwsLbListener = AwsLbListener
+  { lbl_id :: TFRef (AwsId AwsLbListener)
+  , lbl_arn :: TFRef (AwsArn AwsLbListener)
+  , lbl_resource :: ResourceId
+  }
+
+instance IsResource AwsLbListener where
+  resourceId = lbl_resource
+
+data AwsLbListenerParams = AwsLbListenerParams
+  { _lbl_load_balancer_arn :: AwsArn AwsLb
+  , _lbl_port' :: Int
+  , _lbl_default_action :: ListenerActionParams
+  , _lbl_protocol :: LoadBalancerProtocol
+  , _lbl_ssl_policy :: Maybe (T.Text)
+  , _lbl_certificate_arn :: Maybe (Arn)
+  }
+
+-- lbl_load_balancer_arn :: Lens' AwsLbListenerParams AwsArn AwsLb
+lbl_load_balancer_arn :: Functor f => (AwsArn AwsLb -> f (AwsArn AwsLb)) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_load_balancer_arn k atom = fmap (\newlbl_load_balancer_arn -> atom { _lbl_load_balancer_arn = newlbl_load_balancer_arn }) (k (_lbl_load_balancer_arn atom))
+-- lbl_port' :: Lens' AwsLbListenerParams Int
+lbl_port' :: Functor f => (Int -> f (Int)) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_port' k atom = fmap (\newlbl_port' -> atom { _lbl_port' = newlbl_port' }) (k (_lbl_port' atom))
+-- lbl_protocol :: Lens' AwsLbListenerParams LoadBalancerProtocol
+lbl_protocol :: Functor f => (LoadBalancerProtocol -> f (LoadBalancerProtocol)) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_protocol k atom = fmap (\newlbl_protocol -> atom { _lbl_protocol = newlbl_protocol }) (k (_lbl_protocol atom))
+-- lbl_ssl_policy :: Lens' AwsLbListenerParams Maybe (T.Text)
+lbl_ssl_policy :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_ssl_policy k atom = fmap (\newlbl_ssl_policy -> atom { _lbl_ssl_policy = newlbl_ssl_policy }) (k (_lbl_ssl_policy atom))
+-- lbl_certificate_arn :: Lens' AwsLbListenerParams Maybe (Arn)
+lbl_certificate_arn :: Functor f => (Maybe (Arn) -> f (Maybe (Arn))) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_certificate_arn k atom = fmap (\newlbl_certificate_arn -> atom { _lbl_certificate_arn = newlbl_certificate_arn }) (k (_lbl_certificate_arn atom))
+-- lbl_default_action :: Lens' AwsLbListenerParams ListenerActionParams
+lbl_default_action :: Functor f => (ListenerActionParams -> f (ListenerActionParams)) -> AwsLbListenerParams -> f AwsLbListenerParams
+lbl_default_action k atom = fmap (\newlbl_default_action -> atom { _lbl_default_action = newlbl_default_action }) (k (_lbl_default_action atom))
+
+makeAwsLbListenerParams :: AwsArn AwsLb -> Int -> ListenerActionParams -> AwsLbListenerParams
+makeAwsLbListenerParams loadBalancerArn port' defaultAction = AwsLbListenerParams
+  { _lbl_load_balancer_arn = loadBalancerArn
+  , _lbl_port' = port'
+  , _lbl_default_action = defaultAction
+  , _lbl_protocol = LB_HTTP
+  , _lbl_ssl_policy = Nothing
+  , _lbl_certificate_arn = Nothing
+  }
+
+instance ToResourceFieldMap AwsLbListenerParams where
+  toResourceFieldMap params
+    =  rfmField "load_balancer_arn" (_lbl_load_balancer_arn params)
+    <> rfmField "port" (_lbl_port' params)
+    <> rfmOptionalDefField "protocol" LB_HTTP (_lbl_protocol params)
+    <> rfmOptionalField "ssl_policy" (_lbl_ssl_policy params)
+    <> rfmOptionalField "certificate_arn" (_lbl_certificate_arn params)
+    <> rfmField "default_action" (_lbl_default_action params)
+    
+
+instance ToResourceField AwsLbListenerParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data LoadBalancerType = LB_application | LB_network deriving (Eq)
+
+instance ToResourceField LoadBalancerType where
+    toResourceField LB_application = "application"
+    toResourceField LB_network = "network"
+
+----------------------------------------------------------------------
+
+data LoadBalancerProtocol = LB_TCP | LB_HTTP | LB_HTTPS deriving (Eq)
+
+instance ToResourceField LoadBalancerProtocol where
+    toResourceField LB_TCP = "TCP"
+    toResourceField LB_HTTP = "HTTP"
+    toResourceField LB_HTTPS = "HTTPS"
+
+----------------------------------------------------------------------
+
+data ListenerActionParams = ListenerActionParams
+  { _la_target_group_arn :: AwsArn AwsLbTargetGroup
+  , _la_type :: ListenerActionType
+  }
+  deriving (Eq)
+
+-- la_target_group_arn :: Lens' ListenerActionParams AwsArn AwsLbTargetGroup
+la_target_group_arn :: Functor f => (AwsArn AwsLbTargetGroup -> f (AwsArn AwsLbTargetGroup)) -> ListenerActionParams -> f ListenerActionParams
+la_target_group_arn k atom = fmap (\newla_target_group_arn -> atom { _la_target_group_arn = newla_target_group_arn }) (k (_la_target_group_arn atom))
+-- la_type :: Lens' ListenerActionParams ListenerActionType
+la_type :: Functor f => (ListenerActionType -> f (ListenerActionType)) -> ListenerActionParams -> f ListenerActionParams
+la_type k atom = fmap (\newla_type -> atom { _la_type = newla_type }) (k (_la_type atom))
+
+makeListenerActionParams :: AwsArn AwsLbTargetGroup -> ListenerActionType -> ListenerActionParams
+makeListenerActionParams targetGroupArn type_ = ListenerActionParams
+  { _la_target_group_arn = targetGroupArn
+  , _la_type = type_
+  }
+
+instance ToResourceFieldMap ListenerActionParams where
+  toResourceFieldMap params
+    =  rfmField "target_group_arn" (_la_target_group_arn params)
+    <> rfmField "type" (_la_type params)
+    
+
+instance ToResourceField ListenerActionParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data ListenerActionType = LA_forward deriving (Eq)
+
+instance ToResourceField ListenerActionType where
+    toResourceField LA_forward = "forward"
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLbTargetGroup to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/lb_target_group.html aws_lb_target_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lbtg_')
+
+awsLbTargetGroup :: NameElement -> Int -> LoadBalancerProtocol -> TFRef (AwsId AwsVpc) ->(AwsLbTargetGroupParams -> AwsLbTargetGroupParams) -> TF AwsLbTargetGroup
+awsLbTargetGroup name0 port protocol vpcId modf = newAwsLbTargetGroup name0 (modf (makeAwsLbTargetGroupParams port protocol vpcId))
+
+awsLbTargetGroup' :: NameElement -> Int -> LoadBalancerProtocol -> TFRef (AwsId AwsVpc) -> TF AwsLbTargetGroup
+awsLbTargetGroup' name0 port protocol vpcId = newAwsLbTargetGroup name0 (makeAwsLbTargetGroupParams port protocol vpcId)
+
+newAwsLbTargetGroup :: NameElement -> AwsLbTargetGroupParams -> TF AwsLbTargetGroup
+newAwsLbTargetGroup name0 params = do
+  rid <- mkResource "aws_lb_target_group" name0 (toResourceFieldMap params)
+  return AwsLbTargetGroup
+    { lbtg_id = resourceAttr rid "id"
+    , lbtg_arn = resourceAttr rid "arn"
+    , lbtg_name = resourceAttr rid "name"
+    , lbtg_resource = rid
+    }
+
+data AwsLbTargetGroup = AwsLbTargetGroup
+  { lbtg_id :: TFRef (AwsId AwsLbTargetGroup)
+  , lbtg_arn :: TFRef (AwsArn AwsLbTargetGroup)
+  , lbtg_name :: TFRef T.Text
+  , lbtg_resource :: ResourceId
+  }
+
+instance IsResource AwsLbTargetGroup where
+  resourceId = lbtg_resource
+
+data AwsLbTargetGroupParams = AwsLbTargetGroupParams
+  { _lbtg_port :: Int
+  , _lbtg_protocol :: LoadBalancerProtocol
+  , _lbtg_vpc_id :: TFRef (AwsId AwsVpc)
+  , _lbtg_name' :: Maybe (T.Text)
+  , _lbtg_name_prefix :: Maybe (T.Text)
+  , _lbtg_deregistration_delay :: Int
+  , _lbtg_slow_start :: Int
+  , _lbtg_proxy_protocol_v2 :: Maybe (Bool)
+  , _lbtg_stickiness :: Maybe (TargetGroupStickinessParams)
+  , _lbtg_health_check :: Maybe (TargetGroupHealthCheckParams)
+  , _lbtg_target_type :: TargetGroupTargetType
+  , _lbtg_tags :: M.Map T.Text T.Text
+  }
+
+-- lbtg_name' :: Lens' AwsLbTargetGroupParams Maybe (T.Text)
+lbtg_name' :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_name' k atom = fmap (\newlbtg_name' -> atom { _lbtg_name' = newlbtg_name' }) (k (_lbtg_name' atom))
+-- lbtg_name_prefix :: Lens' AwsLbTargetGroupParams Maybe (T.Text)
+lbtg_name_prefix :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_name_prefix k atom = fmap (\newlbtg_name_prefix -> atom { _lbtg_name_prefix = newlbtg_name_prefix }) (k (_lbtg_name_prefix atom))
+-- lbtg_port :: Lens' AwsLbTargetGroupParams Int
+lbtg_port :: Functor f => (Int -> f (Int)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_port k atom = fmap (\newlbtg_port -> atom { _lbtg_port = newlbtg_port }) (k (_lbtg_port atom))
+-- lbtg_protocol :: Lens' AwsLbTargetGroupParams LoadBalancerProtocol
+lbtg_protocol :: Functor f => (LoadBalancerProtocol -> f (LoadBalancerProtocol)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_protocol k atom = fmap (\newlbtg_protocol -> atom { _lbtg_protocol = newlbtg_protocol }) (k (_lbtg_protocol atom))
+-- lbtg_vpc_id :: Lens' AwsLbTargetGroupParams TFRef (AwsId AwsVpc)
+lbtg_vpc_id :: Functor f => (TFRef (AwsId AwsVpc) -> f (TFRef (AwsId AwsVpc))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_vpc_id k atom = fmap (\newlbtg_vpc_id -> atom { _lbtg_vpc_id = newlbtg_vpc_id }) (k (_lbtg_vpc_id atom))
+-- lbtg_deregistration_delay :: Lens' AwsLbTargetGroupParams Int
+lbtg_deregistration_delay :: Functor f => (Int -> f (Int)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_deregistration_delay k atom = fmap (\newlbtg_deregistration_delay -> atom { _lbtg_deregistration_delay = newlbtg_deregistration_delay }) (k (_lbtg_deregistration_delay atom))
+-- lbtg_slow_start :: Lens' AwsLbTargetGroupParams Int
+lbtg_slow_start :: Functor f => (Int -> f (Int)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_slow_start k atom = fmap (\newlbtg_slow_start -> atom { _lbtg_slow_start = newlbtg_slow_start }) (k (_lbtg_slow_start atom))
+-- lbtg_proxy_protocol_v2 :: Lens' AwsLbTargetGroupParams Maybe (Bool)
+lbtg_proxy_protocol_v2 :: Functor f => (Maybe (Bool) -> f (Maybe (Bool))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_proxy_protocol_v2 k atom = fmap (\newlbtg_proxy_protocol_v2 -> atom { _lbtg_proxy_protocol_v2 = newlbtg_proxy_protocol_v2 }) (k (_lbtg_proxy_protocol_v2 atom))
+-- lbtg_stickiness :: Lens' AwsLbTargetGroupParams Maybe (TargetGroupStickinessParams)
+lbtg_stickiness :: Functor f => (Maybe (TargetGroupStickinessParams) -> f (Maybe (TargetGroupStickinessParams))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_stickiness k atom = fmap (\newlbtg_stickiness -> atom { _lbtg_stickiness = newlbtg_stickiness }) (k (_lbtg_stickiness atom))
+-- lbtg_health_check :: Lens' AwsLbTargetGroupParams Maybe (TargetGroupHealthCheckParams)
+lbtg_health_check :: Functor f => (Maybe (TargetGroupHealthCheckParams) -> f (Maybe (TargetGroupHealthCheckParams))) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_health_check k atom = fmap (\newlbtg_health_check -> atom { _lbtg_health_check = newlbtg_health_check }) (k (_lbtg_health_check atom))
+-- lbtg_target_type :: Lens' AwsLbTargetGroupParams TargetGroupTargetType
+lbtg_target_type :: Functor f => (TargetGroupTargetType -> f (TargetGroupTargetType)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_target_type k atom = fmap (\newlbtg_target_type -> atom { _lbtg_target_type = newlbtg_target_type }) (k (_lbtg_target_type atom))
+-- lbtg_tags :: Lens' AwsLbTargetGroupParams M.Map T.Text T.Text
+lbtg_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsLbTargetGroupParams -> f AwsLbTargetGroupParams
+lbtg_tags k atom = fmap (\newlbtg_tags -> atom { _lbtg_tags = newlbtg_tags }) (k (_lbtg_tags atom))
+
+makeAwsLbTargetGroupParams :: Int -> LoadBalancerProtocol -> TFRef (AwsId AwsVpc) -> AwsLbTargetGroupParams
+makeAwsLbTargetGroupParams port protocol vpcId = AwsLbTargetGroupParams
+  { _lbtg_port = port
+  , _lbtg_protocol = protocol
+  , _lbtg_vpc_id = vpcId
+  , _lbtg_name' = Nothing
+  , _lbtg_name_prefix = Nothing
+  , _lbtg_deregistration_delay = 300
+  , _lbtg_slow_start = 0
+  , _lbtg_proxy_protocol_v2 = Nothing
+  , _lbtg_stickiness = Nothing
+  , _lbtg_health_check = Nothing
+  , _lbtg_target_type = TG_instance
+  , _lbtg_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsLbTargetGroupParams where
+  toResourceFieldMap params
+    =  rfmOptionalField "name" (_lbtg_name' params)
+    <> rfmOptionalField "name_prefix" (_lbtg_name_prefix params)
+    <> rfmField "port" (_lbtg_port params)
+    <> rfmField "protocol" (_lbtg_protocol params)
+    <> rfmField "vpc_id" (_lbtg_vpc_id params)
+    <> rfmOptionalDefField "deregistration_delay" 300 (_lbtg_deregistration_delay params)
+    <> rfmOptionalDefField "slow_start" 0 (_lbtg_slow_start params)
+    <> rfmOptionalField "proxy_protocol_v2" (_lbtg_proxy_protocol_v2 params)
+    <> rfmOptionalField "stickiness" (_lbtg_stickiness params)
+    <> rfmOptionalField "health_check" (_lbtg_health_check params)
+    <> rfmOptionalDefField "target_type" TG_instance (_lbtg_target_type params)
+    <> rfmOptionalDefField "tags" M.empty (_lbtg_tags params)
+    
+
+instance ToResourceField AwsLbTargetGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data TargetGroupTargetType = TG_instance | TG_ip deriving (Eq)
+
+instance ToResourceField TargetGroupTargetType where
+    toResourceField TG_instance = "instance"
+    toResourceField TG_ip = "ip"
+
+----------------------------------------------------------------------
+
+data TargetGroupStickinessParams = TargetGroupStickinessParams
+  { _tgs_type :: TargetGroupStickinessType
+  , _tgs_cookie_duration :: Int
+  , _tgs_enabled :: Bool
+  }
+  deriving (Eq)
+
+-- tgs_type :: Lens' TargetGroupStickinessParams TargetGroupStickinessType
+tgs_type :: Functor f => (TargetGroupStickinessType -> f (TargetGroupStickinessType)) -> TargetGroupStickinessParams -> f TargetGroupStickinessParams
+tgs_type k atom = fmap (\newtgs_type -> atom { _tgs_type = newtgs_type }) (k (_tgs_type atom))
+-- tgs_cookie_duration :: Lens' TargetGroupStickinessParams Int
+tgs_cookie_duration :: Functor f => (Int -> f (Int)) -> TargetGroupStickinessParams -> f TargetGroupStickinessParams
+tgs_cookie_duration k atom = fmap (\newtgs_cookie_duration -> atom { _tgs_cookie_duration = newtgs_cookie_duration }) (k (_tgs_cookie_duration atom))
+-- tgs_enabled :: Lens' TargetGroupStickinessParams Bool
+tgs_enabled :: Functor f => (Bool -> f (Bool)) -> TargetGroupStickinessParams -> f TargetGroupStickinessParams
+tgs_enabled k atom = fmap (\newtgs_enabled -> atom { _tgs_enabled = newtgs_enabled }) (k (_tgs_enabled atom))
+
+makeTargetGroupStickinessParams :: TargetGroupStickinessType -> TargetGroupStickinessParams
+makeTargetGroupStickinessParams type_ = TargetGroupStickinessParams
+  { _tgs_type = type_
+  , _tgs_cookie_duration = 86400
+  , _tgs_enabled = True
+  }
+
+instance ToResourceFieldMap TargetGroupStickinessParams where
+  toResourceFieldMap params
+    =  rfmField "type" (_tgs_type params)
+    <> rfmOptionalDefField "cookie_duration" 86400 (_tgs_cookie_duration params)
+    <> rfmOptionalDefField "enabled" True (_tgs_enabled params)
+    
+
+instance ToResourceField TargetGroupStickinessParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data TargetGroupStickinessType = TG_lb_cookie deriving (Eq)
+
+instance ToResourceField TargetGroupStickinessType where
+    toResourceField TG_lb_cookie = "lb_cookie"
+
+----------------------------------------------------------------------
+
+data TargetGroupHealthCheckParams = TargetGroupHealthCheckParams
+  { _tghc_interval :: Int
+  , _tghc_path :: Maybe (T.Text)
+  , _tghc_port :: T.Text
+  , _tghc_protocol :: LoadBalancerProtocol
+  , _tghc_timeout :: Int
+  , _tghc_healthy_threshold :: Int
+  , _tghc_unhealthy_threshold :: Int
+  , _tghc_matcher :: Maybe (T.Text)
+  }
+  deriving (Eq)
+
+-- tghc_interval :: Lens' TargetGroupHealthCheckParams Int
+tghc_interval :: Functor f => (Int -> f (Int)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_interval k atom = fmap (\newtghc_interval -> atom { _tghc_interval = newtghc_interval }) (k (_tghc_interval atom))
+-- tghc_path :: Lens' TargetGroupHealthCheckParams Maybe (T.Text)
+tghc_path :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_path k atom = fmap (\newtghc_path -> atom { _tghc_path = newtghc_path }) (k (_tghc_path atom))
+-- tghc_port :: Lens' TargetGroupHealthCheckParams T.Text
+tghc_port :: Functor f => (T.Text -> f (T.Text)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_port k atom = fmap (\newtghc_port -> atom { _tghc_port = newtghc_port }) (k (_tghc_port atom))
+-- tghc_protocol :: Lens' TargetGroupHealthCheckParams LoadBalancerProtocol
+tghc_protocol :: Functor f => (LoadBalancerProtocol -> f (LoadBalancerProtocol)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_protocol k atom = fmap (\newtghc_protocol -> atom { _tghc_protocol = newtghc_protocol }) (k (_tghc_protocol atom))
+-- tghc_timeout :: Lens' TargetGroupHealthCheckParams Int
+tghc_timeout :: Functor f => (Int -> f (Int)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_timeout k atom = fmap (\newtghc_timeout -> atom { _tghc_timeout = newtghc_timeout }) (k (_tghc_timeout atom))
+-- tghc_healthy_threshold :: Lens' TargetGroupHealthCheckParams Int
+tghc_healthy_threshold :: Functor f => (Int -> f (Int)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_healthy_threshold k atom = fmap (\newtghc_healthy_threshold -> atom { _tghc_healthy_threshold = newtghc_healthy_threshold }) (k (_tghc_healthy_threshold atom))
+-- tghc_unhealthy_threshold :: Lens' TargetGroupHealthCheckParams Int
+tghc_unhealthy_threshold :: Functor f => (Int -> f (Int)) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_unhealthy_threshold k atom = fmap (\newtghc_unhealthy_threshold -> atom { _tghc_unhealthy_threshold = newtghc_unhealthy_threshold }) (k (_tghc_unhealthy_threshold atom))
+-- tghc_matcher :: Lens' TargetGroupHealthCheckParams Maybe (T.Text)
+tghc_matcher :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> TargetGroupHealthCheckParams -> f TargetGroupHealthCheckParams
+tghc_matcher k atom = fmap (\newtghc_matcher -> atom { _tghc_matcher = newtghc_matcher }) (k (_tghc_matcher atom))
+
+makeTargetGroupHealthCheckParams ::  TargetGroupHealthCheckParams
+makeTargetGroupHealthCheckParams  = TargetGroupHealthCheckParams
+  { _tghc_interval = 30
+  , _tghc_path = Nothing
+  , _tghc_port = "traffic-port"
+  , _tghc_protocol = LB_HTTP
+  , _tghc_timeout = 5
+  , _tghc_healthy_threshold = 3
+  , _tghc_unhealthy_threshold = 3
+  , _tghc_matcher = Nothing
+  }
+
+instance ToResourceFieldMap TargetGroupHealthCheckParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "interval" 30 (_tghc_interval params)
+    <> rfmOptionalField "path" (_tghc_path params)
+    <> rfmOptionalDefField "port" "traffic-port" (_tghc_port params)
+    <> rfmOptionalDefField "protocol" LB_HTTP (_tghc_protocol params)
+    <> rfmOptionalDefField "timeout" 5 (_tghc_timeout params)
+    <> rfmOptionalDefField "healthy_threshold" 3 (_tghc_healthy_threshold params)
+    <> rfmOptionalDefField "unhealthy_threshold" 3 (_tghc_unhealthy_threshold params)
+    <> rfmOptionalField "matcher" (_tghc_matcher params)
+    
+
+instance ToResourceField TargetGroupHealthCheckParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLbTargetGroupAttachment to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/lb_target_group_attachment.html aws_lb_target_group_attachment> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lbtga_')
+
+awsLbTargetGroupAttachment :: NameElement -> AwsArn AwsLbTargetGroup -> T.Text ->(AwsLbTargetGroupAttachmentParams -> AwsLbTargetGroupAttachmentParams) -> TF AwsLbTargetGroupAttachment
+awsLbTargetGroupAttachment name0 targetGroupArn targetId modf = newAwsLbTargetGroupAttachment name0 (modf (makeAwsLbTargetGroupAttachmentParams targetGroupArn targetId))
+
+awsLbTargetGroupAttachment' :: NameElement -> AwsArn AwsLbTargetGroup -> T.Text -> TF AwsLbTargetGroupAttachment
+awsLbTargetGroupAttachment' name0 targetGroupArn targetId = newAwsLbTargetGroupAttachment name0 (makeAwsLbTargetGroupAttachmentParams targetGroupArn targetId)
+
+newAwsLbTargetGroupAttachment :: NameElement -> AwsLbTargetGroupAttachmentParams -> TF AwsLbTargetGroupAttachment
+newAwsLbTargetGroupAttachment name0 params = do
+  rid <- mkResource "aws_lb_target_group_attachment" name0 (toResourceFieldMap params)
+  return AwsLbTargetGroupAttachment
+    { lbtga_id = resourceAttr rid "id"
+    , lbtga_resource = rid
+    }
+
+data AwsLbTargetGroupAttachment = AwsLbTargetGroupAttachment
+  { lbtga_id :: TFRef (AwsId AwsLbTargetGroupAttachment)
+  , lbtga_resource :: ResourceId
+  }
+
+instance IsResource AwsLbTargetGroupAttachment where
+  resourceId = lbtga_resource
+
+data AwsLbTargetGroupAttachmentParams = AwsLbTargetGroupAttachmentParams
+  { _lbtga_target_group_arn :: AwsArn AwsLbTargetGroup
+  , _lbtga_target_id :: T.Text
+  , _lbtga_port :: Maybe (Int)
+  , _lbtga_availability_zone :: Maybe (AvailabilityZone)
+  }
+
+-- lbtga_target_group_arn :: Lens' AwsLbTargetGroupAttachmentParams AwsArn AwsLbTargetGroup
+lbtga_target_group_arn :: Functor f => (AwsArn AwsLbTargetGroup -> f (AwsArn AwsLbTargetGroup)) -> AwsLbTargetGroupAttachmentParams -> f AwsLbTargetGroupAttachmentParams
+lbtga_target_group_arn k atom = fmap (\newlbtga_target_group_arn -> atom { _lbtga_target_group_arn = newlbtga_target_group_arn }) (k (_lbtga_target_group_arn atom))
+-- lbtga_target_id :: Lens' AwsLbTargetGroupAttachmentParams T.Text
+lbtga_target_id :: Functor f => (T.Text -> f (T.Text)) -> AwsLbTargetGroupAttachmentParams -> f AwsLbTargetGroupAttachmentParams
+lbtga_target_id k atom = fmap (\newlbtga_target_id -> atom { _lbtga_target_id = newlbtga_target_id }) (k (_lbtga_target_id atom))
+-- lbtga_port :: Lens' AwsLbTargetGroupAttachmentParams Maybe (Int)
+lbtga_port :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsLbTargetGroupAttachmentParams -> f AwsLbTargetGroupAttachmentParams
+lbtga_port k atom = fmap (\newlbtga_port -> atom { _lbtga_port = newlbtga_port }) (k (_lbtga_port atom))
+-- lbtga_availability_zone :: Lens' AwsLbTargetGroupAttachmentParams Maybe (AvailabilityZone)
+lbtga_availability_zone :: Functor f => (Maybe (AvailabilityZone) -> f (Maybe (AvailabilityZone))) -> AwsLbTargetGroupAttachmentParams -> f AwsLbTargetGroupAttachmentParams
+lbtga_availability_zone k atom = fmap (\newlbtga_availability_zone -> atom { _lbtga_availability_zone = newlbtga_availability_zone }) (k (_lbtga_availability_zone atom))
+
+makeAwsLbTargetGroupAttachmentParams :: AwsArn AwsLbTargetGroup -> T.Text -> AwsLbTargetGroupAttachmentParams
+makeAwsLbTargetGroupAttachmentParams targetGroupArn targetId = AwsLbTargetGroupAttachmentParams
+  { _lbtga_target_group_arn = targetGroupArn
+  , _lbtga_target_id = targetId
+  , _lbtga_port = Nothing
+  , _lbtga_availability_zone = Nothing
+  }
+
+instance ToResourceFieldMap AwsLbTargetGroupAttachmentParams where
+  toResourceFieldMap params
+    =  rfmField "target_group_arn" (_lbtga_target_group_arn params)
+    <> rfmField "target_id" (_lbtga_target_id params)
+    <> rfmOptionalField "port" (_lbtga_port params)
+    <> rfmOptionalField "availability_zone" (_lbtga_availability_zone params)
+    
+
+instance ToResourceField AwsLbTargetGroupAttachmentParams where
   toResourceField = RF_Map . toResourceFieldMap 

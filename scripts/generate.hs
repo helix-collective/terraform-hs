@@ -36,6 +36,14 @@ awsHeader = clines
     , "type HostedZoneId = T.Text"
     , "type Route53RecordType = T.Text"
     , ""
+    , "-- A typed ARN"
+    , "newtype AwsArn t = AwsArn {"
+    , "  tArn :: Arn"
+    , "} deriving (Eq);"
+    , ""
+    , "instance ToResourceField (AwsArn t) where"
+    , "  toResourceField (AwsArn t) = toResourceField t"
+    , ""
     , "-- | Add an aws provider to the resource graph."
     , "--"
     , "-- See the original <https://www.terraform.io/docs/providers/aws/index.html terraform documentation>"
@@ -95,6 +103,7 @@ awsResources =
     , ("cidr_block", NamedType "CidrBlock", Required)
     , ("map_public_ip_on_launch", NamedType "Bool", OptionalWithDefault "False")
     , ("availability_zone", NamedType "AvailabilityZone", OptionalWithDefault "\"\"")
+
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
     [ ("id", AwsIdRef "aws_subnet")
@@ -301,7 +310,7 @@ awsResources =
     "https://www.terraform.io/docs/providers/aws/r/autoscaling_attachment.html"
     [ ("autoscaling_group_name", NamedType "T.Text", Required)
     , ("elb", NamedType "T.Text", Optional)
-    , ("alb_target_group_arn", NamedType "T.Text", Optional)
+    , ("alb_target_group_arn", NamedType "AwsArn AwsLbTargetGroup", Optional)
     ]
     [
     ]
@@ -581,6 +590,110 @@ awsResources =
     , ("domain_id", TFRef "T.Text")
     , ("endpoint", TFRef "T.Text")
     ]
+
+  , resourceCode "aws_lb" "lb"
+    "https://www.terraform.io/docs/providers/aws/r/lb.html"
+    [ ("name", NamedType "T.Text", Optional)
+    , ("name_prefix", NamedType "T.Text", Optional)
+    , ("internal", NamedType "Bool", OptionalWithDefault "False")
+    , ("load_balancer_type", NamedType "LoadBalancerType", OptionalWithDefault "LB_application")
+    , ("security_groups", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
+    , ("access_logs", NamedType "AccessLogsParams", Optional)
+    , ("subnets", FTList (AwsIdRef "aws_subnet"), OptionalWithDefault "[]")
+    , ("subnet_mapping", NamedType "SubnetMappingParams", Optional)
+    , ("idle_timeout", NamedType "Int", OptionalWithDefault "60")
+    , ("enable_deletion_protection", NamedType "Bool", OptionalWithDefault "False")
+    , ("enable_cross_zone_load_balancing", NamedType "Bool", OptionalWithDefault "False")
+    , ("enable_http2", NamedType "Bool", OptionalWithDefault "True")
+    , ("ip_address_type", NamedType "T.Text", Optional)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_lb")
+    , ("arn", TFRef "AwsArn AwsLb")
+    , ("dns_name", TFRef "T.Text")
+    , ("canonical_hosted_zone_id", TFRef "T.Text")
+    , ("zone_id", TFRef "T.Text")
+    ]
+
+  , fieldsCode "SubnetMapping" "sn" True
+    [ ("subnet_id",     AwsIdRef "aws_subnet",  Required)
+    , ("allocation_id", AwsIdRef "aws_eip", Required)
+    ]
+
+  , resourceCode "aws_lb_listener" "lbl"
+    "https://www.terraform.io/docs/providers/aws/r/lb_listener.html"
+    [ ("load_balancer_arn", NamedType "AwsArn AwsLb", Required)
+    , ("port'", NamedType "Int", Required)
+    , ("protocol", NamedType "LoadBalancerProtocol", OptionalWithDefault "LB_HTTP")
+    , ("ssl_policy", NamedType "T.Text", Optional)
+    , ("certificate_arn", NamedType "Arn", Optional)
+    , ("default_action", NamedType "ListenerActionParams", Required)
+    ]
+    [ ("id", AwsIdRef "aws_lb_listener")
+    , ("arn", TFRef "AwsArn AwsLbListener")
+    ]
+
+  , enumCode "LoadBalancerType" "LB" ["application","network"]
+  , enumCode "LoadBalancerProtocol" "LB" ["TCP","HTTP", "HTTPS"]
+
+  , fieldsCode "ListenerAction" "la" True
+    [ ("target_group_arn", NamedType "AwsArn AwsLbTargetGroup",  Required)
+    , ("type", NamedType "ListenerActionType", Required)
+    ]
+
+  , enumCode "ListenerActionType" "LA" ["forward"]
+
+  , resourceCode "aws_lb_target_group" "lbtg"
+    "https://www.terraform.io/docs/providers/aws/r/lb_target_group.html"
+    [ ("name'", NamedType "T.Text", Optional)
+    , ("name_prefix", NamedType "T.Text", Optional)
+    , ("port", NamedType "Int", Required)
+    , ("protocol", NamedType "LoadBalancerProtocol", Required)
+    , ("vpc_id", AwsIdRef "aws_vpc", Required)
+    , ("deregistration_delay", NamedType "Int", OptionalWithDefault "300")
+    , ("slow_start", NamedType "Int", OptionalWithDefault "0")
+    , ("proxy_protocol_v2", NamedType "Bool", Optional)
+    , ("stickiness", NamedType "TargetGroupStickinessParams", Optional)
+    , ("health_check", NamedType "TargetGroupHealthCheckParams", Optional)
+    , ("target_type", NamedType "TargetGroupTargetType", OptionalWithDefault "TG_instance")
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_lb_target_group")
+    , ("arn", TFRef "AwsArn AwsLbTargetGroup")
+    , ("name", TFRef "T.Text")
+    ]
+
+  , enumCode "TargetGroupTargetType" "TG" ["instance", "ip"]
+
+  , fieldsCode "TargetGroupStickiness" "tgs" True
+    [ ("type", NamedType "TargetGroupStickinessType", Required)
+    , ("cookie_duration", NamedType "Int", OptionalWithDefault "86400")
+    , ("enabled", NamedType "Bool", OptionalWithDefault "True")
+    ]
+
+  , enumCode "TargetGroupStickinessType" "TG" ["lb_cookie"]
+
+  , fieldsCode "TargetGroupHealthCheck" "tghc" True
+    [ ("interval", NamedType "Int", OptionalWithDefault "30")
+    , ("path", NamedType "T.Text", Optional)
+    , ("port", NamedType "T.Text", OptionalWithDefault "\"traffic-port\"")
+    , ("protocol", NamedType "LoadBalancerProtocol", OptionalWithDefault "LB_HTTP")
+    , ("timeout", NamedType "Int", OptionalWithDefault "5")
+    , ("healthy_threshold", NamedType "Int", OptionalWithDefault "3")
+    , ("unhealthy_threshold", NamedType "Int", OptionalWithDefault "3")
+    , ("matcher", NamedType "T.Text", Optional)
+    ]
+
+  , resourceCode "aws_lb_target_group_attachment" "lbtga"
+    "https://www.terraform.io/docs/providers/aws/r/lb_target_group_attachment.html"
+    [ ("target_group_arn", NamedType "AwsArn AwsLbTargetGroup",  Required)
+    , ("target_id", NamedType "T.Text", Required)
+    , ("port", NamedType "Int", Optional)
+    , ("availability_zone", NamedType "AvailabilityZone", Optional)
+    ]
+    [ ("id", AwsIdRef "aws_lb_target_group_attachment")
+    ]
+
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
@@ -624,6 +737,14 @@ cgroup begin sep end (t0:ts) = CLine (begin <> t0) <> cgroup1 ts
     cgroup1 [] = CLine end
     cgroup1 (t1:ts) = CLine (sep <> t1) <> cgroup1 ts
 
+enumCode :: T.Text -> T.Text -> [T.Text] -> Code
+enumCode htypename fieldprefix values
+  =  mconcat (intersperse cblank [decl,toResourceInstance])
+  where
+    decl = ctemplate "data $1 = $2 deriving (Eq)" [htypename,T.intercalate " | " [fieldprefix <> "_" <> v | v <- values]]
+    toResourceInstance
+      =  ctemplate "instance ToResourceField $1 where" [htypename]
+      <> mconcat [CIndent $ ctemplate "  toResourceField $1_$2 = \"$2\"" [fieldprefix,v] | v <- values]
 
 fieldsCode :: T.Text -> T.Text -> Bool -> [(T.Text, FieldType, FieldMode)] -> Code
 fieldsCode htypename fieldprefix deriveInstances args
@@ -776,7 +897,9 @@ optionalDefault  Optional = "Nothing"
 optionalDefault (OptionalWithDefault def) = def
 
 hftype (NamedType t) = t
-hftype (TFRef t) = T.template "TFRef $1" [t]
+hftype (TFRef t)
+  | T.isInfixOf " " t = T.template "TFRef ($1)" [t]
+  | otherwise         = T.template "TFRef $1" [t]
 hftype (AwsIdRef t) = T.template "TFRef (AwsId $1)" [htypename t]
 hftype (FTList t) = "[" <> hftype t <> "]"
 hftype TagsMap = "M.Map T.Text T.Text"
