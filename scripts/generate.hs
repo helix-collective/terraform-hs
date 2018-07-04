@@ -506,7 +506,7 @@ awsResources =
     , ("records", FTList (TFRef "IpAddress"), OptionalWithDefault "[]")
     , ("alias", NamedType "Route53AliasParams", Optional)
     ]
-    [
+    [ ("fqdn", TFRef "T.Text")
     ]
 
   , resourceCode "aws_sqs_queue" "sqs"
@@ -626,7 +626,7 @@ awsResources =
     , ("port'", NamedType "Int", Required)
     , ("protocol", NamedType "LoadBalancerProtocol", OptionalWithDefault "LB_HTTP")
     , ("ssl_policy", NamedType "T.Text", Optional)
-    , ("certificate_arn", NamedType "Arn", Optional)
+    , ("certificate_arn", NamedType "AwsArn AwsAcmCertificate", Optional)
     , ("default_action", NamedType "ListenerActionParams", Required)
     ]
     [ ("id", AwsIdRef "aws_lb_listener")
@@ -694,6 +694,44 @@ awsResources =
     [ ("id", AwsIdRef "aws_lb_target_group_attachment")
     ]
 
+  , resourceCode "aws_lb_listener_rule" "lblr"
+    "https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html"
+    [ ("listener_arn", NamedType "AwsArn AwsLbListener",  Required)
+    , ("priority", NamedType "Int", Optional)
+    , ("action", NamedType "ListenerActionParams", Required)
+    , ("condition", NamedType "ListenerConditionParams", Required)
+    ]
+    [ ("id", AwsIdRef "aws_lb_target_group_attachment")
+    , ("arn", TFRef "AwsArn AwsLbListenerRule")
+    ]
+
+  , fieldsCode "ListenerCondition" "lblrc" True
+    [ ("field", NamedType "ListenerConditionField",  Required)
+    , ("values", FTList (NamedType "T.Text"),  Required)
+    ]
+
+  , enumCode "ListenerConditionField" "LCF" ["path-pattern","host-header"]
+
+  , resourceCode "aws_acm_certificate" "ac"
+    "https://www.terraform.io/docs/providers/aws/d/acm_certificate.html"
+    [ ("domain_name", NamedType "T.Text", Required)
+    , ("subject_alternative_names", FTList (NamedType "T.Text"),  OptionalWithDefault "[]")
+    , ("validation_method", NamedType "CertValidationMethod", Required)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_acm_certificate")
+    , ("arn", TFRef "AwsArn AwsAcmCertificate")
+    ]
+
+  , enumCode "CertValidationMethod" "CVM" ["DNS","EMAIL","NONE"]
+
+  , resourceCode "aws_acm_certificate_validation" "acv"
+    "https://www.terraform.io/docs/providers/aws/r/acm_certificate_validation.html"
+    [ ("certificate_arn", NamedType "AwsArn AwsAcmCertificate", Required)
+    , ("validation_record_fqdns", FTList (NamedType "T.Text"), OptionalWithDefault "[]")
+    ]
+    [
+    ]
   ]
 
 data FieldType = NamedType T.Text | TFRef T.Text | AwsIdRef T.Text | FTList FieldType | TagsMap
@@ -741,10 +779,11 @@ enumCode :: T.Text -> T.Text -> [T.Text] -> Code
 enumCode htypename fieldprefix values
   =  mconcat (intersperse cblank [decl,toResourceInstance])
   where
-    decl = ctemplate "data $1 = $2 deriving (Eq)" [htypename,T.intercalate " | " [fieldprefix <> "_" <> v | v <- values]]
+    decl = ctemplate "data $1 = $2 deriving (Eq)" [htypename,T.intercalate " | " [hValue v | v <- values]]
+    hValue v = fieldprefix <> "_" <>  T.replace "-" "_" v
     toResourceInstance
       =  ctemplate "instance ToResourceField $1 where" [htypename]
-      <> mconcat [CIndent $ ctemplate "  toResourceField $1_$2 = \"$2\"" [fieldprefix,v] | v <- values]
+      <> mconcat [CIndent $ ctemplate "  toResourceField $1 = \"$2\"" [hValue v,v] | v <- values]
 
 fieldsCode :: T.Text -> T.Text -> Bool -> [(T.Text, FieldType, FieldMode)] -> Code
 fieldsCode htypename fieldprefix deriveInstances args

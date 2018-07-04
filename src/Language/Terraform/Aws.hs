@@ -2791,11 +2791,13 @@ newAwsRoute53Record :: NameElement -> AwsRoute53RecordParams -> TF AwsRoute53Rec
 newAwsRoute53Record name0 params = do
   rid <- mkResource "aws_route53_record" name0 (toResourceFieldMap params)
   return AwsRoute53Record
-    { r53r_resource = rid
+    { r53r_fqdn = resourceAttr rid "fqdn"
+    , r53r_resource = rid
     }
 
 data AwsRoute53Record = AwsRoute53Record
-  { r53r_resource :: ResourceId
+  { r53r_fqdn :: TFRef T.Text
+  , r53r_resource :: ResourceId
   }
 
 instance IsResource AwsRoute53Record where
@@ -3568,7 +3570,7 @@ data AwsLbListenerParams = AwsLbListenerParams
   , _lbl_default_action :: ListenerActionParams
   , _lbl_protocol :: LoadBalancerProtocol
   , _lbl_ssl_policy :: Maybe (T.Text)
-  , _lbl_certificate_arn :: Maybe (Arn)
+  , _lbl_certificate_arn :: Maybe (AwsArn AwsAcmCertificate)
   }
 
 -- lbl_load_balancer_arn :: Lens' AwsLbListenerParams AwsArn AwsLb
@@ -3583,8 +3585,8 @@ lbl_protocol k atom = fmap (\newlbl_protocol -> atom { _lbl_protocol = newlbl_pr
 -- lbl_ssl_policy :: Lens' AwsLbListenerParams Maybe (T.Text)
 lbl_ssl_policy :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsLbListenerParams -> f AwsLbListenerParams
 lbl_ssl_policy k atom = fmap (\newlbl_ssl_policy -> atom { _lbl_ssl_policy = newlbl_ssl_policy }) (k (_lbl_ssl_policy atom))
--- lbl_certificate_arn :: Lens' AwsLbListenerParams Maybe (Arn)
-lbl_certificate_arn :: Functor f => (Maybe (Arn) -> f (Maybe (Arn))) -> AwsLbListenerParams -> f AwsLbListenerParams
+-- lbl_certificate_arn :: Lens' AwsLbListenerParams Maybe (AwsArn AwsAcmCertificate)
+lbl_certificate_arn :: Functor f => (Maybe (AwsArn AwsAcmCertificate) -> f (Maybe (AwsArn AwsAcmCertificate))) -> AwsLbListenerParams -> f AwsLbListenerParams
 lbl_certificate_arn k atom = fmap (\newlbl_certificate_arn -> atom { _lbl_certificate_arn = newlbl_certificate_arn }) (k (_lbl_certificate_arn atom))
 -- lbl_default_action :: Lens' AwsLbListenerParams ListenerActionParams
 lbl_default_action :: Functor f => (ListenerActionParams -> f (ListenerActionParams)) -> AwsLbListenerParams -> f AwsLbListenerParams
@@ -3972,4 +3974,248 @@ instance ToResourceFieldMap AwsLbTargetGroupAttachmentParams where
     
 
 instance ToResourceField AwsLbTargetGroupAttachmentParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsLbListenerRule to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html aws_lb_listener_rule> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'lblr_')
+
+awsLbListenerRule :: NameElement -> AwsArn AwsLbListener -> ListenerActionParams -> ListenerConditionParams ->(AwsLbListenerRuleParams -> AwsLbListenerRuleParams) -> TF AwsLbListenerRule
+awsLbListenerRule name0 listenerArn action condition modf = newAwsLbListenerRule name0 (modf (makeAwsLbListenerRuleParams listenerArn action condition))
+
+awsLbListenerRule' :: NameElement -> AwsArn AwsLbListener -> ListenerActionParams -> ListenerConditionParams -> TF AwsLbListenerRule
+awsLbListenerRule' name0 listenerArn action condition = newAwsLbListenerRule name0 (makeAwsLbListenerRuleParams listenerArn action condition)
+
+newAwsLbListenerRule :: NameElement -> AwsLbListenerRuleParams -> TF AwsLbListenerRule
+newAwsLbListenerRule name0 params = do
+  rid <- mkResource "aws_lb_listener_rule" name0 (toResourceFieldMap params)
+  return AwsLbListenerRule
+    { lblr_id = resourceAttr rid "id"
+    , lblr_arn = resourceAttr rid "arn"
+    , lblr_resource = rid
+    }
+
+data AwsLbListenerRule = AwsLbListenerRule
+  { lblr_id :: TFRef (AwsId AwsLbTargetGroupAttachment)
+  , lblr_arn :: TFRef (AwsArn AwsLbListenerRule)
+  , lblr_resource :: ResourceId
+  }
+
+instance IsResource AwsLbListenerRule where
+  resourceId = lblr_resource
+
+data AwsLbListenerRuleParams = AwsLbListenerRuleParams
+  { _lblr_listener_arn :: AwsArn AwsLbListener
+  , _lblr_action :: ListenerActionParams
+  , _lblr_condition :: ListenerConditionParams
+  , _lblr_priority :: Maybe (Int)
+  }
+
+-- lblr_listener_arn :: Lens' AwsLbListenerRuleParams AwsArn AwsLbListener
+lblr_listener_arn :: Functor f => (AwsArn AwsLbListener -> f (AwsArn AwsLbListener)) -> AwsLbListenerRuleParams -> f AwsLbListenerRuleParams
+lblr_listener_arn k atom = fmap (\newlblr_listener_arn -> atom { _lblr_listener_arn = newlblr_listener_arn }) (k (_lblr_listener_arn atom))
+-- lblr_priority :: Lens' AwsLbListenerRuleParams Maybe (Int)
+lblr_priority :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsLbListenerRuleParams -> f AwsLbListenerRuleParams
+lblr_priority k atom = fmap (\newlblr_priority -> atom { _lblr_priority = newlblr_priority }) (k (_lblr_priority atom))
+-- lblr_action :: Lens' AwsLbListenerRuleParams ListenerActionParams
+lblr_action :: Functor f => (ListenerActionParams -> f (ListenerActionParams)) -> AwsLbListenerRuleParams -> f AwsLbListenerRuleParams
+lblr_action k atom = fmap (\newlblr_action -> atom { _lblr_action = newlblr_action }) (k (_lblr_action atom))
+-- lblr_condition :: Lens' AwsLbListenerRuleParams ListenerConditionParams
+lblr_condition :: Functor f => (ListenerConditionParams -> f (ListenerConditionParams)) -> AwsLbListenerRuleParams -> f AwsLbListenerRuleParams
+lblr_condition k atom = fmap (\newlblr_condition -> atom { _lblr_condition = newlblr_condition }) (k (_lblr_condition atom))
+
+makeAwsLbListenerRuleParams :: AwsArn AwsLbListener -> ListenerActionParams -> ListenerConditionParams -> AwsLbListenerRuleParams
+makeAwsLbListenerRuleParams listenerArn action condition = AwsLbListenerRuleParams
+  { _lblr_listener_arn = listenerArn
+  , _lblr_action = action
+  , _lblr_condition = condition
+  , _lblr_priority = Nothing
+  }
+
+instance ToResourceFieldMap AwsLbListenerRuleParams where
+  toResourceFieldMap params
+    =  rfmField "listener_arn" (_lblr_listener_arn params)
+    <> rfmOptionalField "priority" (_lblr_priority params)
+    <> rfmField "action" (_lblr_action params)
+    <> rfmField "condition" (_lblr_condition params)
+    
+
+instance ToResourceField AwsLbListenerRuleParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data ListenerConditionParams = ListenerConditionParams
+  { _lblrc_field :: ListenerConditionField
+  , _lblrc_values :: [T.Text]
+  }
+  deriving (Eq)
+
+-- lblrc_field :: Lens' ListenerConditionParams ListenerConditionField
+lblrc_field :: Functor f => (ListenerConditionField -> f (ListenerConditionField)) -> ListenerConditionParams -> f ListenerConditionParams
+lblrc_field k atom = fmap (\newlblrc_field -> atom { _lblrc_field = newlblrc_field }) (k (_lblrc_field atom))
+-- lblrc_values :: Lens' ListenerConditionParams [T.Text]
+lblrc_values :: Functor f => ([T.Text] -> f ([T.Text])) -> ListenerConditionParams -> f ListenerConditionParams
+lblrc_values k atom = fmap (\newlblrc_values -> atom { _lblrc_values = newlblrc_values }) (k (_lblrc_values atom))
+
+makeListenerConditionParams :: ListenerConditionField -> [T.Text] -> ListenerConditionParams
+makeListenerConditionParams field values = ListenerConditionParams
+  { _lblrc_field = field
+  , _lblrc_values = values
+  }
+
+instance ToResourceFieldMap ListenerConditionParams where
+  toResourceFieldMap params
+    =  rfmField "field" (_lblrc_field params)
+    <> rfmField "values" (_lblrc_values params)
+    
+
+instance ToResourceField ListenerConditionParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data ListenerConditionField = LCF_path_pattern | LCF_host_header deriving (Eq)
+
+instance ToResourceField ListenerConditionField where
+    toResourceField LCF_path_pattern = "path-pattern"
+    toResourceField LCF_host_header = "host-header"
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsAcmCertificate to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/d/acm_certificate.html aws_acm_certificate> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'ac_')
+
+awsAcmCertificate :: NameElement -> T.Text -> CertValidationMethod ->(AwsAcmCertificateParams -> AwsAcmCertificateParams) -> TF AwsAcmCertificate
+awsAcmCertificate name0 domainName validationMethod modf = newAwsAcmCertificate name0 (modf (makeAwsAcmCertificateParams domainName validationMethod))
+
+awsAcmCertificate' :: NameElement -> T.Text -> CertValidationMethod -> TF AwsAcmCertificate
+awsAcmCertificate' name0 domainName validationMethod = newAwsAcmCertificate name0 (makeAwsAcmCertificateParams domainName validationMethod)
+
+newAwsAcmCertificate :: NameElement -> AwsAcmCertificateParams -> TF AwsAcmCertificate
+newAwsAcmCertificate name0 params = do
+  rid <- mkResource "aws_acm_certificate" name0 (toResourceFieldMap params)
+  return AwsAcmCertificate
+    { ac_id = resourceAttr rid "id"
+    , ac_arn = resourceAttr rid "arn"
+    , ac_resource = rid
+    }
+
+data AwsAcmCertificate = AwsAcmCertificate
+  { ac_id :: TFRef (AwsId AwsAcmCertificate)
+  , ac_arn :: TFRef (AwsArn AwsAcmCertificate)
+  , ac_resource :: ResourceId
+  }
+
+instance IsResource AwsAcmCertificate where
+  resourceId = ac_resource
+
+data AwsAcmCertificateParams = AwsAcmCertificateParams
+  { _ac_domain_name :: T.Text
+  , _ac_validation_method :: CertValidationMethod
+  , _ac_subject_alternative_names :: [T.Text]
+  , _ac_tags :: M.Map T.Text T.Text
+  }
+
+-- ac_domain_name :: Lens' AwsAcmCertificateParams T.Text
+ac_domain_name :: Functor f => (T.Text -> f (T.Text)) -> AwsAcmCertificateParams -> f AwsAcmCertificateParams
+ac_domain_name k atom = fmap (\newac_domain_name -> atom { _ac_domain_name = newac_domain_name }) (k (_ac_domain_name atom))
+-- ac_subject_alternative_names :: Lens' AwsAcmCertificateParams [T.Text]
+ac_subject_alternative_names :: Functor f => ([T.Text] -> f ([T.Text])) -> AwsAcmCertificateParams -> f AwsAcmCertificateParams
+ac_subject_alternative_names k atom = fmap (\newac_subject_alternative_names -> atom { _ac_subject_alternative_names = newac_subject_alternative_names }) (k (_ac_subject_alternative_names atom))
+-- ac_validation_method :: Lens' AwsAcmCertificateParams CertValidationMethod
+ac_validation_method :: Functor f => (CertValidationMethod -> f (CertValidationMethod)) -> AwsAcmCertificateParams -> f AwsAcmCertificateParams
+ac_validation_method k atom = fmap (\newac_validation_method -> atom { _ac_validation_method = newac_validation_method }) (k (_ac_validation_method atom))
+-- ac_tags :: Lens' AwsAcmCertificateParams M.Map T.Text T.Text
+ac_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsAcmCertificateParams -> f AwsAcmCertificateParams
+ac_tags k atom = fmap (\newac_tags -> atom { _ac_tags = newac_tags }) (k (_ac_tags atom))
+
+makeAwsAcmCertificateParams :: T.Text -> CertValidationMethod -> AwsAcmCertificateParams
+makeAwsAcmCertificateParams domainName validationMethod = AwsAcmCertificateParams
+  { _ac_domain_name = domainName
+  , _ac_validation_method = validationMethod
+  , _ac_subject_alternative_names = []
+  , _ac_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsAcmCertificateParams where
+  toResourceFieldMap params
+    =  rfmField "domain_name" (_ac_domain_name params)
+    <> rfmOptionalDefField "subject_alternative_names" [] (_ac_subject_alternative_names params)
+    <> rfmField "validation_method" (_ac_validation_method params)
+    <> rfmOptionalDefField "tags" M.empty (_ac_tags params)
+    
+
+instance ToResourceField AwsAcmCertificateParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data CertValidationMethod = CVM_DNS | CVM_EMAIL | CVM_NONE deriving (Eq)
+
+instance ToResourceField CertValidationMethod where
+    toResourceField CVM_DNS = "DNS"
+    toResourceField CVM_EMAIL = "EMAIL"
+    toResourceField CVM_NONE = "NONE"
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsAcmCertificateValidation to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/acm_certificate_validation.html aws_acm_certificate_validation> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'acv_')
+
+awsAcmCertificateValidation :: NameElement -> AwsArn AwsAcmCertificate ->(AwsAcmCertificateValidationParams -> AwsAcmCertificateValidationParams) -> TF AwsAcmCertificateValidation
+awsAcmCertificateValidation name0 certificateArn modf = newAwsAcmCertificateValidation name0 (modf (makeAwsAcmCertificateValidationParams certificateArn))
+
+awsAcmCertificateValidation' :: NameElement -> AwsArn AwsAcmCertificate -> TF AwsAcmCertificateValidation
+awsAcmCertificateValidation' name0 certificateArn = newAwsAcmCertificateValidation name0 (makeAwsAcmCertificateValidationParams certificateArn)
+
+newAwsAcmCertificateValidation :: NameElement -> AwsAcmCertificateValidationParams -> TF AwsAcmCertificateValidation
+newAwsAcmCertificateValidation name0 params = do
+  rid <- mkResource "aws_acm_certificate_validation" name0 (toResourceFieldMap params)
+  return AwsAcmCertificateValidation
+    { acv_resource = rid
+    }
+
+data AwsAcmCertificateValidation = AwsAcmCertificateValidation
+  { acv_resource :: ResourceId
+  }
+
+instance IsResource AwsAcmCertificateValidation where
+  resourceId = acv_resource
+
+data AwsAcmCertificateValidationParams = AwsAcmCertificateValidationParams
+  { _acv_certificate_arn :: AwsArn AwsAcmCertificate
+  , _acv_validation_record_fqdns :: [T.Text]
+  }
+
+-- acv_certificate_arn :: Lens' AwsAcmCertificateValidationParams AwsArn AwsAcmCertificate
+acv_certificate_arn :: Functor f => (AwsArn AwsAcmCertificate -> f (AwsArn AwsAcmCertificate)) -> AwsAcmCertificateValidationParams -> f AwsAcmCertificateValidationParams
+acv_certificate_arn k atom = fmap (\newacv_certificate_arn -> atom { _acv_certificate_arn = newacv_certificate_arn }) (k (_acv_certificate_arn atom))
+-- acv_validation_record_fqdns :: Lens' AwsAcmCertificateValidationParams [T.Text]
+acv_validation_record_fqdns :: Functor f => ([T.Text] -> f ([T.Text])) -> AwsAcmCertificateValidationParams -> f AwsAcmCertificateValidationParams
+acv_validation_record_fqdns k atom = fmap (\newacv_validation_record_fqdns -> atom { _acv_validation_record_fqdns = newacv_validation_record_fqdns }) (k (_acv_validation_record_fqdns atom))
+
+makeAwsAcmCertificateValidationParams :: AwsArn AwsAcmCertificate -> AwsAcmCertificateValidationParams
+makeAwsAcmCertificateValidationParams certificateArn = AwsAcmCertificateValidationParams
+  { _acv_certificate_arn = certificateArn
+  , _acv_validation_record_fqdns = []
+  }
+
+instance ToResourceFieldMap AwsAcmCertificateValidationParams where
+  toResourceFieldMap params
+    =  rfmField "certificate_arn" (_acv_certificate_arn params)
+    <> rfmOptionalDefField "validation_record_fqdns" [] (_acv_validation_record_fqdns params)
+    
+
+instance ToResourceField AwsAcmCertificateValidationParams where
   toResourceField = RF_Map . toResourceFieldMap 
