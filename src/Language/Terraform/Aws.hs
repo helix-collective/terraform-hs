@@ -986,10 +986,10 @@ instance ToResourceField AwsLaunchConfigurationParams where
 -- (In this binding attribute and argument names all have the prefix 'ag_')
 
 awsAutoscalingGroup :: NameElement -> Int -> Int -> TFRef T.Text ->(AwsAutoscalingGroupParams -> AwsAutoscalingGroupParams) -> TF AwsAutoscalingGroup
-awsAutoscalingGroup name0 maxSize minSize launchConfiguration modf = newAwsAutoscalingGroup name0 (modf (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration))
+awsAutoscalingGroup name0 minSize maxSize launchConfiguration modf = newAwsAutoscalingGroup name0 (modf (makeAwsAutoscalingGroupParams minSize maxSize launchConfiguration))
 
 awsAutoscalingGroup' :: NameElement -> Int -> Int -> TFRef T.Text -> TF AwsAutoscalingGroup
-awsAutoscalingGroup' name0 maxSize minSize launchConfiguration = newAwsAutoscalingGroup name0 (makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration)
+awsAutoscalingGroup' name0 minSize maxSize launchConfiguration = newAwsAutoscalingGroup name0 (makeAwsAutoscalingGroupParams minSize maxSize launchConfiguration)
 
 newAwsAutoscalingGroup :: NameElement -> AwsAutoscalingGroupParams -> TF AwsAutoscalingGroup
 newAwsAutoscalingGroup name0 params = do
@@ -1012,8 +1012,8 @@ instance IsResource AwsAutoscalingGroup where
   resourceId = ag_resource
 
 data AwsAutoscalingGroupParams = AwsAutoscalingGroupParams
-  { _ag_max_size :: Int
-  , _ag_min_size :: Int
+  { _ag_min_size :: Int
+  , _ag_max_size :: Int
   , _ag_launch_configuration :: TFRef T.Text
   , _ag_name' :: T.Text
   , _ag_name_prefix :: T.Text
@@ -1028,12 +1028,12 @@ ag_name' k atom = fmap (\newag_name' -> atom { _ag_name' = newag_name' }) (k (_a
 -- ag_name_prefix :: Lens' AwsAutoscalingGroupParams T.Text
 ag_name_prefix :: Functor f => (T.Text -> f (T.Text)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
 ag_name_prefix k atom = fmap (\newag_name_prefix -> atom { _ag_name_prefix = newag_name_prefix }) (k (_ag_name_prefix atom))
--- ag_max_size :: Lens' AwsAutoscalingGroupParams Int
-ag_max_size :: Functor f => (Int -> f (Int)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
-ag_max_size k atom = fmap (\newag_max_size -> atom { _ag_max_size = newag_max_size }) (k (_ag_max_size atom))
 -- ag_min_size :: Lens' AwsAutoscalingGroupParams Int
 ag_min_size :: Functor f => (Int -> f (Int)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
 ag_min_size k atom = fmap (\newag_min_size -> atom { _ag_min_size = newag_min_size }) (k (_ag_min_size atom))
+-- ag_max_size :: Lens' AwsAutoscalingGroupParams Int
+ag_max_size :: Functor f => (Int -> f (Int)) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
+ag_max_size k atom = fmap (\newag_max_size -> atom { _ag_max_size = newag_max_size }) (k (_ag_max_size atom))
 -- ag_vpc_zone_identifier :: Lens' AwsAutoscalingGroupParams [TFRef (AwsId AwsSubnet)]
 ag_vpc_zone_identifier :: Functor f => ([TFRef (AwsId AwsSubnet)] -> f ([TFRef (AwsId AwsSubnet)])) -> AwsAutoscalingGroupParams -> f AwsAutoscalingGroupParams
 ag_vpc_zone_identifier k atom = fmap (\newag_vpc_zone_identifier -> atom { _ag_vpc_zone_identifier = newag_vpc_zone_identifier }) (k (_ag_vpc_zone_identifier atom))
@@ -1048,9 +1048,9 @@ ag_tag :: Functor f => ([AsgTagParams] -> f ([AsgTagParams])) -> AwsAutoscalingG
 ag_tag k atom = fmap (\newag_tag -> atom { _ag_tag = newag_tag }) (k (_ag_tag atom))
 
 makeAwsAutoscalingGroupParams :: Int -> Int -> TFRef T.Text -> AwsAutoscalingGroupParams
-makeAwsAutoscalingGroupParams maxSize minSize launchConfiguration = AwsAutoscalingGroupParams
-  { _ag_max_size = maxSize
-  , _ag_min_size = minSize
+makeAwsAutoscalingGroupParams minSize maxSize launchConfiguration = AwsAutoscalingGroupParams
+  { _ag_min_size = minSize
+  , _ag_max_size = maxSize
   , _ag_launch_configuration = launchConfiguration
   , _ag_name' = ""
   , _ag_name_prefix = ""
@@ -1063,8 +1063,8 @@ instance ToResourceFieldMap AwsAutoscalingGroupParams where
   toResourceFieldMap params
     =  rfmOptionalDefField "name" "" (_ag_name' params)
     <> rfmOptionalDefField "name_prefix" "" (_ag_name_prefix params)
-    <> rfmField "max_size" (_ag_max_size params)
     <> rfmField "min_size" (_ag_min_size params)
+    <> rfmField "max_size" (_ag_max_size params)
     <> rfmOptionalDefField "vpc_zone_identifier" [] (_ag_vpc_zone_identifier params)
     <> rfmField "launch_configuration" (_ag_launch_configuration params)
     <> rfmOptionalDefField "load_balancers" [] (_ag_load_balancers params)

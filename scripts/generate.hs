@@ -212,8 +212,8 @@ awsResources =
     "https://www.terraform.io/docs/providers/aws/r/autoscaling_group.html"
     [ ("name'", NamedType "T.Text", OptionalWithDefault "\"\"")
     , ("name_prefix", NamedType "T.Text", OptionalWithDefault "\"\"")
-    , ("max_size", NamedType "Int", Required)
     , ("min_size", NamedType "Int", Required)
+    , ("max_size", NamedType "Int", Required)
     , ("vpc_zone_identifier", FTList (AwsIdRef "aws_subnet"), OptionalWithDefault "[]")
     , ("launch_configuration", TFRef "T.Text", Required)
     , ("load_balancers", FTList (TFRef "T.Text"), OptionalWithDefault "[]")
