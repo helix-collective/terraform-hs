@@ -3288,6 +3288,7 @@ newAwsElasticsearchDomain name0 params = do
   return AwsElasticsearchDomain
     { ed_arn = resourceAttr rid "arn"
     , ed_domain_id = resourceAttr rid "domain_id"
+    , ed_domain_name = resourceAttr rid "domain_name"
     , ed_endpoint = resourceAttr rid "endpoint"
     , ed_resource = rid
     }
@@ -3295,6 +3296,7 @@ newAwsElasticsearchDomain name0 params = do
 data AwsElasticsearchDomain = AwsElasticsearchDomain
   { ed_arn :: TFRef Arn
   , ed_domain_id :: TFRef T.Text
+  , ed_domain_name :: TFRef T.Text
   , ed_endpoint :: TFRef T.Text
   , ed_resource :: ResourceId
   }
@@ -3365,6 +3367,58 @@ instance ToResourceFieldMap AwsElasticsearchDomainParams where
 instance ToResourceField AwsElasticsearchDomainParams where
   toResourceField = RF_Map . toResourceFieldMap 
 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsElasticsearchDomainPolicy to the resource graph.
+
+awsElasticsearchDomainPolicy :: NameElement -> TFRef T.Text -> T.Text -> (AwsElasticsearchDomainPolicyParams -> AwsElasticsearchDomainPolicyParams) -> TF AwsElasticsearchDomainPolicy
+awsElasticsearchDomainPolicy name0 domainName' policies modf = newAwsElasticsearchDomainPolicy name0 (modf (makeAwsElasticsearchDomainPolicyParams domainName' policies))
+
+awsElasticsearchDomainPolicy' :: NameElement -> TFRef T.Text -> T.Text -> TF AwsElasticsearchDomainPolicy
+awsElasticsearchDomainPolicy' name0 domainName' policies = newAwsElasticsearchDomainPolicy name0 (makeAwsElasticsearchDomainPolicyParams domainName' policies)
+
+newAwsElasticsearchDomainPolicy :: NameElement -> AwsElasticsearchDomainPolicyParams -> TF AwsElasticsearchDomainPolicy
+newAwsElasticsearchDomainPolicy name0 params = do
+  rid <- mkResource "aws_elasticsearch_domain_policy" name0 (toResourceFieldMap params)
+  return AwsElasticsearchDomainPolicy
+    { edp_arn = resourceAttr rid "arn"
+    , edp_resource = rid
+    }
+
+data AwsElasticsearchDomainPolicy = AwsElasticsearchDomainPolicy
+  { edp_arn :: TFRef Arn
+  , edp_resource :: ResourceId
+  }
+
+instance IsResource AwsElasticsearchDomainPolicy where
+  resourceId = edp_resource
+
+data AwsElasticsearchDomainPolicyParams = AwsElasticsearchDomainPolicyParams
+  { _edp_domain_id' :: TFRef T.Text
+  , _edp_access_policies :: T.Text
+  }
+
+-- ed_domain_name' :: Lens' AwsElasticsearchDomainParams T.Text
+edp_domain_id' :: Functor f => ((TFRef T.Text) -> f (TFRef T.Text)) -> AwsElasticsearchDomainPolicyParams -> f AwsElasticsearchDomainPolicyParams
+edp_domain_id' k atom = fmap (\newedp_domain_id' -> atom { _edp_domain_id' = newedp_domain_id' }) (k (_edp_domain_id' atom))
+-- ed_access_policies :: Lens' AwsElasticsearchDomainParams Maybe (T.Text)
+edp_access_policies :: Functor f => (T.Text -> f (T.Text)) -> AwsElasticsearchDomainPolicyParams -> f AwsElasticsearchDomainPolicyParams
+edp_access_policies k atom = fmap (\newedp_access_policies -> atom { _edp_access_policies = newedp_access_policies }) (k (_edp_access_policies atom))
+
+makeAwsElasticsearchDomainPolicyParams :: TFRef T.Text -> T.Text -> AwsElasticsearchDomainPolicyParams
+makeAwsElasticsearchDomainPolicyParams domainId' policies = AwsElasticsearchDomainPolicyParams
+  { _edp_domain_id' = domainId'
+  , _edp_access_policies = policies
+  }
+
+instance ToResourceFieldMap AwsElasticsearchDomainPolicyParams where
+  toResourceFieldMap params
+    =  rfmField "domain_name" (_edp_domain_id' params)
+    <> rfmField "access_policies" (_edp_access_policies params)
+
+instance ToResourceField AwsElasticsearchDomainPolicyParams where
+  toResourceField = RF_Map . toResourceFieldMap
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsLb to the resource graph.
