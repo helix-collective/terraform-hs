@@ -3367,16 +3367,19 @@ instance ToResourceFieldMap AwsElasticsearchDomainParams where
 instance ToResourceField AwsElasticsearchDomainParams where
   toResourceField = RF_Map . toResourceFieldMap 
 
-
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsElasticsearchDomainPolicy to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/elasticsearch_domain_policy.html aws_elasticsearch_domain_policy> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'edp_')
 
-awsElasticsearchDomainPolicy :: NameElement -> TFRef T.Text -> T.Text -> (AwsElasticsearchDomainPolicyParams -> AwsElasticsearchDomainPolicyParams) -> TF AwsElasticsearchDomainPolicy
-awsElasticsearchDomainPolicy name0 domainName' policies modf = newAwsElasticsearchDomainPolicy name0 (modf (makeAwsElasticsearchDomainPolicyParams domainName' policies))
+awsElasticsearchDomainPolicy :: NameElement -> T.Text -> T.Text ->(AwsElasticsearchDomainPolicyParams -> AwsElasticsearchDomainPolicyParams) -> TF AwsElasticsearchDomainPolicy
+awsElasticsearchDomainPolicy name0 domainName accessPolicies modf = newAwsElasticsearchDomainPolicy name0 (modf (makeAwsElasticsearchDomainPolicyParams domainName accessPolicies))
 
-awsElasticsearchDomainPolicy' :: NameElement -> TFRef T.Text -> T.Text -> TF AwsElasticsearchDomainPolicy
-awsElasticsearchDomainPolicy' name0 domainName' policies = newAwsElasticsearchDomainPolicy name0 (makeAwsElasticsearchDomainPolicyParams domainName' policies)
+awsElasticsearchDomainPolicy' :: NameElement -> T.Text -> T.Text -> TF AwsElasticsearchDomainPolicy
+awsElasticsearchDomainPolicy' name0 domainName accessPolicies = newAwsElasticsearchDomainPolicy name0 (makeAwsElasticsearchDomainPolicyParams domainName accessPolicies)
 
 newAwsElasticsearchDomainPolicy :: NameElement -> AwsElasticsearchDomainPolicyParams -> TF AwsElasticsearchDomainPolicy
 newAwsElasticsearchDomainPolicy name0 params = do
@@ -3395,30 +3398,32 @@ instance IsResource AwsElasticsearchDomainPolicy where
   resourceId = edp_resource
 
 data AwsElasticsearchDomainPolicyParams = AwsElasticsearchDomainPolicyParams
-  { _edp_domain_id' :: TFRef T.Text
+  { _edp_domain_name :: T.Text
   , _edp_access_policies :: T.Text
   }
 
--- ed_domain_name' :: Lens' AwsElasticsearchDomainParams T.Text
-edp_domain_id' :: Functor f => ((TFRef T.Text) -> f (TFRef T.Text)) -> AwsElasticsearchDomainPolicyParams -> f AwsElasticsearchDomainPolicyParams
-edp_domain_id' k atom = fmap (\newedp_domain_id' -> atom { _edp_domain_id' = newedp_domain_id' }) (k (_edp_domain_id' atom))
--- ed_access_policies :: Lens' AwsElasticsearchDomainParams Maybe (T.Text)
+-- edp_domain_name :: Lens' AwsElasticsearchDomainPolicyParams T.Text
+edp_domain_name :: Functor f => (T.Text -> f (T.Text)) -> AwsElasticsearchDomainPolicyParams -> f AwsElasticsearchDomainPolicyParams
+edp_domain_name k atom = fmap (\newedp_domain_name -> atom { _edp_domain_name = newedp_domain_name }) (k (_edp_domain_name atom))
+-- edp_access_policies :: Lens' AwsElasticsearchDomainPolicyParams T.Text
 edp_access_policies :: Functor f => (T.Text -> f (T.Text)) -> AwsElasticsearchDomainPolicyParams -> f AwsElasticsearchDomainPolicyParams
 edp_access_policies k atom = fmap (\newedp_access_policies -> atom { _edp_access_policies = newedp_access_policies }) (k (_edp_access_policies atom))
 
-makeAwsElasticsearchDomainPolicyParams :: TFRef T.Text -> T.Text -> AwsElasticsearchDomainPolicyParams
-makeAwsElasticsearchDomainPolicyParams domainId' policies = AwsElasticsearchDomainPolicyParams
-  { _edp_domain_id' = domainId'
-  , _edp_access_policies = policies
+makeAwsElasticsearchDomainPolicyParams :: T.Text -> T.Text -> AwsElasticsearchDomainPolicyParams
+makeAwsElasticsearchDomainPolicyParams domainName accessPolicies = AwsElasticsearchDomainPolicyParams
+  { _edp_domain_name = domainName
+  , _edp_access_policies = accessPolicies
   }
 
 instance ToResourceFieldMap AwsElasticsearchDomainPolicyParams where
   toResourceFieldMap params
-    =  rfmField "domain_name" (_edp_domain_id' params)
+    =  rfmField "domain_name" (_edp_domain_name params)
     <> rfmField "access_policies" (_edp_access_policies params)
+    
 
 instance ToResourceField AwsElasticsearchDomainPolicyParams where
-  toResourceField = RF_Map . toResourceFieldMap
+  toResourceField = RF_Map . toResourceFieldMap 
+
 ----------------------------------------------------------------------
 
 -- | Add a resource of type AwsLb to the resource graph.

@@ -2,14 +2,14 @@
 {- stack --stack-yaml ./stack.yaml runghc --package terraform-hs -}
 {-# LANGUAGE OverloadedStrings #-}
 
-import qualified Data.Set as S
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import qualified Data.Set                     as S
+import qualified Data.Text                    as T
+import qualified Data.Text.IO                 as T
 import qualified Language.Terraform.Util.Text as T
 
-import Data.List(intercalate,intersperse)
-import System.FilePath((</>))
-import Data.Monoid
+import           Data.List                    (intercalate, intersperse)
+import           Data.Monoid
+import           System.FilePath              ((</>))
 
 awsHeader :: Code
 awsHeader = clines
@@ -588,7 +588,16 @@ awsResources =
     ]
     [ ("arn", TFRef "Arn")
     , ("domain_id", TFRef "T.Text")
+    , ("domain_name", TFRef "T.Text")
     , ("endpoint", TFRef "T.Text")
+    ]
+
+  , resourceCode "aws_elasticsearch_domain_policy" "edp"
+    "https://www.terraform.io/docs/providers/aws/r/elasticsearch_domain_policy.html"
+    [ ("domain_name", NamedType "T.Text", Required)
+    , ("access_policies", NamedType "T.Text", Required)
+    ]
+    [ ("arn", TFRef "Arn")
     ]
 
   , resourceCode "aws_lb" "lb"
@@ -750,10 +759,10 @@ codeText :: Code -> [T.Text]
 codeText c = mkLines "" c
   where
     mkLines :: T.Text -> Code -> [T.Text]
-    mkLines i CEmpty = []
+    mkLines i CEmpty          = []
     mkLines i (CAppend c1 c2) = mkLines i c1 <> mkLines i c2
-    mkLines i (CIndent c) = mkLines (indentStr <> i) c
-    mkLines i (CLine t) = [i <> t]
+    mkLines i (CIndent c)     = mkLines (indentStr <> i) c
+    mkLines i (CLine t)       = [i <> t]
     indentStr = "  "
 
 cline :: T.Text -> Code
@@ -772,7 +781,7 @@ cgroup :: T.Text -> T.Text -> T.Text -> [T.Text] -> Code
 cgroup begin sep end [] = CLine (begin <> end)
 cgroup begin sep end (t0:ts) = CLine (begin <> t0) <> cgroup1 ts
   where
-    cgroup1 [] = CLine end
+    cgroup1 []      = CLine end
     cgroup1 (t1:ts) = CLine (sep <> t1) <> cgroup1 ts
 
 enumCode :: T.Text -> T.Text -> [T.Text] -> Code
@@ -922,17 +931,17 @@ hfnname tftype = unreserve (T.toLower c1 <> cs)
 
 htypename tftype = T.concat (map T.toTitle (T.splitOn "_" tftype))
 
-isOptional Optional = True
-isOptional (OptionalWithDefault _)  = True
-isOptional ExpandedList  = True
-isOptional _ = False
+isOptional Optional                = True
+isOptional (OptionalWithDefault _) = True
+isOptional ExpandedList            = True
+isOptional _                       = False
 
 optionalType ftype Optional = T.template "Maybe ($1)" [hftype ftype]
-optionalType ftype _ = hftype ftype
+optionalType ftype _        = hftype ftype
 
-optionalDefault  Required = "??"
-optionalDefault  ExpandedList = "[]"
-optionalDefault  Optional = "Nothing"
+optionalDefault  Required                 = "??"
+optionalDefault  ExpandedList             = "[]"
+optionalDefault  Optional                 = "Nothing"
 optionalDefault (OptionalWithDefault def) = def
 
 hftype (NamedType t) = t
