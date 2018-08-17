@@ -454,6 +454,7 @@ awsResources =
     , ("publicly_accessible", NamedType "Bool", OptionalWithDefault "False")
     , ("backup_retention_period", NamedType "Int", OptionalWithDefault "0")
     , ("vpc_security_group_ids", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
+    , ("parameter_group_name", TFRef "T.Text", Optional)
     , ("db_subnet_group_name", TFRef "T.Text", Optional)
     , ("tags", TagsMap, OptionalWithDefault "M.empty")
     , ("skip_final_snapshot", NamedType "Bool", OptionalWithDefault "False")
@@ -465,6 +466,21 @@ awsResources =
     , ("address", TFRef "T.Text")
     , ("port", TFRef "T.Text")
     , ("username", TFRef "T.Text")
+    ]
+
+  , resourceCode "aws_db_parameter_group" "dbpg"
+    "https://www.terraform.io/docs/providers/aws/r/db_parameter_group.html"
+    [ ("name'", NamedType "T.Text", Required)
+    , ("family", NamedType "T.Text", Required)
+    , ("parameter", FTList (NamedType "DbpgParameterParams"), ExpandedList)
+    ]
+    [ ("id", AwsIdRef "aws_db_parameter_group")
+    , ("name", TFRef "T.Text")
+    ]
+
+  , fieldsCode "DbpgParameter" "dbpgp" True
+    [ ("name", NamedType "T.Text", Required)
+    , ("value", NamedType "T.Text", Required)
     ]
 
   , resourceCode "aws_db_subnet_group" "dsg"

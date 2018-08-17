@@ -2485,6 +2485,7 @@ data AwsDbInstanceParams = AwsDbInstanceParams
   , _db_publicly_accessible :: Bool
   , _db_backup_retention_period :: Int
   , _db_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
+  , _db_parameter_group_name :: Maybe (TFRef T.Text)
   , _db_db_subnet_group_name :: Maybe (TFRef T.Text)
   , _db_tags :: M.Map T.Text T.Text
   , _db_skip_final_snapshot :: Bool
@@ -2527,6 +2528,9 @@ db_backup_retention_period k atom = fmap (\newdb_backup_retention_period -> atom
 -- db_vpc_security_group_ids :: Lens' AwsDbInstanceParams [TFRef (AwsId AwsSecurityGroup)]
 db_vpc_security_group_ids :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsDbInstanceParams -> f AwsDbInstanceParams
 db_vpc_security_group_ids k atom = fmap (\newdb_vpc_security_group_ids -> atom { _db_vpc_security_group_ids = newdb_vpc_security_group_ids }) (k (_db_vpc_security_group_ids atom))
+-- db_parameter_group_name :: Lens' AwsDbInstanceParams Maybe (TFRef T.Text)
+db_parameter_group_name :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsDbInstanceParams -> f AwsDbInstanceParams
+db_parameter_group_name k atom = fmap (\newdb_parameter_group_name -> atom { _db_parameter_group_name = newdb_parameter_group_name }) (k (_db_parameter_group_name atom))
 -- db_db_subnet_group_name :: Lens' AwsDbInstanceParams Maybe (TFRef T.Text)
 db_db_subnet_group_name :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsDbInstanceParams -> f AwsDbInstanceParams
 db_db_subnet_group_name k atom = fmap (\newdb_db_subnet_group_name -> atom { _db_db_subnet_group_name = newdb_db_subnet_group_name }) (k (_db_db_subnet_group_name atom))
@@ -2554,6 +2558,7 @@ makeAwsDbInstanceParams allocatedStorage engine instanceClass username' password
   , _db_publicly_accessible = False
   , _db_backup_retention_period = 0
   , _db_vpc_security_group_ids = []
+  , _db_parameter_group_name = Nothing
   , _db_db_subnet_group_name = Nothing
   , _db_tags = M.empty
   , _db_skip_final_snapshot = False
@@ -2574,6 +2579,7 @@ instance ToResourceFieldMap AwsDbInstanceParams where
     <> rfmOptionalDefField "publicly_accessible" False (_db_publicly_accessible params)
     <> rfmOptionalDefField "backup_retention_period" 0 (_db_backup_retention_period params)
     <> rfmOptionalDefField "vpc_security_group_ids" [] (_db_vpc_security_group_ids params)
+    <> rfmOptionalField "parameter_group_name" (_db_parameter_group_name params)
     <> rfmOptionalField "db_subnet_group_name" (_db_db_subnet_group_name params)
     <> rfmOptionalDefField "tags" M.empty (_db_tags params)
     <> rfmOptionalDefField "skip_final_snapshot" False (_db_skip_final_snapshot params)
@@ -2581,6 +2587,101 @@ instance ToResourceFieldMap AwsDbInstanceParams where
     
 
 instance ToResourceField AwsDbInstanceParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsDbParameterGroup to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/db_parameter_group.html aws_db_parameter_group> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'dbpg_')
+
+awsDbParameterGroup :: NameElement -> T.Text -> T.Text ->(AwsDbParameterGroupParams -> AwsDbParameterGroupParams) -> TF AwsDbParameterGroup
+awsDbParameterGroup name0 name' family modf = newAwsDbParameterGroup name0 (modf (makeAwsDbParameterGroupParams name' family))
+
+awsDbParameterGroup' :: NameElement -> T.Text -> T.Text -> TF AwsDbParameterGroup
+awsDbParameterGroup' name0 name' family = newAwsDbParameterGroup name0 (makeAwsDbParameterGroupParams name' family)
+
+newAwsDbParameterGroup :: NameElement -> AwsDbParameterGroupParams -> TF AwsDbParameterGroup
+newAwsDbParameterGroup name0 params = do
+  rid <- mkResource "aws_db_parameter_group" name0 (toResourceFieldMap params)
+  return AwsDbParameterGroup
+    { dbpg_id = resourceAttr rid "id"
+    , dbpg_name = resourceAttr rid "name"
+    , dbpg_resource = rid
+    }
+
+data AwsDbParameterGroup = AwsDbParameterGroup
+  { dbpg_id :: TFRef (AwsId AwsDbParameterGroup)
+  , dbpg_name :: TFRef T.Text
+  , dbpg_resource :: ResourceId
+  }
+
+instance IsResource AwsDbParameterGroup where
+  resourceId = dbpg_resource
+
+data AwsDbParameterGroupParams = AwsDbParameterGroupParams
+  { _dbpg_name' :: T.Text
+  , _dbpg_family :: T.Text
+  , _dbpg_parameter :: [DbpgParameterParams]
+  }
+
+-- dbpg_name' :: Lens' AwsDbParameterGroupParams T.Text
+dbpg_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsDbParameterGroupParams -> f AwsDbParameterGroupParams
+dbpg_name' k atom = fmap (\newdbpg_name' -> atom { _dbpg_name' = newdbpg_name' }) (k (_dbpg_name' atom))
+-- dbpg_family :: Lens' AwsDbParameterGroupParams T.Text
+dbpg_family :: Functor f => (T.Text -> f (T.Text)) -> AwsDbParameterGroupParams -> f AwsDbParameterGroupParams
+dbpg_family k atom = fmap (\newdbpg_family -> atom { _dbpg_family = newdbpg_family }) (k (_dbpg_family atom))
+-- dbpg_parameter :: Lens' AwsDbParameterGroupParams [DbpgParameterParams]
+dbpg_parameter :: Functor f => ([DbpgParameterParams] -> f ([DbpgParameterParams])) -> AwsDbParameterGroupParams -> f AwsDbParameterGroupParams
+dbpg_parameter k atom = fmap (\newdbpg_parameter -> atom { _dbpg_parameter = newdbpg_parameter }) (k (_dbpg_parameter atom))
+
+makeAwsDbParameterGroupParams :: T.Text -> T.Text -> AwsDbParameterGroupParams
+makeAwsDbParameterGroupParams name' family = AwsDbParameterGroupParams
+  { _dbpg_name' = name'
+  , _dbpg_family = family
+  , _dbpg_parameter = []
+  }
+
+instance ToResourceFieldMap AwsDbParameterGroupParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_dbpg_name' params)
+    <> rfmField "family" (_dbpg_family params)
+    <> rfmExpandedList "parameter" (_dbpg_parameter params)
+    
+
+instance ToResourceField AwsDbParameterGroupParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+data DbpgParameterParams = DbpgParameterParams
+  { _dbpgp_name :: T.Text
+  , _dbpgp_value :: T.Text
+  }
+  deriving (Eq)
+
+-- dbpgp_name :: Lens' DbpgParameterParams T.Text
+dbpgp_name :: Functor f => (T.Text -> f (T.Text)) -> DbpgParameterParams -> f DbpgParameterParams
+dbpgp_name k atom = fmap (\newdbpgp_name -> atom { _dbpgp_name = newdbpgp_name }) (k (_dbpgp_name atom))
+-- dbpgp_value :: Lens' DbpgParameterParams T.Text
+dbpgp_value :: Functor f => (T.Text -> f (T.Text)) -> DbpgParameterParams -> f DbpgParameterParams
+dbpgp_value k atom = fmap (\newdbpgp_value -> atom { _dbpgp_value = newdbpgp_value }) (k (_dbpgp_value atom))
+
+makeDbpgParameterParams :: T.Text -> T.Text -> DbpgParameterParams
+makeDbpgParameterParams name value = DbpgParameterParams
+  { _dbpgp_name = name
+  , _dbpgp_value = value
+  }
+
+instance ToResourceFieldMap DbpgParameterParams where
+  toResourceFieldMap params
+    =  rfmField "name" (_dbpgp_name params)
+    <> rfmField "value" (_dbpgp_value params)
+    
+
+instance ToResourceField DbpgParameterParams where
   toResourceField = RF_Map . toResourceFieldMap 
 
 ----------------------------------------------------------------------
