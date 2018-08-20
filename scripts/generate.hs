@@ -440,6 +440,41 @@ awsResources =
     [ ("id", AwsIdRef "aws_cloudwatch_metric_alarm")
     ]
 
+  , resourceCode "aws_rds_cluster" "rc"
+    "https://www.terraform.io/docs/providers/aws/r/rds_cluster.html"
+    [ ("cluster_identifier", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("engine", NamedType "DBEngine", Required)
+    , ("engine_version", NamedType "T.Text", Optional)
+    , ("database_name'", NamedType "T.Text", OptionalWithDefault "\"\"")
+    , ("port'", NamedType "Int", Optional)
+    , ("master_username'", NamedType "T.Text", Required)
+    , ("master_password", NamedType "T.Text", Required)
+    , ("skip_final_snapshot", NamedType "Bool", OptionalWithDefault "False")
+    , ("final_snapshot_identifier", NamedType "T.Text", Optional)
+    , ("vpc_security_group_ids", FTList (AwsIdRef "aws_security_group"), OptionalWithDefault "[]")
+    , ("db_cluster_parameter_group_name", TFRef "T.Text", Optional)
+    , ("db_subnet_group_name", TFRef "T.Text", Optional)
+    , ("backup_retention_period", NamedType "Int", OptionalWithDefault "0")
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
+    ]
+    [ ("id", AwsIdRef "aws_rds_cluster")
+    , ("reader_endpoint", TFRef "T.Text")
+    , ("endpoint", TFRef "T.Text")
+    , ("database_name", TFRef "T.Text")
+    , ("port", TFRef "T.Text")
+    , ("master_username", TFRef "T.Text")
+    ]
+
+  , resourceCode "aws_rds_cluster_instance" "rci"
+    "https://www.terraform.io/docs/providers/aws/r/rds_cluster_instance.html"
+    [ ("cluster_identifier", NamedType "T.Text", Required)
+    , ("count", NamedType "Int", Optional)
+    , ("identifier", NamedType "T.Text", Optional)
+    , ("instance_class", NamedType "DBInstanceClass", Required)
+    ]
+    [ ("id", AwsIdRef "aws_rds_cluster_instance")
+    ]
+
   , resourceCode "aws_db_instance" "db"
     "https://www.terraform.io/docs/providers/aws/r/db_instance.html"
     [ ("allocated_storage", NamedType "Int", Required)

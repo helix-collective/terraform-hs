@@ -2434,6 +2434,214 @@ instance ToResourceField AwsCloudwatchMetricAlarmParams where
 
 ----------------------------------------------------------------------
 
+-- | Add a resource of type AwsRdsCluster to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/rds_cluster.html aws_rds_cluster> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'rc_')
+
+awsRdsCluster :: NameElement -> DBEngine -> T.Text -> T.Text ->(AwsRdsClusterParams -> AwsRdsClusterParams) -> TF AwsRdsCluster
+awsRdsCluster name0 engine masterUsername' masterPassword modf = newAwsRdsCluster name0 (modf (makeAwsRdsClusterParams engine masterUsername' masterPassword))
+
+awsRdsCluster' :: NameElement -> DBEngine -> T.Text -> T.Text -> TF AwsRdsCluster
+awsRdsCluster' name0 engine masterUsername' masterPassword = newAwsRdsCluster name0 (makeAwsRdsClusterParams engine masterUsername' masterPassword)
+
+newAwsRdsCluster :: NameElement -> AwsRdsClusterParams -> TF AwsRdsCluster
+newAwsRdsCluster name0 params = do
+  rid <- mkResource "aws_rds_cluster" name0 (toResourceFieldMap params)
+  return AwsRdsCluster
+    { rc_id = resourceAttr rid "id"
+    , rc_reader_endpoint = resourceAttr rid "reader_endpoint"
+    , rc_endpoint = resourceAttr rid "endpoint"
+    , rc_database_name = resourceAttr rid "database_name"
+    , rc_port = resourceAttr rid "port"
+    , rc_master_username = resourceAttr rid "master_username"
+    , rc_resource = rid
+    }
+
+data AwsRdsCluster = AwsRdsCluster
+  { rc_id :: TFRef (AwsId AwsRdsCluster)
+  , rc_reader_endpoint :: TFRef T.Text
+  , rc_endpoint :: TFRef T.Text
+  , rc_database_name :: TFRef T.Text
+  , rc_port :: TFRef T.Text
+  , rc_master_username :: TFRef T.Text
+  , rc_resource :: ResourceId
+  }
+
+instance IsResource AwsRdsCluster where
+  resourceId = rc_resource
+
+data AwsRdsClusterParams = AwsRdsClusterParams
+  { _rc_engine :: DBEngine
+  , _rc_master_username' :: T.Text
+  , _rc_master_password :: T.Text
+  , _rc_cluster_identifier :: T.Text
+  , _rc_engine_version :: Maybe (T.Text)
+  , _rc_database_name' :: T.Text
+  , _rc_port' :: Maybe (Int)
+  , _rc_skip_final_snapshot :: Bool
+  , _rc_final_snapshot_identifier :: Maybe (T.Text)
+  , _rc_vpc_security_group_ids :: [TFRef (AwsId AwsSecurityGroup)]
+  , _rc_db_cluster_parameter_group_name :: Maybe (TFRef T.Text)
+  , _rc_db_subnet_group_name :: Maybe (TFRef T.Text)
+  , _rc_backup_retention_period :: Int
+  , _rc_tags :: M.Map T.Text T.Text
+  }
+
+-- rc_cluster_identifier :: Lens' AwsRdsClusterParams T.Text
+rc_cluster_identifier :: Functor f => (T.Text -> f (T.Text)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_cluster_identifier k atom = fmap (\newrc_cluster_identifier -> atom { _rc_cluster_identifier = newrc_cluster_identifier }) (k (_rc_cluster_identifier atom))
+-- rc_engine :: Lens' AwsRdsClusterParams DBEngine
+rc_engine :: Functor f => (DBEngine -> f (DBEngine)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_engine k atom = fmap (\newrc_engine -> atom { _rc_engine = newrc_engine }) (k (_rc_engine atom))
+-- rc_engine_version :: Lens' AwsRdsClusterParams Maybe (T.Text)
+rc_engine_version :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_engine_version k atom = fmap (\newrc_engine_version -> atom { _rc_engine_version = newrc_engine_version }) (k (_rc_engine_version atom))
+-- rc_database_name' :: Lens' AwsRdsClusterParams T.Text
+rc_database_name' :: Functor f => (T.Text -> f (T.Text)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_database_name' k atom = fmap (\newrc_database_name' -> atom { _rc_database_name' = newrc_database_name' }) (k (_rc_database_name' atom))
+-- rc_port' :: Lens' AwsRdsClusterParams Maybe (Int)
+rc_port' :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_port' k atom = fmap (\newrc_port' -> atom { _rc_port' = newrc_port' }) (k (_rc_port' atom))
+-- rc_master_username' :: Lens' AwsRdsClusterParams T.Text
+rc_master_username' :: Functor f => (T.Text -> f (T.Text)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_master_username' k atom = fmap (\newrc_master_username' -> atom { _rc_master_username' = newrc_master_username' }) (k (_rc_master_username' atom))
+-- rc_master_password :: Lens' AwsRdsClusterParams T.Text
+rc_master_password :: Functor f => (T.Text -> f (T.Text)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_master_password k atom = fmap (\newrc_master_password -> atom { _rc_master_password = newrc_master_password }) (k (_rc_master_password atom))
+-- rc_skip_final_snapshot :: Lens' AwsRdsClusterParams Bool
+rc_skip_final_snapshot :: Functor f => (Bool -> f (Bool)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_skip_final_snapshot k atom = fmap (\newrc_skip_final_snapshot -> atom { _rc_skip_final_snapshot = newrc_skip_final_snapshot }) (k (_rc_skip_final_snapshot atom))
+-- rc_final_snapshot_identifier :: Lens' AwsRdsClusterParams Maybe (T.Text)
+rc_final_snapshot_identifier :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_final_snapshot_identifier k atom = fmap (\newrc_final_snapshot_identifier -> atom { _rc_final_snapshot_identifier = newrc_final_snapshot_identifier }) (k (_rc_final_snapshot_identifier atom))
+-- rc_vpc_security_group_ids :: Lens' AwsRdsClusterParams [TFRef (AwsId AwsSecurityGroup)]
+rc_vpc_security_group_ids :: Functor f => ([TFRef (AwsId AwsSecurityGroup)] -> f ([TFRef (AwsId AwsSecurityGroup)])) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_vpc_security_group_ids k atom = fmap (\newrc_vpc_security_group_ids -> atom { _rc_vpc_security_group_ids = newrc_vpc_security_group_ids }) (k (_rc_vpc_security_group_ids atom))
+-- rc_db_cluster_parameter_group_name :: Lens' AwsRdsClusterParams Maybe (TFRef T.Text)
+rc_db_cluster_parameter_group_name :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_db_cluster_parameter_group_name k atom = fmap (\newrc_db_cluster_parameter_group_name -> atom { _rc_db_cluster_parameter_group_name = newrc_db_cluster_parameter_group_name }) (k (_rc_db_cluster_parameter_group_name atom))
+-- rc_db_subnet_group_name :: Lens' AwsRdsClusterParams Maybe (TFRef T.Text)
+rc_db_subnet_group_name :: Functor f => (Maybe (TFRef T.Text) -> f (Maybe (TFRef T.Text))) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_db_subnet_group_name k atom = fmap (\newrc_db_subnet_group_name -> atom { _rc_db_subnet_group_name = newrc_db_subnet_group_name }) (k (_rc_db_subnet_group_name atom))
+-- rc_backup_retention_period :: Lens' AwsRdsClusterParams Int
+rc_backup_retention_period :: Functor f => (Int -> f (Int)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_backup_retention_period k atom = fmap (\newrc_backup_retention_period -> atom { _rc_backup_retention_period = newrc_backup_retention_period }) (k (_rc_backup_retention_period atom))
+-- rc_tags :: Lens' AwsRdsClusterParams M.Map T.Text T.Text
+rc_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsRdsClusterParams -> f AwsRdsClusterParams
+rc_tags k atom = fmap (\newrc_tags -> atom { _rc_tags = newrc_tags }) (k (_rc_tags atom))
+
+makeAwsRdsClusterParams :: DBEngine -> T.Text -> T.Text -> AwsRdsClusterParams
+makeAwsRdsClusterParams engine masterUsername' masterPassword = AwsRdsClusterParams
+  { _rc_engine = engine
+  , _rc_master_username' = masterUsername'
+  , _rc_master_password = masterPassword
+  , _rc_cluster_identifier = ""
+  , _rc_engine_version = Nothing
+  , _rc_database_name' = ""
+  , _rc_port' = Nothing
+  , _rc_skip_final_snapshot = False
+  , _rc_final_snapshot_identifier = Nothing
+  , _rc_vpc_security_group_ids = []
+  , _rc_db_cluster_parameter_group_name = Nothing
+  , _rc_db_subnet_group_name = Nothing
+  , _rc_backup_retention_period = 0
+  , _rc_tags = M.empty
+  }
+
+instance ToResourceFieldMap AwsRdsClusterParams where
+  toResourceFieldMap params
+    =  rfmOptionalDefField "cluster_identifier" "" (_rc_cluster_identifier params)
+    <> rfmField "engine" (_rc_engine params)
+    <> rfmOptionalField "engine_version" (_rc_engine_version params)
+    <> rfmOptionalDefField "database_name" "" (_rc_database_name' params)
+    <> rfmOptionalField "port" (_rc_port' params)
+    <> rfmField "master_username" (_rc_master_username' params)
+    <> rfmField "master_password" (_rc_master_password params)
+    <> rfmOptionalDefField "skip_final_snapshot" False (_rc_skip_final_snapshot params)
+    <> rfmOptionalField "final_snapshot_identifier" (_rc_final_snapshot_identifier params)
+    <> rfmOptionalDefField "vpc_security_group_ids" [] (_rc_vpc_security_group_ids params)
+    <> rfmOptionalField "db_cluster_parameter_group_name" (_rc_db_cluster_parameter_group_name params)
+    <> rfmOptionalField "db_subnet_group_name" (_rc_db_subnet_group_name params)
+    <> rfmOptionalDefField "backup_retention_period" 0 (_rc_backup_retention_period params)
+    <> rfmOptionalDefField "tags" M.empty (_rc_tags params)
+    
+
+instance ToResourceField AwsRdsClusterParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
+-- | Add a resource of type AwsRdsClusterInstance to the resource graph.
+--
+-- See the terraform <https://www.terraform.io/docs/providers/aws/r/rds_cluster_instance.html aws_rds_cluster_instance> documentation
+-- for details.
+-- (In this binding attribute and argument names all have the prefix 'rci_')
+
+awsRdsClusterInstance :: NameElement -> T.Text -> DBInstanceClass ->(AwsRdsClusterInstanceParams -> AwsRdsClusterInstanceParams) -> TF AwsRdsClusterInstance
+awsRdsClusterInstance name0 clusterIdentifier instanceClass modf = newAwsRdsClusterInstance name0 (modf (makeAwsRdsClusterInstanceParams clusterIdentifier instanceClass))
+
+awsRdsClusterInstance' :: NameElement -> T.Text -> DBInstanceClass -> TF AwsRdsClusterInstance
+awsRdsClusterInstance' name0 clusterIdentifier instanceClass = newAwsRdsClusterInstance name0 (makeAwsRdsClusterInstanceParams clusterIdentifier instanceClass)
+
+newAwsRdsClusterInstance :: NameElement -> AwsRdsClusterInstanceParams -> TF AwsRdsClusterInstance
+newAwsRdsClusterInstance name0 params = do
+  rid <- mkResource "aws_rds_cluster_instance" name0 (toResourceFieldMap params)
+  return AwsRdsClusterInstance
+    { rci_id = resourceAttr rid "id"
+    , rci_resource = rid
+    }
+
+data AwsRdsClusterInstance = AwsRdsClusterInstance
+  { rci_id :: TFRef (AwsId AwsRdsClusterInstance)
+  , rci_resource :: ResourceId
+  }
+
+instance IsResource AwsRdsClusterInstance where
+  resourceId = rci_resource
+
+data AwsRdsClusterInstanceParams = AwsRdsClusterInstanceParams
+  { _rci_cluster_identifier :: T.Text
+  , _rci_instance_class :: DBInstanceClass
+  , _rci_count :: Maybe (Int)
+  , _rci_identifier :: Maybe (T.Text)
+  }
+
+-- rci_cluster_identifier :: Lens' AwsRdsClusterInstanceParams T.Text
+rci_cluster_identifier :: Functor f => (T.Text -> f (T.Text)) -> AwsRdsClusterInstanceParams -> f AwsRdsClusterInstanceParams
+rci_cluster_identifier k atom = fmap (\newrci_cluster_identifier -> atom { _rci_cluster_identifier = newrci_cluster_identifier }) (k (_rci_cluster_identifier atom))
+-- rci_count :: Lens' AwsRdsClusterInstanceParams Maybe (Int)
+rci_count :: Functor f => (Maybe (Int) -> f (Maybe (Int))) -> AwsRdsClusterInstanceParams -> f AwsRdsClusterInstanceParams
+rci_count k atom = fmap (\newrci_count -> atom { _rci_count = newrci_count }) (k (_rci_count atom))
+-- rci_identifier :: Lens' AwsRdsClusterInstanceParams Maybe (T.Text)
+rci_identifier :: Functor f => (Maybe (T.Text) -> f (Maybe (T.Text))) -> AwsRdsClusterInstanceParams -> f AwsRdsClusterInstanceParams
+rci_identifier k atom = fmap (\newrci_identifier -> atom { _rci_identifier = newrci_identifier }) (k (_rci_identifier atom))
+-- rci_instance_class :: Lens' AwsRdsClusterInstanceParams DBInstanceClass
+rci_instance_class :: Functor f => (DBInstanceClass -> f (DBInstanceClass)) -> AwsRdsClusterInstanceParams -> f AwsRdsClusterInstanceParams
+rci_instance_class k atom = fmap (\newrci_instance_class -> atom { _rci_instance_class = newrci_instance_class }) (k (_rci_instance_class atom))
+
+makeAwsRdsClusterInstanceParams :: T.Text -> DBInstanceClass -> AwsRdsClusterInstanceParams
+makeAwsRdsClusterInstanceParams clusterIdentifier instanceClass = AwsRdsClusterInstanceParams
+  { _rci_cluster_identifier = clusterIdentifier
+  , _rci_instance_class = instanceClass
+  , _rci_count = Nothing
+  , _rci_identifier = Nothing
+  }
+
+instance ToResourceFieldMap AwsRdsClusterInstanceParams where
+  toResourceFieldMap params
+    =  rfmField "cluster_identifier" (_rci_cluster_identifier params)
+    <> rfmOptionalField "count" (_rci_count params)
+    <> rfmOptionalField "identifier" (_rci_identifier params)
+    <> rfmField "instance_class" (_rci_instance_class params)
+    
+
+instance ToResourceField AwsRdsClusterInstanceParams where
+  toResourceField = RF_Map . toResourceFieldMap 
+
+----------------------------------------------------------------------
+
 -- | Add a resource of type AwsDbInstance to the resource graph.
 --
 -- See the terraform <https://www.terraform.io/docs/providers/aws/r/db_instance.html aws_db_instance> documentation
