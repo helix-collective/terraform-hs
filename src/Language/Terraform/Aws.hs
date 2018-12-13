@@ -1147,6 +1147,7 @@ instance IsResource AwsEip where
 data AwsEipParams = AwsEipParams
   { _eip_vpc :: Bool
   , _eip_instance :: Maybe (TFRef (AwsId AwsInstance))
+  , _eip_tags :: M.Map T.Text T.Text
   }
 
 -- eip_vpc :: Lens' AwsEipParams Bool
@@ -1155,17 +1156,22 @@ eip_vpc k atom = fmap (\neweip_vpc -> atom { _eip_vpc = neweip_vpc }) (k (_eip_v
 -- eip_instance :: Lens' AwsEipParams Maybe (TFRef (AwsId AwsInstance))
 eip_instance :: Functor f => (Maybe (TFRef (AwsId AwsInstance)) -> f (Maybe (TFRef (AwsId AwsInstance)))) -> AwsEipParams -> f AwsEipParams
 eip_instance k atom = fmap (\neweip_instance -> atom { _eip_instance = neweip_instance }) (k (_eip_instance atom))
+-- eip_tags :: Lens' AwsEipParams M.Map T.Text T.Text
+eip_tags :: Functor f => (M.Map T.Text T.Text -> f (M.Map T.Text T.Text)) -> AwsEipParams -> f AwsEipParams
+eip_tags k atom = fmap (\neweip_tags -> atom { _eip_tags = neweip_tags }) (k (_eip_tags atom))
 
 makeAwsEipParams ::  AwsEipParams
 makeAwsEipParams  = AwsEipParams
   { _eip_vpc = False
   , _eip_instance = Nothing
+  , _eip_tags = M.empty
   }
 
 instance ToResourceFieldMap AwsEipParams where
   toResourceFieldMap params
     =  rfmOptionalDefField "vpc" False (_eip_vpc params)
     <> rfmOptionalField "instance" (_eip_instance params)
+    <> rfmOptionalDefField "tags" M.empty (_eip_tags params)
     
 
 instance ToResourceField AwsEipParams where

@@ -234,6 +234,7 @@ awsResources =
     "https://www.terraform.io/docs/providers/aws/r/eip.html"
     [ ("vpc", NamedType "Bool", OptionalWithDefault "False")
     , ("instance", AwsIdRef "aws_instance", Optional)
+    , ("tags", TagsMap, OptionalWithDefault "M.empty")
     ]
     [ ("id", AwsIdRef "aws_eip")
     , ("private_ip", TFRef "IpAddress")
