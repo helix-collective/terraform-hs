@@ -63,9 +63,11 @@ module Language.Terraform.Core(
 
 import Data.Default
 import Data.Maybe(fromMaybe)
-import Data.Monoid
+import Data.Semigroup
+import Data.Monoid (Monoid (..))
 import Data.Typeable
 import Data.Dynamic
+import Control.Applicative ((<$>))
 import Control.Monad(void)
 import Control.Monad.Trans.State.Lazy(StateT,get,put,modify',runStateT)
 import System.FilePath((</>))
@@ -115,9 +117,12 @@ data Provisioner = Provisioner {
 -- keys are allowed.
 newtype ResourceFieldMap = ResourceFieldMap { unResourceFieldMap :: [(T.Text,ResourceField)] }
 
+instance Semigroup ResourceFieldMap where
+  ResourceFieldMap f1 <> ResourceFieldMap f2 = ResourceFieldMap (f1 <> f2)
+
 instance Monoid ResourceFieldMap where
   mempty = ResourceFieldMap []
-  mappend (ResourceFieldMap f1) (ResourceFieldMap f2) = ResourceFieldMap (f1 <> f2)
+  mappend = (<>)
 
 rfmField :: ToResourceField f => T.Text -> f -> ResourceFieldMap
 rfmField field v = ResourceFieldMap [(field, toResourceField v)]
